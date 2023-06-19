@@ -1,0 +1,38 @@
+{% extends 'mytlg/base.html' %}
+
+{% block 'title' %}
+    Успешная настройка бота
+{% endblock %}
+
+{% block 'body' %}
+
+    <div class="container-xxl container-p-y">
+      <div class="misc-wrapper">
+        <h2 class="mb-2 mx-2">⚙️ Настройка завершена!</h2>
+        <p class="mb-2 mx-2">👌 Окей. Теперь бот будет присылать Вам новости 🗞</p>
+
+        <div class="mb-1 mt-2">
+            <a id="ok-button" class="btn btn-primary my-btn-clr">Хорошо, спасибо!</a>
+        </div>
+        <div class="mt-4">
+          <img
+            src="/static/spending_static/site_donor/assets/img/illustrations/man-with-laptop-light.png"
+            alt="man-with-laptop"
+            width="500"
+            class="img-fluid"
+            data-app-dark-img="illustrations/man-with-laptop-dark.png"
+            data-app-light-img="illustrations/man-with-laptop-light.png"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- скрипт для нажатия на кнопку-->
+    <script>
+      var tgObject = window.Telegram.WebApp;
+      const okButton = document.getElementById('ok-button');
+      okButton.addEventListener('click', () => {
+        tgObject.close() // закрываем окно WebApp
+      });
+    </script>
+{% endblock %}

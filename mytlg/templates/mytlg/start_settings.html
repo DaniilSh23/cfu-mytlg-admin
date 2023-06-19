@@ -1,0 +1,76 @@
+{% extends 'mytlg/base.html' %}
+
+{% block 'title' %}
+  Стартовые настройки
+{% endblock %}
+
+{% block 'body' %}
+
+  <div class="row">
+    <h4 class="fw-bold py-3 mb-1"><span class="text-muted fw-light">Настройки /</span> Выбор тем и каналов</h4>
+    <!-- Default Checkboxes and radios & Default checkboxes and radios -->
+    <div class="col-xl-6">
+      <div class="card mb-1">
+        <h5 class="card-header">Темы и каналы</h5>
+        <!-- Checkboxes and Radios -->
+        <div class="card-body">
+          <div class="row gy-3">
+            <div class="col-md">
+              <div class="demo-inline-spacing mt-1">
+                <form id="themeForm" action="{% url 'mytlg:start_settings' %}" method="post">
+                  <input type="text" id="tg-id-input" value="" name="tlg_id">
+                  <small class="text-light fw-semibold">Выберите интересующие Вас тематики:</small>
+
+                    <div class="list-group">
+                      {% for i_theme in themes %}
+                        <label class="list-group-item" for="theme-{{ i_theme.pk }}">
+                          <input class="form-check-input me-1" id="theme-{{ i_theme.pk }}" type="checkbox" name="theme" value="{{ i_theme.pk }}">
+                          {{ i_theme.theme_name }}
+                        </label>
+                      {% endfor %}
+                    </div>
+                  <div class="mb-1 mt-3">
+                    <button id="saveThemesBtn" type="submit" class="btn btn-info my-btn-clr">Сохранить выбор</button>
+                  </div>
+                </form>
+              </div>
+              <div id="ajaxResult"></div>
+
+            </div>
+          </div>
+        </div>
+        <hr class="m-0" />
+      </div>
+    </div>
+  </div>
+
+  <!--СКРИПТ ДЛЯ ОТПРАВКИ ДАННЫХ О ВЫБРАННЫХ ТЕМАТИКАХ И ОБНОВЛЕНИЕ ФОРМЫ КАНАЛАМИ ДЛЯ ЭТИХ ТЕМАТИК-->
+  <script>
+    $(document).ready(function() {
+      $('#themeForm').submit(function(event) {
+        event.preventDefault(); // предотвращаем стандартное поведение формы
+        var formData = $(this).serialize();
+
+        $.ajax({
+          url: '{% url 'mytlg:save_themes' %}', // путь к обработчику на сервере
+          type: 'POST',
+          data: formData,
+          dataType: 'html', // указываем, что ожидаем ответ в виде HTML
+          success: function(data) {
+            $('#ajaxResult').html(data); // обновляем содержимое элемента с id="ajaxResult"
+            $('#themeForm').hide();   // Скрываем форму с тематиками
+          },
+          error: function() {
+            alert('Произошла ошибка');
+          }
+        });
+      });
+    });
+  </script>
+
+<!--СКРИПТ ДЛЯ ОТПРАВКИ ВЫБРАННЫХ КАНАЛОВ ПО ТЕМАТИКАМ НА БЭКЭНД ЧЕРЕЗ AJAX-->
+<script>
+
+</script>
+
+{% endblock %}
