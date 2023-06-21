@@ -106,7 +106,7 @@ def save_themes_view(request):
         bot_usr_obj.themes.set(themes)
 
         # Формируем и даём ответ
-        new_form_html = make_form_with_channels(themes_pk)
+        new_form_html = make_form_with_channels(themes_pk, tlg_id)
         if not new_form_html:
             MY_LOGGER.warning(f'Не найдены некоторые тематики по первичным ключам из запроса. Даём ответ 404.')
             return HttpResponse(content=f'Some object Themes from primary keys list {themes_pk} does not exist',

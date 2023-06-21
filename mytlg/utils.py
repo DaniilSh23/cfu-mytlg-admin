@@ -5,7 +5,7 @@ from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.models import Channels, Themes
 
 
-def make_form_with_channels(themes_pk):
+def make_form_with_channels(themes_pk, tlg_id):
     """
     Функция для формирования строки с HTML разметкой веб-формы с каналами для выбранных тематик.
     """
@@ -72,7 +72,7 @@ def make_form_with_channels(themes_pk):
     <div class="col-md mb-1 mb-md-0">
         <small class="text-light fw-semibold">Выберите каналы для тематик из раскрывающегося списка</small>
         <form action="{reverse_lazy('mytlg:start_settings')}" method="post">
-            <input type="text" id="tg-id-input" value="" name="tlg_id">
+            <input type="hidden" id="tg-id-input" value="{tlg_id}" name="tlg_id">
             <div class="accordion mt-2" id="accordionExample">
                 {acordeon_body}
             </div>
