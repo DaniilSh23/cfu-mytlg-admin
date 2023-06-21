@@ -4,10 +4,37 @@ from django.shortcuts import render
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
 
-from cfu_mytlg_admin.settings import MY_LOGGER
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.models import Themes, BotUser
 from mytlg.utils import make_form_with_channels
+
+
+class WriteUsrView(APIView):
+    """
+    Вьюшка для обработки запросов при старте бота, записывает или обновляет данные о пользователе.
+    """
+    def post(self, request):
+        MY_LOGGER.info(f'Получен запрос на вьюшку WriteUsrView: {request.data}')
+
+        if not request.data.get("token") or request.data.get("token") != BOT_TOKEN:
+            MY_LOGGER.warning(f'Неверный токен запроса: {request.data.get("token")} != {BOT_TOKEN}')
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
+
+        MY_LOGGER.debug(f'Записываем/обновляем данные о юзере в БД')
+        bot_usr_obj, created = BotUser.objects.update_or_create(
+            tlg_id=request.data.get("tlg_id"),
+            defaults={
+                "tlg_id": request.data.get("tlg_id"),
+                "tlg_username": request.data.get("tlg_username"),
+            }
+        )
+        MY_LOGGER.success(f'Данные о юзере успешно {"созданы" if created else "обновлены"} даём ответ на запрос.')
+        return Response(data=f'success {"write" if created else "update"} object of bot user!',
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
