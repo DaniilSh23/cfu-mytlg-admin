@@ -146,7 +146,11 @@
       var tgObject = window.Telegram.WebApp;
       tgObject.expand() // расширяем окно на весь экран
       tgObject.ready() // убираем индикатор загрузки вверху окна
-      document.querySelectorAll('tg-id-input').value = tgObject.initDataUnsafe.user.id;
+      const tlgIdElements = document.querySelectorAll('[name="tlg_id"]');
+      tlgIdElements.forEach(function (elem) {
+        // Выполнение действий с каждым элементом, устанавливаем TG ID от скрипта телеги
+        elem.value = tgObject.initDataUnsafe.user.id;
+      });
     </script>
 
 </body>
