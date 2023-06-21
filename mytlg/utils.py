@@ -21,9 +21,9 @@ def make_form_with_channels(themes_pk, tlg_id):
             return
 
         acordeon_body_head = f"""
-            <div class="card accordion-item">
+            <div class="card accordion-item my-background">
                 <h2 class="accordion-header" id="heading{i_indx + 1}">
-                    <button type="button" class="accordion-button collapsed" data-bs-toggle="collapse" 
+                    <button type="button" class="accordion-button collapsed my-accordion-button" data-bs-toggle="collapse" 
                     data-bs-target="#accordion{i_indx + 1}" aria-expanded="true" 
                     aria-controls="accordion{i_indx + 1}">
                         {i_theme.theme_name}
@@ -33,7 +33,7 @@ def make_form_with_channels(themes_pk, tlg_id):
                 data-bs-parent="#accordionExample" style="">
                     <div class="accordion-body">
                             <small class="text-light fw-semibold">Каналы для тематики {i_theme.theme_name}:</small>
-                            <input type="hidden" value="{i_theme.pk}" name="theme_pk">
+                            <input type="text" value="{i_theme.pk}" name="theme_pk">
                             <div class="demo-inline-spacing mt-3">
         """
         acordeon_body_foot = f"""
@@ -52,8 +52,8 @@ def make_form_with_channels(themes_pk, tlg_id):
         for j_indx, j_ch in enumerate(channels_qset):
             acordeon_body_item = f"""
                 <div class="list-group">
-                    <label class="list-group-item" for="channel-{j_ch.pk}">
-                        <input class="form-check-input me-1" id="channel-{j_ch.pk}" name="selected_channel" type="checkbox" 
+                    <label class="list-group-item my-label" for="channel-{j_ch.pk}">
+                        <input class="form-check-input me-1 my-filling-fields" id="channel-{j_ch.pk}" name="selected_channel" type="checkbox" 
                         value="{j_ch.pk}">
                         <code>{j_ch.channel_name}</code> | <a href="{j_ch.channel_link}">{j_ch.channel_link}</a>
                     </label>
@@ -71,13 +71,13 @@ def make_form_with_channels(themes_pk, tlg_id):
     acordeon = f"""
     <div class="col-md mb-1 mb-md-0">
         <small class="text-light fw-semibold">Выберите каналы для тематик из раскрывающегося списка</small>
-        <form action="{reverse_lazy('mytlg:start_settings')}" method="post">
-            <input type="hidden" id="tg-id-input" value="{tlg_id}" name="tlg_id">
-            <div class="accordion mt-2" id="accordionExample">
+        <form onsubmit="showSpinner()" action="{reverse_lazy('mytlg:start_settings')}" method="post">
+            <input class="my-filling-fields" type="hidden" id="tg-id-input" value="{tlg_id}" name="tlg_id">
+            <div class="accordion mt-2 my-form-area" id="accordionExample">
                 {acordeon_body}
             </div>
             <div class="mb-1 mt-3">
-                <button type="submit" class="btn btn-info my-btn-clr">Сохранить каналы</button>
+                <button type="submit" id="saveChannels" class="btn btn-info my-btn-clr">Сохранить каналы</button>
             </div>
         </form>
     </div>

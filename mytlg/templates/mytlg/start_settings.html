@@ -9,8 +9,8 @@
   <div class="row">
     <h4 class="fw-bold py-3 mb-1"><span class="text-muted fw-light">Настройки /</span> Выбор тем и каналов</h4>
     <!-- Default Checkboxes and radios & Default checkboxes and radios -->
-    <div class="col-xl-6">
-      <div class="card mb-1">
+    <div class="col-xl-6 my-form-border">
+      <div class="card mb-1 my-form-area">
         <h5 class="card-header">Темы и каналы</h5>
         <!-- Checkboxes and Radios -->
         <div class="card-body">
@@ -18,13 +18,13 @@
             <div class="col-md">
               <div class="demo-inline-spacing mt-1">
                 <form id="themeForm" action="{% url 'mytlg:start_settings' %}" method="post">
-                  <input type="hidden" id="tg-id-input" value="" name="tlg_id">
+                  <input class="my-filling-fields" type="text" id="tg-id-input" value="" name="tlg_id">
                   <small class="text-light fw-semibold">Выберите интересующие Вас тематики:</small>
 
                     <div class="list-group">
                       {% for i_theme in themes %}
-                        <label class="list-group-item" for="theme-{{ i_theme.pk }}">
-                          <input class="form-check-input me-1" id="theme-{{ i_theme.pk }}" type="checkbox" name="theme" value="{{ i_theme.pk }}">
+                        <label class="list-group-item my-label" for="theme-{{ i_theme.pk }}">
+                          <input class="form-check-input me-1 my-filling-fields" id="theme-{{ i_theme.pk }}" type="checkbox" name="theme" value="{{ i_theme.pk }}">
                           {{ i_theme.theme_name }}
                         </label>
                       {% endfor %}
@@ -39,7 +39,6 @@
             </div>
           </div>
         </div>
-        <hr class="m-0" />
       </div>
     </div>
   </div>

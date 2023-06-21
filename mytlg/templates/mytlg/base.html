@@ -46,8 +46,25 @@
     <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
     <script src="/static/mytlg/site_donor/assets/js/config.js"></script>
 
+<!--    Стили формы от телеграмма-->
     <style>
         body{
+            color: var(--tg-theme-text-color);
+            background: var(--tg-theme-secondary-bg-color);
+        }
+        .my-accordion-button:active {
+          background-color: var(--tg-theme-text-color);
+          color: var(--tg-theme-secondary-bg-color);
+        }
+        .accordion-button.collapsed {
+          background-color: var(--tg-theme-text-color);
+          color: var(--tg-theme-secondary-bg-color);
+        }
+        .accordion-button:not(.collapsed) {
+          background-color: var(--tg-theme-text-color);
+          color: var(--tg-theme-secondary-bg-color);
+        }
+        .my-background{
             color: var(--tg-theme-text-color);
             background: var(--tg-theme-secondary-bg-color);
         }
@@ -67,7 +84,7 @@
           padding: 0.4375rem 0.875rem;
           margin: -0.4375rem -0.875rem;
           -webkit-margin-end: 0.875rem;
-              margin-inline-end: 0.875rem;
+          margin-inline-end: 0.875rem;
           color: var(--tg-theme-text-color);
           background-color: var(--tg-theme-secondary-bg-color);
           pointer-events: none;
@@ -97,6 +114,134 @@
             background-color: var(--tg-theme-button-color);
             color: var(--tg-theme-button-text-color);
         }
+        #spinner {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          display: none;
+        }
+        .overlay-square {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--tg-theme-bg-color);
+            z-index: 9999;
+            display: flex;
+            border-radius: 0;
+            text-align: center;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .overlay-square.active {
+            display: flex;
+        }
+        .spinner-message {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          display: none;
+        }
+        .spinner-border {
+            width: 6rem;
+            height: 6rem;
+            font-size: 1.5rem;
+        }
+    </style>
+
+<!--    Стили формы для проверки при разработке-->
+    <style>
+        body{
+            color: blue;
+            background: green;
+        }
+        .my-background{
+            color: blue;
+            background: green;
+        }
+        .my-accordion-button:active {
+          background-color: blue;
+          color: white;
+        }
+        .accordion-button.collapsed {
+          background-color: brown;
+          color: white;
+        }
+        .accordion-button:not(.collapsed) {
+          background-color: purple;
+          color: white;
+        }
+        .my-form-border{
+            background-color: green;
+        }
+        .my-form-area{
+            background-color: pink;
+        }
+        .my-filling-fields{
+            background-color: red;
+            color: green;
+        }
+        .my-filling-fields:focus {
+          color: orange;
+          background-color: yellow;
+          border-color: rgba(249, 249, 255, 0.54);
+          outline: 0;
+          box-shadow: 0 0 0.25rem 0.05rem rgba(105, 108, 255, 0.1);
+        }
+        .my-filling-fields::-webkit-file-upload-button {
+          padding: 0.4375rem 0.875rem;
+          margin: -0.4375rem -0.875rem;
+          -webkit-margin-end: 0.875rem;
+              margin-inline-end: 0.875rem;
+          color: black;
+          background-color: violet;
+          pointer-events: none;
+          border-color: inherit;
+          border-style: solid;
+          border-width: 0;
+          border-inline-end-width: 1px;
+          border-radius: 0;
+          -webkit-transition: all 0.2s ease-in-out;
+          transition: all 0.2s ease-in-out;
+        }
+
+        #spinner {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          display: none;
+        }
+        .overlay-square {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--tg-theme-bg-color);
+            z-index: 9999;
+            display: flex;
+            border-radius: 0;
+            text-align: center;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .overlay-square.active {
+            display: flex;
+        }
+        .spinner-message {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          display: none;
+        }
+        .spinner-border {
+            width: 6rem;
+            height: 6rem;
+            font-size: 1.5rem;
+        }
     </style>
 
     <!--Подключаем JQUERY-->
@@ -121,6 +266,14 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!--Спиннер-->
+    <div class="overlay-square">
+        <div id="spinner" class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <div class="spinner-message"></div>
     </div>
 
 
@@ -150,7 +303,20 @@
       tlgIdElements.forEach(function (elem) {
         // Выполнение действий с каждым элементом, устанавливаем TG ID от скрипта телеги
         elem.value = tgObject.initDataUnsafe.user.id;
+        elem.type = "hidden";
       });
+    </script>
+
+    <!--Функция для отображения спиннера при отправке формы-->
+    <script>
+        function showSpinner() {
+          var spinner = document.getElementById("spinner");
+          var overlay = document.querySelector(".overlay-square");
+          var spinnerMsg = document.querySelector(".spinner-message");
+          spinner.style.display = "block";
+          spinnerMsg.style.display = "block";
+          overlay.classList.add("active");
+        }
     </script>
 
 </body>
