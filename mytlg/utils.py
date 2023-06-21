@@ -33,7 +33,7 @@ def make_form_with_channels(themes_pk, tlg_id):
                 data-bs-parent="#accordionExample" style="">
                     <div class="accordion-body">
                             <small class="text-light fw-semibold">Каналы для тематики {i_theme.theme_name}:</small>
-                            <input type="text" value="{i_theme.pk}" name="theme_pk">
+                            <input type="hidden" value="{i_theme.pk}" name="theme_pk">
                             <div class="demo-inline-spacing mt-3">
         """
         acordeon_body_foot = f"""
