@@ -34,7 +34,7 @@ class WriteUsrView(APIView):
         )
         MY_LOGGER.success(f'Данные о юзере успешно {"созданы" if created else "обновлены"} даём ответ на запрос.')
         return Response(data=f'success {"write" if created else "update"} object of bot user!',
-                        status=status.HTTP_400_BAD_REQUEST)
+                        status=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
