@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
-from mytlg.models import Themes, BotUser
+from mytlg.models import Themes, BotUser, Channels
 from mytlg.utils import make_form_with_channels
 
 
@@ -68,10 +68,10 @@ class StartSettingsView(View):
             return HttpResponse(f'User not found', status=404)
 
         selected_channels_lst = list(map(lambda i_ch: int(i_ch), selected_channels_lst))
-        channels_qset = Themes.objects.filter(pk__in=selected_channels_lst)
+        channels_qset = Channels.objects.filter(pk__in=selected_channels_lst)
         MY_LOGGER.debug(f'Получены объекты каналов для привязки к юзеру с tlg_id=={tlg_id} на основании списка '
                         f'PK={selected_channels_lst}\n{channels_qset}')
-        bot_usr_obj.themes.set(channels_qset)
+        bot_usr_obj.channels.set(channels_qset)
         return render(request, template_name='mytlg/success.html')
 
 
