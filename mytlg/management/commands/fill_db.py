@@ -51,6 +51,15 @@ class Command(BaseCommand):
                 ('Крипта головного мозга🤯🚀', 'https://t.me/crypto_mozgi'),
                 ('Сигналы Криптовалюты', 'https://t.me/torgovlya_fyuchersy2'),
             ),
+            'Технологии': (
+                ('Эксплойт ', 'https://t.me/exploitex'),
+                ('Wylsacom Red ', 'https://t.me/Wylsared'),
+                ('Не баг, а фича ', 'https://t.me/bugfeature'),
+                ('ChatGPT 4.0 | Бот Канал ✳️ ', 'https://t.me/ChatGPT_Main'),
+                ('Милорд ', 'https://t.me/+itM4B8KVXRIzNzdi'),
+                ('1337: IT, ChatGPT, Midjourney ', 'https://t.me/chatgpt1337_artis'),
+                ('concertzaal', 'https://t.me/concertzaal'),
+            )
         }
         for i_key, i_value in themes.items():
             i_theme, i_created = Themes.objects.get_or_create(
