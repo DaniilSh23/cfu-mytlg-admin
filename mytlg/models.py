@@ -10,6 +10,7 @@ class BotUser(models.Model):
     start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
     themes = models.ManyToManyField(verbose_name='тематики', related_name='bot_user', to='Themes', blank=True)
     channels = models.ManyToManyField(verbose_name='каналы', related_name='bot_user', to='Channels', blank=True)
+    when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
 
     def __str__(self):
         return f'User TG_ID {self.tlg_id}'

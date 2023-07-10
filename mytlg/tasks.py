@@ -22,3 +22,11 @@ def scheduled_task_example():
     Пример отложенной задачи, которая печатает в консоль.
     """
     print(f'Привет мир, я отложенная задача. Сейчас: {datetime.datetime.utcnow()}')
+
+
+@shared_task
+def gpt_interests_processing():
+    """
+    Обработка интересов пользователя, через GPT модель.
+    """
+    # TODO: обработать через GPT

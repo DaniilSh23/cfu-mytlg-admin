@@ -1,15 +1,20 @@
+import datetime
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.models import Themes, BotUser, Channels
+from mytlg.tasks import gpt_interests_processing
 from mytlg.utils import make_form_with_channels
 
 
@@ -116,3 +121,74 @@ def save_themes_view(request):
     else:
         MY_LOGGER.warning(f'Получен запрос на вьюшку сохранения тем юзера с неразрешенным методом')
         return HttpResponse(content='Method not allowed', status=405)
+
+
+@method_decorator(decorator=csrf_exempt, name='dispatch')
+class WriteInterestsView(View):
+    """
+    Вьюшки обработки запросов для записи интересов пользователя
+    """
+    def get(self, request):
+        """
+        Показываем страничку с формой для заполнения 5 интересов.
+        """
+        MY_LOGGER.info(f'Получен GET запрос на вьюшку для записи интересов.')
+        context = {
+            'interest_examples': (
+                'Футбол, лига чемпионов и всё в этом духе',
+                'Криптовалюта, финансы и акции топовых компаний',
+                'Животные, но в основном милые. Такие как котики и собачки, но не крокодилы и змеи.',
+                'Технологии, искусственный интеллект и вот это вот всё',
+                'Бизнес, то на чём можно зарабатывать, стартапы и прорывные идеи!'
+            )
+        }
+        return render(request, template_name='mytlg/write_interests.html', context=context)
+
+    def post(self, request):
+        """
+        Вьюшка для обработки запросов на запись интересов
+        """
+        MY_LOGGER.info(f'Получен POST запрос для записи интересов пользователя. {request.POST}')
+
+        # Проверка данных запроса
+        tlg_id = request.POST.get("tlg_id")
+        interests = request.POST.getlist("interest")
+        when_send_news = request.POST.get('when_send_news')
+
+        check_interests = [i_interest for i_interest in interests if i_interest != '']
+        if len(check_interests) < 1:
+            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. В запросе отсутствует хотя бы 1 интерес')
+            err_msgs.error(request, f'Заполните хотя бы 1 интерес')
+            return redirect(to=reverse_lazy('mytlg:write_interests'))
+
+        elif not when_send_news:
+            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. '
+                              f'В запросе отсутствует время, когда слать новости')
+            err_msgs.error(request, f'Пожалуйста, укажите время, когда хотите получать новости!')
+            return redirect(to=reverse_lazy('mytlg:write_interests'))
+
+        elif not tlg_id or not tlg_id.isdigit():
+            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. '
+                              f'В запросе отсутствует tlg_id')
+            err_msgs.error(request, f'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            return redirect(to=reverse_lazy('mytlg:write_interests'))
+
+        MY_LOGGER.debug(f'Обрабатываем через модель GPT интересы пользователя')
+        gpt_interests_processing.delay()
+
+        MY_LOGGER.debug(f'Записываем в БД пользователю время, когда он будет получать новости')
+        try:
+            bot_usr_obj = BotUser.objects.get(tlg_id=int(tlg_id))
+        except ObjectDoesNotExist:
+            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. Юзер с tlg_id=={tlg_id} не найден в БД!')
+            err_msgs.error(request, f'Пользователь: Не найден Ваш профиль! Отправьте боту команду /start')
+            return redirect(to=reverse_lazy('mytlg:write_interests'))
+        bot_usr_obj.when_send_news = when_send_news
+        bot_usr_obj.save()
+
+        context = dict(
+            header='⚙️ Настройка завершена!',
+            description=f'👌 Окей. Теперь бот будет присылать Вам новости 🗞 в {when_send_news} каждый день',
+            btn_text='Хорошо, спасибо!'
+        )
+        return render(request, template_name='mytlg/success.html', context=context)
