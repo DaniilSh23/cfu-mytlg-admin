@@ -33,6 +33,7 @@ env = environ.Env(
     TG_API_ID=str,
     TG_API_HASH=str,
     BOT_TOKEN=str,
+    OPENAI_KEY=str,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -194,3 +195,6 @@ MY_LOGGER.add(  # системные логи в файл
 
 # Настройки для Telegram
 BOT_TOKEN = env('BOT_TOKEN')
+
+# OpenAI Token
+OPENAI_API_KEY = env('OPENAI_API_KEY')

@@ -13,6 +13,7 @@ from rest_framework import status
 from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
+from mytlg.gpt_processing import ask_the_gpt
 from mytlg.models import Themes, BotUser, Channels
 from mytlg.tasks import gpt_interests_processing
 from mytlg.utils import make_form_with_channels
@@ -174,7 +175,7 @@ class WriteInterestsView(View):
             return redirect(to=reverse_lazy('mytlg:write_interests'))
 
         MY_LOGGER.debug(f'Обрабатываем через модель GPT интересы пользователя')
-        gpt_interests_processing.delay()
+        gpt_interests_processing.delay(interests=check_interests, tlg_id=tlg_id)
 
         MY_LOGGER.debug(f'Записываем в БД пользователю время, когда он будет получать новости')
         try:
@@ -192,3 +193,25 @@ class WriteInterestsView(View):
             btn_text='Хорошо, спасибо!'
         )
         return render(request, template_name='mytlg/success.html', context=context)
+
+
+def text_view(request):
+    """
+    Тестовая вьюшка. Тестим всякое
+    """
+    themes = Themes.objects.all()
+    themes_str = '\n'.join([i_theme.theme_name for i_theme in themes])
+    rslt = ask_the_gpt(
+        base_text=themes_str,
+        query='Подбери подходящую тематику для следующего интереса пользователя: '
+              '"Мне интересна лига чемпионов, составы футбольных команд, хоккей и немного шахмат"',
+        system='Ты ответственный помощник и твоя задача - это классификация интересов пользователей по определённым '
+               'тематикам. На вход ты будешь получать данные с информацией для ответа пользователю - '
+               'это список тематик (каждая тематика с новой строки) и запрос пользователя, который будет содержать '
+               'формулировку его интереса. Твоя задача определить только одну тематику из переданного списка, '
+               'которая с большей вероятностью подходит под интерес пользователя и написать в ответ только эту '
+               'тематику и никакого больше текста в твоём ответе не должно быть. Не придумывай ничего от себя, выбирай'
+               ' тематику строго из того списка, который получил'
+    )
+    print(rslt)
+    return HttpResponse(content=rslt)

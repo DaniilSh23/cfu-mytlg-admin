@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
         # Создать записи о тематиках
         themes = {
-            'Telegram': (
+            'Telegram'.lower(): (
                 ('ChatGPT & Midjourney ', 'https://t.me/nomax'),
                 ('Botcollection ', 'https://t.me/botcollection'),
                 ('Каналы Telegram - каталог', 'https://t.me/chagram'),
@@ -21,37 +21,37 @@ class Command(BaseCommand):
                 ('Telegram Baza ', 'https://t.me/TBaza'),
                 ('HowYour ', 'https://t.me/HowYour'),
             ),
-            'Софт и приложения': (
+            'Софт и приложения'.lower(): (
                 ('📲 Easy APK  ', 'https://t.me/EasyAPK'),
                 ('💎 MUST HAVE ', 'https://t.me/Alexey070315'),
                 ('Bзлoмaнные приложения ', 'https://t.me/daker7'),
             ),
-            'Маркетинг, PR, реклама': (
+            'Маркетинг, PR, реклама'.lower(): (
                 ('Семейка ботов', 'https://t.me/FamilyBots'),
                 ('Клиент всегда прав', 'https://t.me/klientvp'),
                 ('Сосисочная', 'https://t.me/joinchat/-pYpF2amrepmMTli'),
                 ('кабачковая икра по акции', 'https://t.me/sale_caviar'),
             ),
-            'Бизнес и стартапы': (
+            'Бизнес и стартапы'.lower(): (
                 ('Книги на миллион | бизнес блог', 'https://t.me/ikniga'),
                 ('ОПЕРШТАБ РЫБАКОВ ИГОРЬ', 'https://t.me/rybakovigor'),
                 ('Трансформатор', 'https://t.me/TransformatorTV'),
                 ('Стартап дня. Александр Горный.', 'https://t.me/startupoftheday'),
                 ('СберБизнес', 'https://t.me/sberbusiness'),
             ),
-            'Образование': (
+            'Образование'.lower(): (
                 ('!Finuniver', 'https://t.me/finuniverchan'),
                 ('Вышка для своих', 'https://t.me/hse_live'),
                 ('⚡️ITMOLNIA⚡️', 'https://t.me/itmolnia'),
                 ('Университет «Синергия»', 'https://t.me/synergyunivers'),
             ),
-            'Криптовалюты': (
+            'Криптовалюты'.lower(): (
                 ('CoinLLions', 'https://t.me/coinllions'),
                 ('Криптограм 👾', 'https://t.me/cryptogram_ton'),
                 ('Крипта головного мозга🤯🚀', 'https://t.me/crypto_mozgi'),
                 ('Сигналы Криптовалюты', 'https://t.me/torgovlya_fyuchersy2'),
             ),
-            'Технологии': (
+            'Технологии'.lower(): (
                 ('Эксплойт ', 'https://t.me/exploitex'),
                 ('Wylsacom Red ', 'https://t.me/Wylsared'),
                 ('Не баг, а фича ', 'https://t.me/bugfeature'),
