@@ -8,7 +8,8 @@ class BotUser(models.Model):
     tlg_id = models.CharField(verbose_name='tlg_id', max_length=30, db_index=True)
     tlg_username = models.CharField(verbose_name='username', max_length=100, blank=False, null=True)
     start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
-    themes = models.ManyToManyField(verbose_name='тематики', related_name='bot_user', to='Themes', blank=True)
+    themes = models.ManyToManyField(verbose_name='темы', related_name='bot_user', to='Themes', blank=True)
+    sub_themes = models.ManyToManyField(verbose_name='подтемы', related_name='bot_user', to='SubThemes', blank=True)
     channels = models.ManyToManyField(verbose_name='каналы', related_name='bot_user', to='Channels', blank=True)
     when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
 
@@ -36,9 +37,9 @@ class BotSettings(models.Model):
 
 class Themes(models.Model):
     """
-    Модель для таблицы с тематиками постов.
+    Модель для таблицы с темами каналов.
     """
-    theme_name = models.CharField(verbose_name='имя тематики', max_length=200)
+    theme_name = models.CharField(verbose_name='имя темы', max_length=200)
     created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
 
     def __str__(self):
@@ -46,8 +47,24 @@ class Themes(models.Model):
 
     class Meta:
         ordering = ['id']
-        verbose_name = 'тематика'
-        verbose_name_plural = 'тематики'
+        verbose_name = 'тема'
+        verbose_name_plural = 'темы'
+
+
+class SubThemes(models.Model):
+    """
+    Модель для таблицы с подтемами каналов
+    """
+    sub_theme_name = models.CharField(verbose_name='имя подтмемы', max_length=200)
+    created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
+
+    def __str__(self):
+        return self.sub_theme_name
+
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'подтема'
+        verbose_name_plural = 'подтемы'
 
 
 class Channels(models.Model):
@@ -58,7 +75,8 @@ class Channels(models.Model):
     channel_name = models.CharField(verbose_name='название канала', max_length=150)
     channel_link = models.URLField(verbose_name='ссылка на канал', max_length=150)
     created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
-    theme = models.ForeignKey(verbose_name='тематика канала', to=Themes, on_delete=models.CASCADE)
+    theme = models.ForeignKey(verbose_name='тема канала', to=Themes, on_delete=models.CASCADE, blank=False, null=True)
+    sub_theme = models.ForeignKey(verbose_name='подтема канала', to=SubThemes, on_delete=models.CASCADE, blank=False, null=True)
 
     def __str__(self):
         return self.channel_link

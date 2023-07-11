@@ -45,11 +45,14 @@ def ask_the_gpt(system, query, base_text, temp=0):
         {"role": "user", "content": f"Данные с информацией для ответа пользователю: {base_text}\n\n"
                                     f"Запрос пользователя: \n{query}"}
     ]
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        temperature=temp
-    )
+    try:
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            temperature=temp
+        )
+    except openai.error.ServiceUnavailableError as err:
+        MY_LOGGER.error(f'Серверы OpenAI перегружены или недоступны. {err}')
     answer = completion.choices[0].message.content
     return answer  # возвращает ответ
 

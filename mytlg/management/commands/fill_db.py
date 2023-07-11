@@ -1,7 +1,7 @@
 from django.core.management import BaseCommand
 from loguru import logger
 
-from mytlg.models import Themes, Channels
+from mytlg.models import Themes, Channels, SubThemes
 
 
 class Command(BaseCommand):
@@ -61,6 +61,40 @@ class Command(BaseCommand):
                 ('concertzaal', 'https://t.me/concertzaal'),
             )
         }
+        sub_themes = {
+            'Технологии'.lower(): {
+                'Python'.lower(): (
+                    ('Python обучающий', 'https://t.me/pythonist24'),
+                    ('Python Academy ', 'https://t.me/python_academy'),
+                    ('Python Hacks', 'https://t.me/python_secrets'),
+                    ('Python Community', 'https://t.me/Python_Community_ru'),
+                ),
+                'Frontend-разработка'.lower(): (
+                    ('Простой HTML | Программирование', 'https://t.me/joinchat/ml4Q_yJfHtwwOGUy'),
+                    ('Простой JavaScript | Программирование', 'https://t.me/joinchat/T1h1H8kGO0hhYjc6'),
+                    ('Сайтодел | GitHub, CodePen, JavaScript, CSS, Figma', 'https://t.me/sitodel'),
+                ),
+                'Linux'.lower(): (
+                    ('Linux для чайника', 'https://t.me/os_linux_ru'),
+                    ('DevOps School | Linux, InfoSec, ИБ', 'https://t.me/devops_sc'),
+                    ('Kali Linux', 'https://t.me/linuxkalii'),
+                ),
+            },
+            'Образование'.lower(): {
+                'Онлайн обучение'.lower(): (
+                    ('GeekBrains', 'https://t.me/geekbrains_ru'),
+                    ('Яндекс Практикум', 'https://t.me/yndx_practicum'),
+                    ('Skillbox: образовательная платформа', 'https://t.me/skillboxru'),
+                    ('Нетология', 'https://t.me/netology_ru'),
+                    ('Лекторий', 'https://t.me/lektorium'),
+                ),
+                'Английский язык'.lower(): (
+                    ('Fucking English | Английский 18+', 'https://t.me/fuckingenglish'),
+                    ('Английский с нуля | Английский язык', 'https://t.me/EnglishBestChannel'),
+                    ('УЧИЛКА АНГЛИЙСКОГО', 'https://t.me/englishmaria'),
+                )
+            }
+        }
         for i_key, i_value in themes.items():
             i_theme, i_created = Themes.objects.get_or_create(
                 theme_name=i_key,
@@ -77,5 +111,25 @@ class Command(BaseCommand):
                     }
                 )
                 logger.success(f'Канал {j_ch_lnk!r} {"создан" if j_created else "уже есть"} в БД.')
+
+            # Достаём и записываем в БД подтемы
+            i_sub_themes = sub_themes.get(i_key)
+            if i_sub_themes:
+                for k_key, k_val in i_sub_themes.items():
+                    i_sub_theme, i_created = SubThemes.objects.get_or_create(
+                        sub_theme_name=k_key,
+                        defaults={'sub_theme_name': k_key}
+                    )
+                    logger.success(f'Подтема {k_key!r} {"создана" if i_created else "уже есть"} в БД.')
+                    for k_ch_name, k_ch_lnk in k_val:
+                        ch_obj, j_created = Channels.objects.get_or_create(
+                            channel_link=k_ch_lnk,
+                            defaults={
+                                "channel_name": k_ch_name,
+                                "channel_link": k_ch_lnk,
+                                "sub_theme": i_sub_theme
+                            }
+                        )
+                        logger.success(f'Канал {k_ch_lnk!r} {"создан" if j_created else "уже есть"} в БД.')
 
         logger.info('Окончание команды по наполнению БД!')

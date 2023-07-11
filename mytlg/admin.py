@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from mytlg.models import BotUser, BotSettings, Themes, Channels
+from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes
 
 
 @admin.register(BotUser)
@@ -47,6 +47,20 @@ class ThemesAdmin(admin.ModelAdmin):
     )
 
 
+@admin.register(SubThemes)
+class ThemesAdmin(admin.ModelAdmin):
+    list_display = (
+        "pk",
+        "sub_theme_name",
+        "created_at",
+    )
+    list_display_links = (
+        "pk",
+        "sub_theme_name",
+        "created_at",
+    )
+
+
 @admin.register(Channels)
 class ChannelsAdmin(admin.ModelAdmin):
     list_display = (
@@ -56,6 +70,7 @@ class ChannelsAdmin(admin.ModelAdmin):
         "channel_link",
         "created_at",
         "theme",
+        "sub_theme",
     )
     list_display_links = (
         "pk",
@@ -64,4 +79,5 @@ class ChannelsAdmin(admin.ModelAdmin):
         "channel_link",
         "created_at",
         "theme",
+        "sub_theme",
     )
