@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes
+from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight
 
 
 @admin.register(BotUser)
@@ -80,4 +80,20 @@ class ChannelsAdmin(admin.ModelAdmin):
         "created_at",
         "theme",
         "sub_theme",
+    )
+
+
+@admin.register(ThemesWeight)
+class ThemesWeightAdmin(admin.ModelAdmin):
+    list_display = (
+        'bot_user',
+        'theme',
+        'sub_theme',
+        'weight',
+    )
+    list_display_links = (
+        'bot_user',
+        'theme',
+        'sub_theme',
+        'weight',
     )

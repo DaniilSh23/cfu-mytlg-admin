@@ -85,3 +85,21 @@ class Channels(models.Model):
         ordering = ['-id']
         verbose_name = 'канал'
         verbose_name_plural = 'каналы'
+
+
+class ThemesWeight(models.Model):
+    """
+    'Вес' темы или подтемы для каждого пользователя
+    """
+    bot_user = models.ForeignKey(verbose_name='юзер бота', to=BotUser, on_delete=models.CASCADE)
+    theme = models.ForeignKey(verbose_name='тема', to=Themes, on_delete=models.CASCADE, blank=True, null=False)
+    sub_theme = models.ForeignKey(verbose_name='подтема', to=SubThemes, on_delete=models.CASCADE, blank=True, null=False)
+    weight = models.FloatField(verbose_name='вес')
+
+    def __str__(self):
+        return f'(под)тема:{self.theme if self.theme else self.sub_theme}|юзер:{self.bot_user}|вес:{self.weight}'
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'вес (под)темы'
+        verbose_name_plural = 'веса (под)тем'
