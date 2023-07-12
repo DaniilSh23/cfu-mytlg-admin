@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.gpt_processing import ask_the_gpt
 from mytlg.models import Themes, Channels, BotUser, SubThemes
-from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg
+from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram
 
 
 @shared_task
@@ -52,6 +52,12 @@ def gpt_interests_processing(interests: List, tlg_id: str):
                    'тематику и никакого больше текста в твоём ответе не должно быть. Не придумывай ничего от себя, '
                    'выбирай тематику строго из того списка, который получил.'
         )
+        if not gpt_rslt:
+            MY_LOGGER.error(f'Неудачный запрос к API OpenAI')
+            send_err_msg_for_user_to_telegram(err_msg='😔 Серверы ИИ перегружены, не удалось подобрать подходящие для '
+                                                      'Вас темы. Пожалуйста, попробуйте позже 🔄', tlg_id=tlg_id)
+            return
+
         MY_LOGGER.debug(f'Получили ответ от GPT {gpt_rslt!r} по интересу пользователя {i_interest!r}')
         MY_LOGGER.debug(f'Привязываем пользователя к подтеме и каналам')
         try:

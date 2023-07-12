@@ -53,6 +53,7 @@ def ask_the_gpt(system, query, base_text, temp=0):
         )
     except openai.error.ServiceUnavailableError as err:
         MY_LOGGER.error(f'Серверы OpenAI перегружены или недоступны. {err}')
+        return False
     answer = completion.choices[0].message.content
     return answer  # возвращает ответ
 
