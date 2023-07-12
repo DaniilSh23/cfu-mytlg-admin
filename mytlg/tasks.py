@@ -6,6 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.gpt_processing import ask_the_gpt
 from mytlg.models import Themes, Channels, BotUser, SubThemes
+from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg
 
 
 @shared_task
@@ -37,6 +38,7 @@ def gpt_interests_processing(interests: List, tlg_id: str):
     bot_usr.themes.clear()
     bot_usr.channels.clear()
 
+    themes_rslt = list()
     for i_interest in interests:
         MY_LOGGER.debug(f'Шлём запрос к gpt по интересу: {i_interest!r}')
         gpt_rslt = ask_the_gpt(
@@ -64,5 +66,10 @@ def gpt_interests_processing(interests: List, tlg_id: str):
             except ObjectDoesNotExist:
                 MY_LOGGER.warning(f'В БД не найдена тема или подтема: {gpt_rslt!r}. Пользователь не привязан.')
                 continue
+        themes_rslt.append(gpt_rslt.lower())
         [bot_usr.channels.add(i_ch) for i_ch in rel_channels]
+
+    MY_LOGGER.debug(f'Отправка в телеграм подобранных тем и каналов')
+    send_gpt_interests_proc_rslt_to_tlg(gpt_rslts=themes_rslt, tlg_id=tlg_id)
+
     MY_LOGGER.info(f'Окончание работы задачи celery по обработке интересов пользователя, через GPT модель.')

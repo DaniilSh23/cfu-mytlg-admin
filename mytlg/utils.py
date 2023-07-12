@@ -1,7 +1,10 @@
+from typing import List
+
+import requests
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse_lazy
 
-from cfu_mytlg_admin.settings import MY_LOGGER
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.models import Channels, Themes
 
 
@@ -83,3 +86,25 @@ def make_form_with_channels(themes_pk, tlg_id):
     </div>
     """
     return acordeon
+
+
+def send_gpt_interests_proc_rslt_to_tlg(gpt_rslts: List, tlg_id):
+    """
+    Отправка результатов обработки интересов через модель GPT юзеру в телеграм
+    """
+    msg_txt = '📌 Вот, какие темы мне удалось подобрать по Вашим интересам:\n\n'
+    for i_theme in gpt_rslts:
+        msg_txt = ''.join([msg_txt, f'🔹 {i_theme}\n'])
+
+    MY_LOGGER.info(f'Запущена функция для отправки в телеграм подобранных тем пользователя.')
+    send_rslt = requests.post(
+        url=f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',
+        data={
+            'chat_id': tlg_id,
+            'text': msg_txt,
+        }
+    )
+    if send_rslt.status_code == 200:
+        MY_LOGGER.success('Успешная отправка подобранных тем пользователю в телеграм')
+    else:
+        MY_LOGGER.warning(f'Не удалось отправить пользователю в телеграм подобранные темы: {send_rslt.text}')
