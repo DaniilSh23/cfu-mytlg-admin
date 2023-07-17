@@ -1,4 +1,5 @@
 import datetime
+import time
 from typing import List
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
@@ -50,7 +51,10 @@ def gpt_interests_processing(interests: List, tlg_id: str):
                    'формулировку его интереса. Твоя задача определить только одну тематику из переданного списка, '
                    'которая с большей вероятностью подходит под интерес пользователя и написать в ответ только эту '
                    'тематику и никакого больше текста в твоём ответе не должно быть. Не придумывай ничего от себя, '
-                   'выбирай тематику строго из того списка, который получил.'
+                   'выбирай тематику строго из того списка, который получил. Если интерес пользователя не подходит '
+                   'ни под одну из предоставленных тебе тематик, то пришли в ответ только фразу no themes и никакого '
+                   'больше текста.',
+            temp=0.3,
         )
         if not gpt_rslt:
             MY_LOGGER.error(f'Неудачный запрос к API OpenAI')
@@ -59,21 +63,25 @@ def gpt_interests_processing(interests: List, tlg_id: str):
             return
 
         MY_LOGGER.debug(f'Получили ответ от GPT {gpt_rslt!r} по интересу пользователя {i_interest!r}')
-        MY_LOGGER.debug(f'Привязываем пользователя к подтеме и каналам')
-        try:
-            rel_theme = Themes.objects.get(theme_name=gpt_rslt.lower())
-            bot_usr.themes.add(rel_theme)
-            rel_channels = Channels.objects.filter(theme=rel_theme)[:5]
-        except ObjectDoesNotExist:
+        if gpt_rslt == 'no themes':
+            MY_LOGGER.info(f'GPT не определил тем для интереса пользователя: {i_interest!r} и прислал {gpt_rslt!r}')
+            gpt_rslt = 'gpt не определил тему'
+        else:
+            MY_LOGGER.debug(f'Привязываем пользователя к подтеме и каналам')
             try:
-                rel_theme = SubThemes.objects.get(sub_theme_name=gpt_rslt.lower())
-                bot_usr.sub_themes.add(rel_theme)
-                rel_channels = Channels.objects.filter(sub_theme=rel_theme)[:5]
+                rel_theme = Themes.objects.get(theme_name=gpt_rslt.lower())
+                bot_usr.themes.add(rel_theme)
+                rel_channels = Channels.objects.filter(theme=rel_theme)[:5]
             except ObjectDoesNotExist:
-                MY_LOGGER.warning(f'В БД не найдена тема или подтема: {gpt_rslt!r}. Пользователь не привязан.')
-                continue
+                try:
+                    rel_theme = SubThemes.objects.get(sub_theme_name=gpt_rslt.lower())
+                    bot_usr.sub_themes.add(rel_theme)
+                    rel_channels = Channels.objects.filter(sub_theme=rel_theme)[:5]
+                except ObjectDoesNotExist:
+                    MY_LOGGER.warning(f'В БД не найдена тема или подтема: {gpt_rslt!r}. Пользователь не привязан.')
+                    continue
+            [bot_usr.channels.add(i_ch) for i_ch in rel_channels]
         themes_rslt.append(gpt_rslt.lower())
-        [bot_usr.channels.add(i_ch) for i_ch in rel_channels]
 
     MY_LOGGER.debug(f'Отправка в телеграм подобранных тем и каналов')
     send_gpt_interests_proc_rslt_to_tlg(gpt_rslts=themes_rslt, tlg_id=tlg_id)
