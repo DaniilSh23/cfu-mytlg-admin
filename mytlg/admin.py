@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight
+from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight, TlgAccounts
 
 
 @admin.register(BotUser)
@@ -96,4 +96,36 @@ class ThemesWeightAdmin(admin.ModelAdmin):
         'theme',
         'sub_theme',
         'weight',
+    )
+
+
+# class ChannelsInline(admin.TabularInline):
+#     """
+#     Отображение связанных объектов модели Channels в модели TlgAccounts
+#     """
+#     model = TlgAccounts.channels.through
+
+
+@admin.register(TlgAccounts)
+class TlgAccountsAdmin(admin.ModelAdmin):
+    # inlines = [
+    #     ChannelsInline,
+    # ]
+    list_display = (
+        "session_file",
+        "acc_tlg_id",
+        "tlg_first_name",
+        "tlg_last_name",
+        "proxy",
+        "is_run",
+        "created_at",
+    )
+    list_display_links = (
+        "session_file",
+        "acc_tlg_id",
+        "tlg_first_name",
+        "tlg_last_name",
+        "proxy",
+        "is_run",
+        "created_at",
     )

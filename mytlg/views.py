@@ -16,7 +16,6 @@ from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.gpt_processing import ask_the_gpt
 from mytlg.models import Themes, BotUser, Channels
 from mytlg.tasks import gpt_interests_processing
-from mytlg.utils import make_form_with_channels
 
 
 class WriteUsrView(APIView):
@@ -79,49 +78,6 @@ class StartSettingsView(View):
                         f'PK={selected_channels_lst}\n{channels_qset}')
         bot_usr_obj.channels.set(channels_qset)
         return render(request, template_name='mytlg/success.html')
-
-
-@csrf_exempt
-def save_themes_view(request):
-    """
-    Вьюшка для обработки AJAX POST запроса на сохранение выбранных юзером тем,
-    а также ответом новой формы в виде строки с HTML разметкой.
-    """
-    if request.method == 'POST':
-        MY_LOGGER.info(f'Получен POST запрос для сохранения тем пользователя. {request.POST}')
-
-        # Проверка данных запроса
-        tlg_id = request.POST.get("tlg_id")
-        themes_pk = request.POST.getlist("theme")
-        themes_pk_check_lst = list(map(lambda pk: pk.isdigit(), themes_pk))
-        themes_pk = list(map(lambda pk: int(pk), themes_pk))
-        if (not tlg_id or not tlg_id.isdigit()) or not all(themes_pk_check_lst):
-            MY_LOGGER.warning(f'Данные запрос не прошли валидацию!')
-            return HttpResponse(content='invalid request params', status=400)
-
-        # Записываем данные в БД
-        try:
-            bot_usr_obj = BotUser.objects.get(tlg_id=int(tlg_id))
-        except ObjectDoesNotExist:
-            MY_LOGGER.warning(f'Объект юзера с tlg_id=={tlg_id} не найден в БД.')
-            return HttpResponse(f'User not found', status=404)
-
-        themes = Themes.objects.filter(pk__in=themes_pk)
-        MY_LOGGER.debug(f'Получены объекты тематик для привязки к юзеру с tlg_id=={tlg_id} на основании списка '
-                        f'PK={themes_pk}\n{themes}')
-        bot_usr_obj.themes.set(themes)
-
-        # Формируем и даём ответ
-        new_form_html = make_form_with_channels(themes_pk, tlg_id)
-        if not new_form_html:
-            MY_LOGGER.warning(f'Не найдены некоторые тематики по первичным ключам из запроса. Даём ответ 404.')
-            return HttpResponse(content=f'Some object Themes from primary keys list {themes_pk} does not exist',
-                                status=404)
-        MY_LOGGER.success(f'Даём успешный ответ на запрос')
-        return HttpResponse(content=new_form_html, status=200)
-    else:
-        MY_LOGGER.warning(f'Получен запрос на вьюшку сохранения тем юзера с неразрешенным методом')
-        return HttpResponse(content='Method not allowed', status=405)
 
 
 @method_decorator(decorator=csrf_exempt, name='dispatch')
@@ -195,7 +151,7 @@ class WriteInterestsView(View):
         return render(request, template_name='mytlg/success.html', context=context)
 
 
-def text_view(request):
+def test_view(request):
     """
     Тестовая вьюшка. Тестим всякое
     """

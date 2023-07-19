@@ -1,5 +1,4 @@
 import datetime
-import time
 from typing import List
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist

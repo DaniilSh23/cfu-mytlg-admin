@@ -1,4 +1,14 @@
+import os
+import shutil
+
 from django.db import models
+from django.db.models.signals import pre_delete, post_save
+from django.dispatch import receiver
+
+from cfu_mytlg_admin import settings
+from cfu_mytlg_admin.settings import MY_LOGGER
+
+from mytlg.utils import send_command_to_bot
 
 
 class BotUser(models.Model):
@@ -31,8 +41,8 @@ class BotSettings(models.Model):
 
     class Meta:
         ordering = ['-id']
-        verbose_name = 'настройка Redirect Bot'
-        verbose_name_plural = 'настройки Redirect Bot'
+        verbose_name = 'настройка бота'
+        verbose_name_plural = 'настройки бота'
 
 
 class Themes(models.Model):
@@ -103,3 +113,54 @@ class ThemesWeight(models.Model):
         ordering = ['-id']
         verbose_name = 'вес (под)темы'
         verbose_name_plural = 'веса (под)тем'
+
+
+class TlgAccounts(models.Model):
+    """
+    TG аккаунты для работы.
+    """
+    session_file = models.FileField(verbose_name='файл сессии', upload_to='sessions/', blank=False, null=True)
+    acc_tlg_id = models.CharField(verbose_name='tlg_id аккаунта', max_length=50, blank=True, null=False)
+    tlg_first_name = models.CharField(verbose_name='tlg_first_name', max_length=50, blank=True, null=False)
+    tlg_last_name = models.CharField(verbose_name='tlg_last_name', max_length=50, blank=True, null=False)
+    proxy = models.CharField(verbose_name='proxy', max_length=200, blank=True, null=False)
+    is_run = models.BooleanField(verbose_name='аккаунт запущен', default=False)
+    created_at = models.DateTimeField(verbose_name='дата и время добавления акка', auto_now_add=True)
+    channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='tlg_accounts', blank=True)
+
+    def __str__(self):
+        return f'TLG Account ID=={self.acc_tlg_id}'
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'tlg аккаунт'
+        verbose_name_plural = 'tlg аккаунты'
+
+
+@receiver(pre_delete, sender=TlgAccounts)
+def delete_session_file(sender, instance, **kwargs):
+    """
+    Функция, которая получает сигнал при удалении модели TlgAccounts и удаляет файл сессии телеграм
+    """
+    MY_LOGGER.info(f'Получен сигнал pre_delete от модели TlgAccounts. Выполняем soft-delete файла сессии')
+    if not os.path.exists(os.path.join(settings.MEDIA_ROOT, 'del_sessions')):   # Если нет папки del_sessions
+        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'del_sessions'))     # То создаём
+
+    if instance.session_file:
+        file_path_string = os.path.join(settings.MEDIA_ROOT, instance.session_file.name)
+        if os.path.exists(file_path_string):
+            MY_LOGGER.debug(f'Перемещаем файл сессии {file_path_string!r} в папку "del_sessions"!')
+            shutil.move(file_path_string, os.path.join(settings.MEDIA_ROOT, 'del_sessions'))
+
+
+@receiver(post_save, sender=TlgAccounts)
+def send_bot_command(sender, instance, created, **kwargs):
+    """
+    Сигнал для отправки боту команды на старт или стоп аккаунта
+    """
+    MY_LOGGER.info(f'Получен сигнал post_save от модели TlgAccounts.')
+    if not created:
+        bot_command = 'start_acc' if instance.is_run else 'stop_acc'
+        MY_LOGGER.info(f'Выполним отправку боту команды: {bot_command!r}')
+        command_msg = f'*&*&{bot_command} {instance.session_file.path}:{instance.pk}|'
+        send_command_to_bot(command=command_msg)
