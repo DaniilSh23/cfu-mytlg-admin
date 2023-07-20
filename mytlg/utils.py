@@ -48,22 +48,19 @@ def send_err_msg_for_user_to_telegram(err_msg, tlg_id):
         MY_LOGGER.warning(f'Не удалось отправить текст ошибки пользователю в телеграм: {send_rslt.text}')
 
 
-def send_command_to_bot(command: str):
+def send_command_to_bot(command: str, bot_admin):
     """
     Отправка боту команды на выполнение каких-либо действий
     """
-    # TODO: дописать функцию, логи о результатах отправки тоже тут
-    return True
-    MY_LOGGER.info(f'Выполняем функцию для отпавки команды на остановку аккаунтов из-за истекших подписок.')
-    bot_admin = BotSettings.objects.get(key='bot_admin').value
+    MY_LOGGER.info(f'Выполняем функцию для отправки команды боту: {command}.')
     url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
-    data = {'chat_id': bot_admin, 'text': f'{command_msg}', 'disable_notification': True}
-    MY_LOGGER.debug(f'Выполняем запрос на отправку команды боту для отключения каналов по истекшим подпискам')
+    data = {'chat_id': bot_admin, 'text': f'{command}', 'disable_notification': True}
+    MY_LOGGER.debug(f'Выполняем запрос на отправку команды боту, данные запроса: {data}')
     response = requests.post(url=url, data=data)  # Выполняем запрос на отправку сообщения
 
     if response.status_code != 200:  # Обработка неудачного запроса на отправку
-        MY_LOGGER.error(f'Неудачная отправка команды на остановку аккаунтов из-за истекших подписок.\n'
+        MY_LOGGER.error(f'Неудачная отправка команды боту.\n'
                         f'Запрос: url={url} | data={data}\n'
                         f'Ответ:{response.json()}')
         return
-    MY_LOGGER.success(f'Успешная отправка команды на остановку аккаунтов из-за истекших подписок.')
+    MY_LOGGER.success(f'Успешная отправка команды боту.')

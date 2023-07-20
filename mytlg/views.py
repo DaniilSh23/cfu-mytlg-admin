@@ -14,7 +14,8 @@ from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.gpt_processing import ask_the_gpt
-from mytlg.models import Themes, BotUser, Channels
+from mytlg.models import Themes, BotUser, Channels, TlgAccounts, SubThemes, NewsPosts
+from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer
 from mytlg.tasks import gpt_interests_processing
 
 
@@ -149,6 +150,154 @@ class WriteInterestsView(View):
             btn_text='Хорошо, спасибо!'
         )
         return render(request, template_name='mytlg/success.html', context=context)
+
+
+class SetAccRunFlag(APIView):
+    """
+    Установка флага запуска аккаунта
+    """
+    def post(self, request):
+        MY_LOGGER.info(f'Получен POST запрос на вьюшку установки флага запуска аккаунта')
+        ser = SetAccDataSerializer(data=request.data)
+
+        if ser.is_valid():
+            MY_LOGGER.debug(f'Данные валидны, проверяем токен')
+
+            if ser.data.get("token") == BOT_TOKEN:
+                MY_LOGGER.debug(f'Токен успешно проверен')
+
+                try:
+                    TlgAccounts.objects.filter(pk=int(ser.data.get("acc_pk"))).update(is_run=ser.data.get("is_run"))
+                except ObjectDoesNotExist:
+                    MY_LOGGER.warning(f'Не найден в БД объект TlgAccounts с PK={ser.data.get("acc_pk")}')
+                    return Response(data={'result': f'Not found object with primary key == {ser.data.get("acc_pk")}'},
+                                    status=status.HTTP_404_NOT_FOUND)
+
+                return Response(data={'result': 'is_run flag successfully changed'}, status=status.HTTP_200_OK)
+
+            else:
+                MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. Полученный токен: {ser.data.get("token")}')
+                return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+            MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.data}')
+            return Response({'result': 'Not valid data'}, status.HTTP_400_BAD_REQUEST)
+
+
+class GetChannelsListView(APIView):
+    """
+    Вьюшка для получения списка каналов для конкретного аккаунта.
+    """
+    def get(self, request):
+        """
+        В запросе необходимо передать параметр token=токен бота.
+        """
+        MY_LOGGER.info(f'Поступил GET запрос на вьюшку получения списка запущенных аккаунтов: {request.GET}')
+
+        token = request.query_params.get("token")
+        if not token or token != BOT_TOKEN:
+            MY_LOGGER.warning(f'Токен неверный или отсутствует. Значение параметра token={token}')
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        acc_pk = request.query_params.get("acc_pk")
+        if not acc_pk or not acc_pk.isdigit():
+            MY_LOGGER.warning(f'acc_pk невалидный или отсутствует. Значение параметра acc_pk={acc_pk}')
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            channels_qset = TlgAccounts.objects.get(pk=int(acc_pk)).channels.all()
+        except ObjectDoesNotExist:
+            MY_LOGGER.warning(f'Запрошены каналы для несуществующего аккаунта (PK аккаунта == {acc_pk!r}')
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='Object does not exists')
+
+        channels_lst = [
+            {
+                "pk": i_ch.pk,
+                "channel_id": i_ch.channel_id,
+                "channel_name": i_ch.channel_name,
+                "channel_link": i_ch.channel_link,
+            }
+            for i_ch in channels_qset
+        ]
+        serializer = ChannelsSerializer(channels_lst, many=True)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+class RelatedNewsView(APIView):
+    """
+    Вьюшки для новостей по определённой тематике
+    """
+    def get(self, request):
+        """
+        Получение новостей по определённой тематике. Передать PK канала.
+        """
+        MY_LOGGER.info(f'Получен GET запрос для получения новостей по определённой тематике: {request.GET}')
+
+        token = request.query_params.get("token")
+        if not token or token != BOT_TOKEN:
+            MY_LOGGER.warning(f'Токен неверный или отсутствует. Значение параметра token={token}')
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        ch_pk = request.query_params.get("ch_pk")
+        if not ch_pk or not ch_pk.isdigit():
+            MY_LOGGER.warning(f'ch_pk невалидный или отсутствует. Значение параметра ch_pk={ch_pk}')
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            ch_obj = Channels.objects.get(pk=int(ch_pk))    # TODO: дописать select_related | prefetch_related
+        except ObjectDoesNotExist:
+            MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        # Достаём все каналы по теме
+        theme_obj = ch_obj.theme if ch_obj.theme else ch_obj.sub_theme.theme
+        ch_qset = Channels.objects.filter(theme=theme_obj)
+        channels_lst = [i_ch for i_ch in ch_qset]
+
+        # Достаём все подтемы по теме
+        sub_themes_qset = SubThemes.objects.filter(theme=theme_obj)
+        for i_sub_theme in sub_themes_qset:
+            i_ch_qset = Channels.objects.filter(sub_theme=i_sub_theme)
+            [channels_lst.append(i_ch) for i_ch in i_ch_qset if i_ch not in channels_lst]
+
+        # По очереди достаём из каналов посты, джойним посты по разделителю в общую строку
+        all_posts_string = ''
+        separator = '\n===&&&***^^^%%%===\n'
+        for i_ch in channels_lst:
+            i_ch_posts = NewsPosts.objects.filter(channel=i_ch)
+            for i_post in i_ch_posts:
+                all_posts_string = separator.join([all_posts_string, i_post.text])
+
+        ser = NewsPostsSerializer({'posts': all_posts_string, 'separator': separator})
+        return Response(data=ser.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        """
+        Запись в БД нового новостного поста.
+        """
+        MY_LOGGER.info(f'Пришёл POST запрос на вьюшку для записи нового новостного поста: {request.POST}')
+        ser = WriteNewPostSerializer(data=request.data)
+        if ser.is_valid():
+            MY_LOGGER.debug(f'Данные валидны, проверяем токен')
+
+            if ser.data.get("token") == BOT_TOKEN:
+                MY_LOGGER.debug(f'Токен успешно проверен')
+
+                try:
+                    ch_obj = Channels.objects.get(pk=ser.data.get("ch_pk"))
+                except ObjectDoesNotExist:
+                    return Response(data={'result': 'channel object does not exist'})
+
+                NewsPosts.objects.create(channel=ch_obj, text=ser.data.get("text"))
+                return Response(data={'result': 'new post write successfull'}, status=status.HTTP_200_OK)
+
+            else:
+                MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. Полученный токен: {ser.data.get("token")}')
+                return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+            MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.data}')
+            return Response({'result': 'Not valid data'}, status.HTTP_400_BAD_REQUEST)
 
 
 def test_view(request):

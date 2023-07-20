@@ -65,6 +65,7 @@ class SubThemes(models.Model):
     """
     Модель для таблицы с подтемами каналов
     """
+    theme = models.ForeignKey(verbose_name='связанная тема', to=Themes, on_delete=models.CASCADE, blank=True, null=False)
     sub_theme_name = models.CharField(verbose_name='имя подтмемы', max_length=200)
     created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
 
@@ -85,8 +86,8 @@ class Channels(models.Model):
     channel_name = models.CharField(verbose_name='название канала', max_length=150)
     channel_link = models.URLField(verbose_name='ссылка на канал', max_length=150)
     created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
-    theme = models.ForeignKey(verbose_name='тема канала', to=Themes, on_delete=models.CASCADE, blank=False, null=True)
-    sub_theme = models.ForeignKey(verbose_name='подтема канала', to=SubThemes, on_delete=models.CASCADE, blank=False, null=True)
+    theme = models.ForeignKey(verbose_name='тема канала', to=Themes, on_delete=models.CASCADE, blank=True, null=True)
+    sub_theme = models.ForeignKey(verbose_name='подтема канала', to=SubThemes, on_delete=models.CASCADE, blank=True, null=True)
 
     def __str__(self):
         return self.channel_link
@@ -162,5 +163,20 @@ def send_bot_command(sender, instance, created, **kwargs):
     if not created:
         bot_command = 'start_acc' if instance.is_run else 'stop_acc'
         MY_LOGGER.info(f'Выполним отправку боту команды: {bot_command!r}')
-        command_msg = f'*&*&{bot_command} {instance.session_file.path}:{instance.pk}|'
-        send_command_to_bot(command=command_msg)
+        command_msg = f'*&*&{bot_command} {instance.session_file.path} {instance.pk} {instance.proxy}'
+        send_command_to_bot(command=command_msg, bot_admin=BotSettings.objects.get(key='bot_admins').value.split()[0])
+
+
+class NewsPosts(models.Model):
+    """
+    Модель для новостных постов.
+    """
+    channel = models.ForeignKey(verbose_name='канал', to=Channels, on_delete=models.CASCADE)
+    text = models.TextField(verbose_name='текст поста', max_length=10000)
+    created_at = models.DateTimeField(verbose_name='дата и время', auto_now_add=True)
+    is_sent = models.BooleanField(verbose_name='отправлен пользователям', default=False)
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'новостной пост'
+        verbose_name_plural = 'новостные посты'

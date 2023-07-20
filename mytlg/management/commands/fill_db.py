@@ -107,7 +107,8 @@ class Command(BaseCommand):
                     defaults={
                         "channel_name": j_ch_name,
                         "channel_link": j_ch_lnk,
-                        "theme": i_theme
+                        "theme": i_theme,
+                        'sub_theme': None,
                     }
                 )
                 logger.success(f'Канал {j_ch_lnk!r} {"создан" if j_created else "уже есть"} в БД.')
@@ -127,7 +128,8 @@ class Command(BaseCommand):
                             defaults={
                                 "channel_name": k_ch_name,
                                 "channel_link": k_ch_lnk,
-                                "sub_theme": i_sub_theme
+                                "sub_theme": i_sub_theme,
+                                'theme': None,
                             }
                         )
                         logger.success(f'Канал {k_ch_lnk!r} {"создан" if j_created else "уже есть"} в БД.')

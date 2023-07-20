@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight, TlgAccounts
+from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight, TlgAccounts, NewsPosts
 
 
 @admin.register(BotUser)
@@ -112,6 +112,7 @@ class TlgAccountsAdmin(admin.ModelAdmin):
     #     ChannelsInline,
     # ]
     list_display = (
+        'pk',
         "session_file",
         "acc_tlg_id",
         "tlg_first_name",
@@ -121,11 +122,28 @@ class TlgAccountsAdmin(admin.ModelAdmin):
         "created_at",
     )
     list_display_links = (
+        "pk",
         "session_file",
         "acc_tlg_id",
         "tlg_first_name",
         "tlg_last_name",
         "proxy",
-        "is_run",
         "created_at",
+    )
+    list_editable = (
+        'is_run',
+    )
+
+
+@admin.register(NewsPosts)
+class NewsPostsAdmin(admin.ModelAdmin):
+    list_display = (
+        'pk',
+        'is_sent',
+        'created_at',
+    )
+    list_display_links = (
+        'pk',
+        'is_sent',
+        'created_at',
     )

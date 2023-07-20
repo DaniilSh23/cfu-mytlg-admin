@@ -68,6 +68,9 @@ INSTALLED_APPS = [
 
     # Созданные приложения
     'mytlg.apps.MytlgConfig',
+
+    # сторонние приложения
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
