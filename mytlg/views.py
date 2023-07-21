@@ -261,13 +261,13 @@ class RelatedNewsView(APIView):
             [channels_lst.append(i_ch) for i_ch in i_ch_qset if i_ch not in channels_lst]
 
         # По очереди достаём из каналов посты, джойним посты по разделителю в общую строку
-        all_posts_string = ''
-        separator = '\n===&&&***^^^%%%===\n'
+        all_posts_lst = []
+        separator = '\n====================\n'
         for i_ch in channels_lst:
             i_ch_posts = NewsPosts.objects.filter(channel=i_ch)
             for i_post in i_ch_posts:
-                all_posts_string = separator.join([all_posts_string, i_post.text])
-
+                all_posts_lst.append(i_post.text)
+        all_posts_string = separator.join(all_posts_lst)
         ser = NewsPostsSerializer({'posts': all_posts_string, 'separator': separator})
         return Response(data=ser.data, status=status.HTTP_200_OK)
 

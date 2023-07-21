@@ -5,8 +5,8 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.gpt_processing import ask_the_gpt
-from mytlg.models import Themes, Channels, BotUser, SubThemes
-from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram
+from mytlg.models import Themes, Channels, BotUser, SubThemes, NewsPosts
+from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot
 
 
 @shared_task
@@ -86,3 +86,24 @@ def gpt_interests_processing(interests: List, tlg_id: str):
     send_gpt_interests_proc_rslt_to_tlg(gpt_rslts=themes_rslt, tlg_id=tlg_id)
 
     MY_LOGGER.info(f'Окончание работы задачи celery по обработке интересов пользователя, через GPT модель.')
+
+
+@shared_task
+def scheduled_task_for_send_post_to_users():
+    """
+    Задача по расписанию для отправки новостных постов пользователям.
+    """
+    MY_LOGGER.info(f'Вызвана задача по отправке новостных постов пользователям')
+
+    news_posts_qset = NewsPosts.objects.filter(is_sent=False)
+    for i_post in news_posts_qset:
+        # Достаём юзеров, связанных с этим каналов
+        bot_users_qset = BotUser.objects.filter(channels=i_post.channel)
+        # Отправляем по очереди всем этим юзерам новостной пост
+        for i_bot_user in bot_users_qset:
+            send_message_by_bot(chat_id=i_bot_user.tlg_id, text=i_post.text)
+        # Когда итерация по новостному посту закончена, ставим в БД посту флаг is_sent=True
+        i_post.is_sent = True
+        i_post.save()
+
+    MY_LOGGER.info(f'Окончание задачи по отправке новостных постов пользователям')

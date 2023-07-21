@@ -176,9 +176,9 @@ CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"    # Это адрес 
 CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}"    # Это адрес бэкэнда результатов (тоже у нас Redis)
 CELERY_TIMEZONE = "Europe/Moscow"   # Временная зона для Celery
 CELERY_BEAT_SCHEDULE = {    # Настройки шедуля
-    'my_task': {
-        'task': 'first_word.tasks.scheduled_task_example',
-        'schedule': 60 * 60  # Время в секундах между запусками задач
+    'send_posts_to_users_task': {
+        'task': 'mytlg.tasks.scheduled_task_for_send_post_to_users',
+        'schedule': 10  # TODO: изменить время запуска шедуля
     }
 }
 
