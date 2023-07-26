@@ -1,0 +1,23 @@
+{% extends 'mytlg/base.html' %}
+
+{% block 'title' %}
+  Загрузка новых каналов
+{% endblock %}
+
+{% block 'body' %}
+    <form action="{% url 'mytlg:upload_new_channels' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="card">
+            <h5 class="card-header">Добавьте JSON файлы с новыми каналами</h5>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="formFileMultiple" class="form-label">Выберите несколько файлов JSON с результатами парсинга</label>
+                    <input name="json_files" class="form-control" type="file" id="formFileMultiple" multiple>
+                </div>
+                <div>
+                    <button type="submit" class="btn rounded-pill btn-dark">Загрузить</button>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}

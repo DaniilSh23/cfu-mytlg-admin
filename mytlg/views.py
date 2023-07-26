@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
@@ -23,6 +24,7 @@ class WriteUsrView(APIView):
     """
     Вьюшка для обработки запросов при старте бота, записывает или обновляет данные о пользователе.
     """
+
     def post(self, request):
         MY_LOGGER.info(f'Получен запрос на вьюшку WriteUsrView: {request.data}')
 
@@ -48,6 +50,7 @@ class StartSettingsView(View):
     """
     Вьюшка для установки стартовых настроек бота
     """
+
     def get(self, request):
         context = {
             "themes": Themes.objects.all()
@@ -86,6 +89,7 @@ class WriteInterestsView(View):
     """
     Вьюшки обработки запросов для записи интересов пользователя
     """
+
     def get(self, request):
         """
         Показываем страничку с формой для заполнения 5 интересов.
@@ -156,6 +160,7 @@ class SetAccRunFlag(APIView):
     """
     Установка флага запуска аккаунта
     """
+
     def post(self, request):
         MY_LOGGER.info(f'Получен POST запрос на вьюшку установки флага запуска аккаунта')
         ser = SetAccDataSerializer(data=request.data)
@@ -188,6 +193,7 @@ class GetChannelsListView(APIView):
     """
     Вьюшка для получения списка каналов для конкретного аккаунта.
     """
+
     def get(self, request):
         """
         В запросе необходимо передать параметр token=токен бота.
@@ -227,6 +233,7 @@ class RelatedNewsView(APIView):
     """
     Вьюшки для новостей по определённой тематике
     """
+
     def get(self, request):
         """
         Получение новостей по определённой тематике. Передать PK канала.
@@ -244,7 +251,7 @@ class RelatedNewsView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            ch_obj = Channels.objects.get(pk=int(ch_pk))    # TODO: дописать select_related | prefetch_related
+            ch_obj = Channels.objects.get(pk=int(ch_pk))  # TODO: дописать select_related | prefetch_related
         except ObjectDoesNotExist:
             MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -298,6 +305,58 @@ class RelatedNewsView(APIView):
         else:
             MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.data}')
             return Response({'result': 'Not valid data'}, status.HTTP_400_BAD_REQUEST)
+
+
+class UploadNewChannels(View):
+    """
+    Вьюшка для загрузки новых каналов (JSON файлы - результат парсинга tgstat).
+    """
+
+    def get(self, request):
+        """
+        Рендерим страничку с формой для загрузки JSON файлов с результатом парсинга.
+        """
+        MY_LOGGER.info(f'Получен GET запрос на вьюшку загрузки новыйх каналов из JSON файла')
+
+        if not request.user.is_staff:
+            MY_LOGGER.warning(f'Юзер, выполнивший запрос, не имеет статус staff. Редиректим для авторизации')
+            return redirect(to=f'/admin/login/?next={reverse_lazy("mytlg:upload_new_channels")}')
+
+        context = {}
+        return render(request, template_name='mytlg/upload_new_channels.html', context=context)
+
+    def post(self, request):  # TODO: дописать обработку файлов с новыми каналами.
+        """
+        Обработка POST запроса, получаем файлы JSON с новыми каналами телеграм.
+        """
+        MY_LOGGER.info(f'Получен POST запрос на вьюшку загрузки новыйх каналов из JSON файла')
+
+        if not request.user.is_staff:
+            MY_LOGGER.warning(f'Юзер, выполнивший запрос, не имеет статус staff. Редиректим для авторизации')
+            return redirect(to=f'/admin/login/?next={reverse_lazy("mytlg:upload_new_channels")}')
+
+        for i_json_file in request.FILES.getlist("json_files"):
+            i_file_dct = json.loads(i_json_file.read().decode('utf-8'))
+            theme_obj, theme_created = Themes.objects.get_or_create(
+                theme_name=i_file_dct.get("category").lower(),
+                defaults={"theme_name": i_file_dct.get("category").lower()},
+            )
+            MY_LOGGER.debug(f'{"Создали" if theme_created else "Достали из БД"} тему {theme_obj}!')
+
+            i_data = i_file_dct.get("data")
+            for i_key, i_val in i_data.items():
+                ch_obj, ch_created = Channels.objects.update_or_create(
+                    channel_link=i_val[1],
+                    defaults={
+                        "channel_name": i_key,
+                        "channel_link": i_val[1],
+                        "subscribers_numb": int(i_val[0]),
+                        "theme": theme_obj,
+                    }
+                )
+                MY_LOGGER.debug(f'Канал {ch_obj} был {"создан" if ch_created else "обновлён"}!')
+
+        return HttpResponse(content=f'Получил файлы, спасибо.')
 
 
 def test_view(request):

@@ -1,7 +1,7 @@
 from django.urls import path
 
 from mytlg.views import StartSettingsView, WriteUsrView, WriteInterestsView, test_view, SetAccRunFlag, \
-    GetChannelsListView, RelatedNewsView
+    GetChannelsListView, RelatedNewsView, UploadNewChannels
 
 app_name = 'mytlg'
 
@@ -12,6 +12,7 @@ urlpatterns = [
     path('set_acc_run_flag/', SetAccRunFlag.as_view(), name='set_acc_run_flag'),
     path('get_channels/', GetChannelsListView.as_view(), name='get_channels'),
     path('related_news/', RelatedNewsView.as_view(), name='related_news'),
+    path('upload_new_channels/', UploadNewChannels.as_view(), name='upload_new_channels'),
 
     path('test/', test_view, name='test'),
 ]

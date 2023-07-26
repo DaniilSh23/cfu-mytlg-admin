@@ -85,9 +85,12 @@ class Channels(models.Model):
     channel_id = models.CharField(verbose_name='ID канала', max_length=50, blank=True, null=False)
     channel_name = models.CharField(verbose_name='название канала', max_length=150)
     channel_link = models.URLField(verbose_name='ссылка на канал', max_length=150)
+    description = models.TextField(verbose_name='описание', max_length=500, blank=True, null=False)
+    subscribers_numb = models.IntegerField(verbose_name='кол-во подписчиков', default=0)
     created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
     theme = models.ForeignKey(verbose_name='тема канала', to=Themes, on_delete=models.CASCADE, blank=True, null=True)
     sub_theme = models.ForeignKey(verbose_name='подтема канала', to=SubThemes, on_delete=models.CASCADE, blank=True, null=True)
+    is_ready = models.BooleanField(verbose_name='готов', default=False)
 
     def __str__(self):
         return self.channel_link
@@ -128,6 +131,7 @@ class TlgAccounts(models.Model):
     is_run = models.BooleanField(verbose_name='аккаунт запущен', default=False)
     created_at = models.DateTimeField(verbose_name='дата и время добавления акка', auto_now_add=True)
     channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='tlg_accounts', blank=True)
+    subscribed_numb_of_channels = models.IntegerField(verbose_name='кол-во подписок на каналы', default=0)
 
     def __str__(self):
         return f'TLG Account ID=={self.acc_tlg_id}'

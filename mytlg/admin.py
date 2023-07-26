@@ -1,6 +1,9 @@
 from django.contrib import admin
+from django.urls import path, reverse
+from django.utils.html import format_html
 
 from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight, TlgAccounts, NewsPosts
+from mytlg.views import UploadNewChannels
 
 
 @admin.register(BotUser)
@@ -120,6 +123,7 @@ class TlgAccountsAdmin(admin.ModelAdmin):
         "proxy",
         "is_run",
         "created_at",
+        "subscribed_numb_of_channels",
     )
     list_display_links = (
         "pk",
@@ -129,6 +133,7 @@ class TlgAccountsAdmin(admin.ModelAdmin):
         "tlg_last_name",
         "proxy",
         "created_at",
+        "subscribed_numb_of_channels",
     )
     list_editable = (
         'is_run',
@@ -147,3 +152,9 @@ class NewsPostsAdmin(admin.ModelAdmin):
         'is_sent',
         'created_at',
     )
+
+    # add_form_template = 'mytlg/upload_new_channels.html'
+    # def custom_link(self, obj):
+    #     url = reverse('mytlg:upload_new_channels')  # Замените 'your_custom_page' на имя вашего URL-шаблона
+    #     return format_html('<a class="button" href="{}">Моя ссылка</a>', url)
+    # custom_link.short_description = 'Кастомная ссылка'
