@@ -1,12 +1,16 @@
 import datetime
+import json
+from io import BytesIO
 from typing import List
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count
 
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.gpt_processing import ask_the_gpt
-from mytlg.models import Themes, Channels, BotUser, SubThemes, NewsPosts
-from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot
+from mytlg.models import Themes, Channels, BotUser, SubThemes, NewsPosts, TlgAccounts, AccountTasks
+from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
+    send_file_by_bot
 
 
 @shared_task
@@ -107,3 +111,49 @@ def scheduled_task_for_send_post_to_users():
         i_post.save()
 
     MY_LOGGER.info(f'Окончание задачи по отправке новостных постов пользователям')
+
+
+@shared_task
+def subscription_to_new_channels():
+    """
+    Таск селери для подписки аккаунтов на новые каналы.
+    """
+    MY_LOGGER.info(f'Запущен таск селери по подписке аккаунтов на новые каналы.')
+
+    acc_qset = TlgAccounts.objects.annotate(num_ch=Count('channels')).filter(num_ch__lt=500, is_run=True)
+    ch_lst = list(Channels.objects.filter(is_ready=False))
+    for i_acc in acc_qset:
+        ch_available_numb = 500 - i_acc.channels.count()    # Считаем кол-во доступных для подписки каналов
+        i_acc_channels_lst = ch_lst[:ch_available_numb]     # Срезаем нужные каналы для аккаунта в отдельный список
+
+        MY_LOGGER.debug(f'Создаём в БД запись о задаче аккаунту')
+        command_data = {
+            "cmd": "subscribe_to_channels",
+            "data": [(i_ch.pk, i_ch.channel_link) for i_ch in i_acc_channels_lst],
+        }
+        acc_task = AccountTasks.objects.create(
+            task_name='подписаться на каналы',
+            tlg_acc=i_acc,
+            initial_data=json.dumps(command_data),
+        )
+
+        MY_LOGGER.debug(f'Отправляем через бота задачу аккаунту')
+        command_data['task_pk'] = acc_task.pk
+        task_is_set = send_file_by_bot(
+            chat_id=i_acc.acc_tlg_id,
+            caption=f"/subscribe_to_channels",
+            file=BytesIO(json.dumps(command_data).encode(encoding='utf-8')),
+            file_name='command_data.txt',
+        )
+        if not task_is_set:
+            MY_LOGGER.warning(f'Не удалось поставить аккаунту задачу! {i_acc!r}')
+            acc_task.delete()   # Удаляем из БД задачу аккаунта
+            continue
+
+        ch_lst = ch_lst[ch_available_numb - 1:]     # Отрезаем из общего списка каналы, которые забрал аккаунт
+        if len(ch_lst) < 0:
+            MY_LOGGER.debug('Список каталов закончился, останавливаем цикл итерации по аккаунтам')
+            break
+
+    MY_LOGGER.info(f'Таск по отправке аккаунтам задач подписаться на каналы завершена.')
+

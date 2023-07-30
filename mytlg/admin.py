@@ -74,6 +74,7 @@ class ChannelsAdmin(admin.ModelAdmin):
         "created_at",
         "theme",
         "sub_theme",
+        "is_ready",
     )
     list_display_links = (
         "pk",
@@ -83,6 +84,7 @@ class ChannelsAdmin(admin.ModelAdmin):
         "created_at",
         "theme",
         "sub_theme",
+        "is_ready",
     )
 
 

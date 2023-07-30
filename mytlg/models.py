@@ -1,8 +1,9 @@
 import os
 import shutil
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.db.models.signals import pre_delete, post_save
+from django.db.models.signals import pre_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from cfu_mytlg_admin import settings
@@ -158,13 +159,19 @@ def delete_session_file(sender, instance, **kwargs):
             shutil.move(file_path_string, os.path.join(settings.MEDIA_ROOT, 'del_sessions'))
 
 
-@receiver(post_save, sender=TlgAccounts)
-def send_bot_command(sender, instance, created, **kwargs):
+@receiver(pre_save, sender=TlgAccounts)
+def send_bot_command(sender, instance, **kwargs):
     """
     Сигнал для отправки боту команды на старт или стоп аккаунта
     """
     MY_LOGGER.info(f'Получен сигнал post_save от модели TlgAccounts.')
-    if not created:
+
+    try:
+        old_instance = TlgAccounts.objects.get(pk=instance.pk)
+    except ObjectDoesNotExist:
+        return
+
+    if old_instance.is_run != instance.is_run:
         bot_command = 'start_acc' if instance.is_run else 'stop_acc'
         MY_LOGGER.info(f'Выполним отправку боту команды: {bot_command!r}')
         command_msg = f'*&*&{bot_command} {instance.session_file.path} {instance.pk} {instance.proxy}'
@@ -184,3 +191,25 @@ class NewsPosts(models.Model):
         ordering = ['-id']
         verbose_name = 'новостной пост'
         verbose_name_plural = 'новостные посты'
+
+
+class AccountTasks(models.Model):
+    """
+    Модель для задач аккаунтам телеграм.
+    """
+    task_name = models.CharField(verbose_name='название задачи', max_length=100)
+    tlg_acc = models.ForeignKey(verbose_name='аккаунт', to=TlgAccounts, on_delete=models.CASCADE)
+    initial_data = models.TextField(verbose_name='исходные данные', max_length=5000)
+    created_at = models.DateTimeField(verbose_name='когда создана', auto_now_add=True)
+    execution_result = models.TextField(verbose_name='результат выполнения', max_length=5000, blank=True, null=False)
+    completed_at = models.DateTimeField(verbose_name='когда завершена', blank=True, null=True)
+    fully_completed = models.BooleanField(verbose_name='завершена полностью', default=False)
+
+    def __str__(self):
+        return f'задача {self.task_name!r} {self.tlg_acc!r}'
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'задача аккаунту'
+        verbose_name_plural = 'задачи аккаунтам'
+

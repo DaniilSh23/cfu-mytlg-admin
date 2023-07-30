@@ -40,3 +40,25 @@ class WriteNewPostSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=50)
     ch_pk = serializers.IntegerField()
     text = serializers.CharField()
+
+
+class ChildTaskResultsSerializer(serializers.Serializer):
+    """
+    Сериалайзер для вложенных элементов поля results в WriteTaskResultSerializer.
+    """
+    ch_pk = serializers.CharField()
+    success = serializers.BooleanField()
+    ch_id = serializers.CharField()
+    ch_name = serializers.CharField()
+    description = serializers.CharField(required=False, allow_blank=True)
+    subscribers_numb = serializers.IntegerField()
+
+
+class WriteTaskResultSerializer(serializers.Serializer):
+    """
+    Сериалайзер для записи в БД резульатов задачи аккаунта.
+    """
+    token = serializers.CharField(max_length=50)
+    task_pk = serializers.CharField(max_length=15)
+    fully_completed = serializers.BooleanField()
+    results = ChildTaskResultsSerializer(many=True)

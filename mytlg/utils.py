@@ -66,7 +66,7 @@ def send_command_to_bot(command: str, bot_admin):
     MY_LOGGER.success(f'Успешная отправка команды боту.')
 
 
-def send_message_by_bot(chat_id, text, disable_notification=False):
+def send_message_by_bot(chat_id, text, disable_notification=False) -> bool | None:
     """
     Функция для отправки сообщений в телеграм от лица бота
     """
@@ -82,3 +82,26 @@ def send_message_by_bot(chat_id, text, disable_notification=False):
                         f'Ответ:{response.json()}')
         return
     MY_LOGGER.success(f'Успешная отправка сообщения от лица бота юзеру {chat_id!r}.')
+    return True
+
+
+def send_file_by_bot(chat_id, caption, file, file_name, disable_notification=False) -> bool | None:
+    """
+    Фукнция для отправки файла от лица бота.
+    file - должен быть байтовым IO объектом.
+    """
+    MY_LOGGER.info(f'Вызвана функция для отправки от лица бота файла в телегу юзеру {chat_id!r}')
+    url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument'
+    data = {'chat_id': chat_id, 'caption': caption, 'disable_notification': disable_notification}
+    # Телега принимает файлы в пар-ре document, в него кладём кортеж с именем, IO объектом файла и MIME типом
+    files = {'document': (file_name, file, 'text/plain')}
+    MY_LOGGER.debug(f'Выполняем запрос на отправку файла от лица бота, данные запроса: {data} | {files}')
+    response = requests.post(url=url, data=data, files=files)
+
+    if response.status_code != 200:
+        MY_LOGGER.error(f'Неудачная отправка файла от лица бота.\n'
+                        f'Запрос: url={url} | data={data} | files={files}\n'
+                        f'Ответ:{response.json()}')
+        return
+    MY_LOGGER.success(f'Успешная отправка файла от лица бота юзеру {chat_id!r}.')
+    return True

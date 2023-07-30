@@ -1,6 +1,9 @@
 import datetime
 import json
+from io import BytesIO
 
+import pytz
+import requests
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -13,11 +16,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib import messages as err_msgs
 
-from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
 from mytlg.gpt_processing import ask_the_gpt
-from mytlg.models import Themes, BotUser, Channels, TlgAccounts, SubThemes, NewsPosts
-from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer
-from mytlg.tasks import gpt_interests_processing
+from mytlg.models import Themes, BotUser, Channels, TlgAccounts, SubThemes, NewsPosts, AccountTasks
+from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
+    WriteTaskResultSerializer
+from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels
 
 
 class WriteUsrView(APIView):
@@ -325,7 +329,7 @@ class UploadNewChannels(View):
         context = {}
         return render(request, template_name='mytlg/upload_new_channels.html', context=context)
 
-    def post(self, request):  # TODO: дописать обработку файлов с новыми каналами.
+    def post(self, request):
         """
         Обработка POST запроса, получаем файлы JSON с новыми каналами телеграм.
         """
@@ -356,26 +360,107 @@ class UploadNewChannels(View):
                 )
                 MY_LOGGER.debug(f'Канал {ch_obj} был {"создан" if ch_created else "обновлён"}!')
 
+        subscription_to_new_channels.delay()
         return HttpResponse(content=f'Получил файлы, спасибо.')
+
+
+class WriteTasksResults(APIView):
+    """
+    Вьюшки для записи результатов заданий аккаунтов.
+    """
+    def post(self, request):
+        MY_LOGGER.info(f'Получен POST запрос на вьюшку записи результатов задачи аккаунта')
+
+        ser = WriteTaskResultSerializer(data=request.data)
+        if ser.is_valid():
+            MY_LOGGER.debug(f'Данные валидны, проверяем токен')
+
+            if ser.data.get("token") == BOT_TOKEN:
+                MY_LOGGER.debug(f'Токен успешно проверен')
+
+                try:
+                    task_obj = AccountTasks.objects.get(pk=int(ser.data.get("task_pk")))
+                except ObjectDoesNotExist:
+                    return Response(data={'result': 'account task object does not exist'},
+                                    status=status.HTTP_404_NOT_FOUND)
+
+                MY_LOGGER.debug(f'Обновляем данные в БД по задаче аккаунта c PK=={task_obj.pk}')
+                task_obj.execution_result = ser.data.get("results")
+                task_obj.fully_completed = ser.data.get("fully_completed")
+                task_obj.completed_at = datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
+                task_obj.save()
+
+                tlg_acc = task_obj.tlg_acc
+
+                MY_LOGGER.debug(f'Обновляем в БД каналы')
+                for i_ch in ser.data.get("results"):
+                    try:
+                        ch_obj = Channels.objects.get(pk=int(i_ch.get("ch_pk")))
+                    except ObjectDoesNotExist:
+                        MY_LOGGER.warning(f'Объект канала с PK=={i_ch.get("ch_pk")} не найден в БД. Пропускаем...')
+                        continue
+                    if not i_ch.get("success"):
+                        MY_LOGGER.debug(f'Канал {ch_obj!r} имеет success=={i_ch.get("success")}. Пропускаем...')
+                        continue
+                    ch_obj.channel_id = i_ch.get("ch_id")
+                    ch_obj.channel_name = i_ch.get("ch_name")
+                    ch_obj.description = i_ch.get("description")
+                    ch_obj.subscribers_numb = i_ch.get("subscribers_numb")
+                    ch_obj.is_ready = True
+                    ch_obj.save()
+                    tlg_acc.channels.add(ch_obj)
+                    tlg_acc.subscribed_numb_of_channels += 1
+                    tlg_acc.save()
+                    MY_LOGGER.debug(f'Канал {ch_obj!r} обновлён и связан с аккаунтом {tlg_acc!r}.')
+
+                return Response(data={'result': 'task result write successful'}, status=status.HTTP_200_OK)
+
+            else:
+                MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. Полученный токен: {ser.data.get("token")}')
+                return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+            MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.data} | Ошибки: {ser.errors}')
+            return Response(data={'result': 'Not valid data'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def test_view(request):
     """
     Тестовая вьюшка. Тестим всякое
     """
-    themes = Themes.objects.all()
-    themes_str = '\n'.join([i_theme.theme_name for i_theme in themes])
-    rslt = ask_the_gpt(
-        base_text=themes_str,
-        query='Подбери подходящую тематику для следующего интереса пользователя: '
-              '"Мне интересна лига чемпионов, составы футбольных команд, хоккей и немного шахмат"',
-        system='Ты ответственный помощник и твоя задача - это классификация интересов пользователей по определённым '
-               'тематикам. На вход ты будешь получать данные с информацией для ответа пользователю - '
-               'это список тематик (каждая тематика с новой строки) и запрос пользователя, который будет содержать '
-               'формулировку его интереса. Твоя задача определить только одну тематику из переданного списка, '
-               'которая с большей вероятностью подходит под интерес пользователя и написать в ответ только эту '
-               'тематику и никакого больше текста в твоём ответе не должно быть. Не придумывай ничего от себя, выбирай'
-               ' тематику строго из того списка, который получил'
-    )
-    print(rslt)
-    return HttpResponse(content=rslt)
+    # themes = Themes.objects.all()
+    # themes_str = '\n'.join([i_theme.theme_name for i_theme in themes])
+    # rslt = ask_the_gpt(
+    #     base_text=themes_str,
+    #     query='Подбери подходящую тематику для следующего интереса пользователя: '
+    #           '"Мне интересна лига чемпионов, составы футбольных команд, хоккей и немного шахмат"',
+    #     system='Ты ответственный помощник и твоя задача - это классификация интересов пользователей по определённым '
+    #            'тематикам. На вход ты будешь получать данные с информацией для ответа пользователю - '
+    #            'это список тематик (каждая тематика с новой строки) и запрос пользователя, который будет содержать '
+    #            'формулировку его интереса. Твоя задача определить только одну тематику из переданного списка, '
+    #            'которая с большей вероятностью подходит под интерес пользователя и написать в ответ только эту '
+    #            'тематику и никакого больше текста в твоём ответе не должно быть. Не придумывай ничего от себя, выбирай'
+    #            ' тематику строго из того списка, который получил'
+    # )
+    # print(rslt)
+
+    file_data = b'Hello, Telegram!'  # Ваши данные для файла
+    # Создаем временный файл-буфер в памяти
+    file_buffer = BytesIO(file_data)
+
+    files = {
+        'document': ('myfile.txt', file_data)  # Создаем объект файла с кастомным именем
+    }
+
+    url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument'
+    data = {'chat_id': 1978587604, 'caption': 'test файлик'}
+    MY_LOGGER.debug(f'Выполняем запрос на отправку сообщения от лица бота, данные запроса: {data}')
+    response = requests.post(url=url, data=data, files=files)  # Выполняем запрос на отправку сообщения
+
+    # Обрабатываем ответ
+    if response.status_code == 200:
+        print('Файл успешно отправлен')
+    else:
+        print('Ошибка отправки файла:', response.text)
+
+    return HttpResponse(content=response.text)
