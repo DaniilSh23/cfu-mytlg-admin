@@ -14,6 +14,5 @@ WORKDIR /django_app
 EXPOSE 8000
 
 # Запуск Celery и Gunicorn
-CMD ["celery", "-A", "cfu_mytlg_admin", "worker", "--loglevel=info", "-B", "&",
-"gunicorn", "--bind", "0.0.0.0:8000", "cfu_mytlg_admin.wsgi:application"]
+CMD ["celery", "-A", "cfu_mytlg_admin", "worker", "--loglevel=info", "-B", "&", "gunicorn", "--bind", "0.0.0.0:8000", "cfu_mytlg_admin.wsgi:application"]
 
