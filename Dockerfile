@@ -4,9 +4,9 @@ RUN mkdir "django_app"
 
 COPY requirements.txt /django_app/
 
-RUN sudo apt install libpq-dev postgresql postgresql-contrib curl
+RUN apt install libpq-dev postgresql postgresql-contrib curl
 
-RUN sudo apt-get install build-essential
+RUN apt-get install build-essential
 
 RUN pip install psycopg2-binary
 
