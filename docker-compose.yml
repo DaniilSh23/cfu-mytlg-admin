@@ -1,0 +1,23 @@
+version: '3'
+services:
+  django_app: 	# Django приложения
+    build: 	# Собираем контейнер из Dockerfile
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000 	# Связываем 8000 порт хоста с 8000 портом контейнера в приложением Django
+    volumes: 	# Устанавливаем место для хранилища файлов
+      - /path/on/host/to/django_app/:/django_app 	# Связываем текущую директорию с папкой проекта в контейнере
+    depends_on: 	# Указываем, что этот контейнер должен запуститься после контейнеров db, redis
+      - db
+      - redis
+  db: 	# БД PostgreSQL
+    image: postgres:latest 	# Берём оф. образ PostgreSQL
+    volumes:
+      - /path/on/host/:/var/lib/postgresql/ 	# Сохраняем все данные БД в ФС хоста
+    environment: 	# Устанавливаем переменные окружения
+      - POSTGRES_DB=your_database_name
+      - POSTGRES_USER=your_username
+      - POSTGRES_PASSWORD=your_password
+  redis:
+    image: redis:latest
