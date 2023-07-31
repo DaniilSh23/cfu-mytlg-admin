@@ -34,6 +34,7 @@ env = environ.Env(
     TG_API_HASH=str,
     BOT_TOKEN=str,
     OPENAI_KEY=str,
+    SEND_NEWS_TIMEOUT=int,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -178,7 +179,11 @@ CELERY_TIMEZONE = "Europe/Moscow"   # Временная зона для Celery
 CELERY_BEAT_SCHEDULE = {    # Настройки шедуля
     'send_posts_to_users_task': {
         'task': 'mytlg.tasks.scheduled_task_for_send_post_to_users',
-        'schedule': 100000  # TODO: изменить время запуска шедуля
+        'schedule': env('SEND_NEWS_TIMEOUT')
+    },
+    'test_task': {
+        'task': 'mytlg.tasks.scheduled_task_example',
+        'schedule': 10
     }
 }
 

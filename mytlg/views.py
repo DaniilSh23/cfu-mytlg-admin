@@ -21,7 +21,7 @@ from mytlg.gpt_processing import ask_the_gpt
 from mytlg.models import Themes, BotUser, Channels, TlgAccounts, SubThemes, NewsPosts, AccountTasks
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     WriteTaskResultSerializer
-from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels
+from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, scheduled_task_example
 
 
 class WriteUsrView(APIView):
@@ -444,23 +444,26 @@ def test_view(request):
     # )
     # print(rslt)
 
-    file_data = b'Hello, Telegram!'  # Ваши данные для файла
-    # Создаем временный файл-буфер в памяти
-    file_buffer = BytesIO(file_data)
+    # file_data = b'Hello, Telegram!'  # Ваши данные для файла
+    # # Создаем временный файл-буфер в памяти
+    # file_buffer = BytesIO(file_data)
+    #
+    # files = {
+    #     'document': ('myfile.txt', file_data)  # Создаем объект файла с кастомным именем
+    # }
+    #
+    # url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument'
+    # data = {'chat_id': 1978587604, 'caption': 'test файлик'}
+    # MY_LOGGER.debug(f'Выполняем запрос на отправку сообщения от лица бота, данные запроса: {data}')
+    # response = requests.post(url=url, data=data, files=files)  # Выполняем запрос на отправку сообщения
+    #
+    # # Обрабатываем ответ
+    # if response.status_code == 200:
+    #     print('Файл успешно отправлен')
+    # else:
+    #     print('Ошибка отправки файла:', response.text)
+    #
+    # return HttpResponse(content=response.text)
 
-    files = {
-        'document': ('myfile.txt', file_data)  # Создаем объект файла с кастомным именем
-    }
-
-    url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument'
-    data = {'chat_id': 1978587604, 'caption': 'test файлик'}
-    MY_LOGGER.debug(f'Выполняем запрос на отправку сообщения от лица бота, данные запроса: {data}')
-    response = requests.post(url=url, data=data, files=files)  # Выполняем запрос на отправку сообщения
-
-    # Обрабатываем ответ
-    if response.status_code == 200:
-        print('Файл успешно отправлен')
-    else:
-        print('Ошибка отправки файла:', response.text)
-
-    return HttpResponse(content=response.text)
+    scheduled_task_example.delay()
+    return HttpResponse(content='okay my friend !', status=200)
