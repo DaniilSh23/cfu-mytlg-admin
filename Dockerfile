@@ -4,7 +4,7 @@ RUN mkdir "django_app"
 
 COPY requirements.txt /django_app/
 
-RUN python -m pip install -r /django_app/requirements.txt
+RUN python -m pip install --no-cache-dir -r /django_app/requirements.txt
 
 COPY . /django_app/
 
