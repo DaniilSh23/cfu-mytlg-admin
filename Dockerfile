@@ -4,19 +4,21 @@ RUN mkdir "django_app"
 
 COPY requirements.txt /django_app/
 
-RUN apt install libpq-dev postgresql postgresql-contrib curl
+RUN apt update
 
-RUN apt-get install build-essential
+RUN apt install python3-dev libpq-dev postgresql-contrib curl -y
+
+RUN apt-get install build-essential -y
 
 RUN pip install psycopg2-binary
-
-RUN pip install psycopg2
 
 RUN python -m pip install --no-cache-dir -r /django_app/requirements.txt
 
 COPY . /django_app/
 
 WORKDIR /django_app
+
+RUN python manage.py migrate
 
 # Открываем 8000 и 6379 порты для Gunicorn и Redis
 EXPOSE 8000
