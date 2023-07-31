@@ -1,0 +1,41 @@
+version: '3'
+services:
+  my_db: # БД PostgreSQL
+    image: postgres:latest # Берём оф. образ PostgreSQL
+    volumes:
+      - /home/da/PycharmProjects/cfu_mytlg_admin/db/:/var/lib/postgresql/ # Сохраняем все данные БД в ФС хоста
+    env_file: # Указываем явно путь к файлу с переменными окружения
+      - .env
+    environment: # Переменные окружения для создания юзера, пароля и БД в postgres
+    # (какого-то хрена работает только если указать в таком порядке)
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_DB: ${DATABASE_NAME}
+    networks:
+      - mynetwork
+  my_redis:
+    image: redis:latest
+    networks:
+      - mynetwork
+  cfu_mytlg_admin: # Django приложения
+    build: # Собираем контейнер из Dockerfile
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL}
+    entrypoint: ["/cfu_mytlg_admin/entrypoint.sh"]
+    ports:
+      - "8000:8000" # Связываем 8000 порт хоста с 8000 портом контейнера в приложением Django
+    volumes: # Устанавливаем место для хранилища файлов
+      - /home/da/PycharmProjects/cfu_mytlg_admin/:/cfu_mytlg_admin # Связываем текущую директорию с папкой проекта в контейнере
+    depends_on: # Указываем, что этот контейнер должен запуститься после контейнеров db, redis
+      - my_db
+      - my_redis
+    networks:
+      - mynetwork
+networks:
+  mynetwork:
