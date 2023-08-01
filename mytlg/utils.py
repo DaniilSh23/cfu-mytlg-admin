@@ -48,15 +48,19 @@ def send_err_msg_for_user_to_telegram(err_msg, tlg_id):
         MY_LOGGER.warning(f'Не удалось отправить текст ошибки пользователю в телеграм: {send_rslt.text}')
 
 
-def send_command_to_bot(command: str, bot_admin):
+def send_command_to_bot(command: str, bot_admin, session_file, disable_notification=True):
     """
-    Отправка боту команды на выполнение каких-либо действий
+    Отправка боту команды на старт или стоп аккаунта. Также шлём и файл сессии
     """
+    # TODO: доработать так, чтобы при стопе аккаунта файл сессии не отправлять
     MY_LOGGER.info(f'Выполняем функцию для отправки команды боту: {command}.')
-    url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
-    data = {'chat_id': bot_admin, 'text': f'{command}', 'disable_notification': True}
-    MY_LOGGER.debug(f'Выполняем запрос на отправку команды боту, данные запроса: {data}')
-    response = requests.post(url=url, data=data)  # Выполняем запрос на отправку сообщения
+    url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument'
+    data = {'chat_id': bot_admin, 'caption': command, 'disable_notification': disable_notification}
+    with open(file=session_file, mode='rb') as file:
+        file_name = session_file.split('/')[-1]
+        files = {'document': (file_name, file)}
+        MY_LOGGER.debug(f'Выполняем запрос на отправку команды боту, данные запроса: {data}')
+        response = requests.post(url=url, data=data, files=files)  # Выполняем запрос на отправку сообщения с файлом
 
     if response.status_code != 200:  # Обработка неудачного запроса на отправку
         MY_LOGGER.error(f'Неудачная отправка команды боту.\n'

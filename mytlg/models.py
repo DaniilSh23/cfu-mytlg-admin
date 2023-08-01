@@ -172,10 +172,16 @@ def send_bot_command(sender, instance, **kwargs):
         return
 
     if old_instance.is_run != instance.is_run:
+        # TODO: разделить функционал отправки команды на старт и стоп аккаунта
         bot_command = 'start_acc' if instance.is_run else 'stop_acc'
         MY_LOGGER.info(f'Выполним отправку боту команды: {bot_command!r}')
-        command_msg = f'*&*&{bot_command} {instance.session_file.path} {instance.pk} {instance.proxy}'
-        send_command_to_bot(command=command_msg, bot_admin=BotSettings.objects.get(key='bot_admins').value.split()[0])
+        file_name = instance.session_file.path.split('/')[-1]
+        command_msg = f'/{bot_command} {instance.pk} {file_name} {instance.proxy if bot_command == "start_acc" else ""}'
+        send_command_to_bot(
+            command=command_msg,
+            bot_admin=BotSettings.objects.get(key='bot_admins').value.split()[0],
+            session_file=instance.session_file.path,
+        )
 
 
 class NewsPosts(models.Model):
