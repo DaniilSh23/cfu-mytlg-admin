@@ -181,10 +181,10 @@ CELERY_BEAT_SCHEDULE = {    # Настройки шедуля
         'task': 'mytlg.tasks.scheduled_task_for_send_post_to_users',
         'schedule': env('SEND_NEWS_TIMEOUT')
     },
-    'test_task': {
-        'task': 'mytlg.tasks.scheduled_task_example',
-        'schedule': 10
-    }
+    # 'test_task': {
+    #     'task': 'mytlg.tasks.scheduled_task_example',
+    #     'schedule': 10
+    # }
 }
 
 # Настройки логгера
