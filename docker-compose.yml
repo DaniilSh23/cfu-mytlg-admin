@@ -3,7 +3,7 @@ services:
   my_db: # БД PostgreSQL
     image: postgres:latest # Берём оф. образ PostgreSQL
     volumes:
-      - /home/da/PycharmProjects/cfu_mytlg_admin/db/:/var/lib/postgresql/ # Сохраняем все данные БД в ФС хоста
+      - ${POSTGRES_VOLUME_PATH}:/var/lib/postgresql/ # Сохраняем все данные БД в ФС хоста
     env_file: # Указываем явно путь к файлу с переменными окружения
       - .env
     environment: # Переменные окружения для создания юзера, пароля и БД в postgres
@@ -31,7 +31,7 @@ services:
     ports:
       - "8000:8000" # Связываем 8000 порт хоста с 8000 портом контейнера в приложением Django
     volumes: # Устанавливаем место для хранилища файлов
-      - /home/da/PycharmProjects/cfu_mytlg_admin/:/cfu_mytlg_admin # Связываем текущую директорию с папкой проекта в контейнере
+      - ${DJANGO_VOLUME_PATH}:/cfu_mytlg_admin # Связываем текущую директорию с папкой проекта в контейнере
     depends_on: # Указываем, что этот контейнер должен запуститься после контейнеров db, redis
       - my_db
       - my_redis
