@@ -208,6 +208,6 @@ BOT_TOKEN = env('BOT_TOKEN')
 OPENAI_API_KEY = env('OPENAI_API_KEY')
 
 # Настройки для проксирования запросов от Nginx при деплое через докер
-CSRF_TRUSTED_ORIGINS = ['0.0.0.0:8000']
+CSRF_TRUSTED_ORIGINS = ['http://0.0.0.0:8000']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
