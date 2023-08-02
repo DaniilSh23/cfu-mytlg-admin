@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight, TlgAccounts, NewsPosts
+from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight, TlgAccounts, NewsPosts, \
+    AccountTasks
 from mytlg.views import UploadNewChannels
 
 
@@ -160,3 +161,23 @@ class NewsPostsAdmin(admin.ModelAdmin):
     #     url = reverse('mytlg:upload_new_channels')  # Замените 'your_custom_page' на имя вашего URL-шаблона
     #     return format_html('<a class="button" href="{}">Моя ссылка</a>', url)
     # custom_link.short_description = 'Кастомная ссылка'
+
+
+@admin.register(AccountTasks)
+class AccountTasksAdmin(admin.ModelAdmin):
+    list_display = (
+        'pk',
+        'task_name',
+        'tlg_acc',
+        'created_at',
+        'completed_at',
+        'fully_completed',
+    )
+    list_display_links = (
+        'pk',
+        'task_name',
+        'tlg_acc',
+        'created_at',
+        'completed_at',
+        'fully_completed',
+    )
