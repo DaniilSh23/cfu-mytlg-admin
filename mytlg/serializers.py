@@ -48,10 +48,10 @@ class ChildTaskResultsSerializer(serializers.Serializer):
     """
     ch_pk = serializers.CharField()
     success = serializers.BooleanField()
-    ch_id = serializers.CharField()
-    ch_name = serializers.CharField()
+    ch_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    ch_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     description = serializers.CharField(required=False, allow_blank=True)
-    subscribers_numb = serializers.IntegerField()
+    subscribers_numb = serializers.IntegerField(required=False, default=0)
 
 
 class WriteTaskResultSerializer(serializers.Serializer):

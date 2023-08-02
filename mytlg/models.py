@@ -148,6 +148,12 @@ def delete_session_file(sender, instance, **kwargs):
     """
     Функция, которая получает сигнал при удалении модели TlgAccounts и удаляет файл сессии телеграм
     """
+    if os.path.exists(instance.session_file.path):
+        MY_LOGGER.debug(f'Удаляем файл сессии {instance.session_file.path!r}')
+        os.remove(instance.session_file.path)
+    return
+
+    # TODO: ниже логика для soft delete, потом возможно убрать
     MY_LOGGER.info(f'Получен сигнал pre_delete от модели TlgAccounts. Выполняем soft-delete файла сессии')
     if not os.path.exists(os.path.join(settings.MEDIA_ROOT, 'del_sessions')):   # Если нет папки del_sessions
         os.mkdir(os.path.join(settings.MEDIA_ROOT, 'del_sessions'))     # То создаём
