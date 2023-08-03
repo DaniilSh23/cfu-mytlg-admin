@@ -20,6 +20,10 @@ echo "from django.contrib.auth import get_user_model; User = get_user_model(); U
 echo "Set keys in Django project"
 python manage.py setkeys
 
+# Load DB data from fixture
+echo "Load DB data from fixture"
+python manage.py loaddata db_data_*
+
 # Start celery
 echo "Starting celery"
 celery -A cfu_mytlg_admin worker -l INFO -B &
