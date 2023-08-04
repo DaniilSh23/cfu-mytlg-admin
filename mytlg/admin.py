@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, reverse
 from django.utils.html import format_html
 
+from mytlg.admin_mixins import ExportAsJSONMixin
 from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight, TlgAccounts, NewsPosts, \
     AccountTasks
 from mytlg.views import UploadNewChannels
@@ -66,7 +67,10 @@ class ThemesAdmin(admin.ModelAdmin):
 
 
 @admin.register(Channels)
-class ChannelsAdmin(admin.ModelAdmin):
+class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
+    actions = [     # список доп. действий в админке для записей данной модели
+        'export_json',   # export_csv - имя метода в миксине ExportAsCSVMixin
+    ]
     list_display = (
         "pk",
         "channel_id",

@@ -424,6 +424,19 @@ class WriteTasksResults(APIView):
             return Response(data={'result': 'Not valid data'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UpdateChannelsView(APIView):  # TODO: удалить нах, потенциальная дыра системы
+    """
+    Вьюшка для обновления записей каналов.
+    """
+    def post(self, request):
+        print(request.data)
+        ch_obj = Channels.objects.get(pk=int(request.data.get('pk')))
+        ch_obj.channel_id = request.data.get('pk')
+        ch_obj.description = request.data.get('pk')
+        ch_obj.save()
+        return Response(data={'result': f'{ch_obj} | {ch_obj.channel_id} | {ch_obj.description}'}, status=status.HTTP_200_OK)
+
+
 def test_view(request):
     """
     Тестовая вьюшка. Тестим всякое
@@ -465,5 +478,19 @@ def test_view(request):
     #
     # return HttpResponse(content=response.text)
 
-    scheduled_task_example.delay()
+    # scheduled_task_example.delay()
+    # return HttpResponse(content='okay my friend !', status=200)
+
+    # Получение ботом инфы о каналах
+    MY_LOGGER.info(f'Получаем инфу о канале ботом')
+    send_rslt = requests.post(
+        url=f'https://api.telegram.org/bot{BOT_TOKEN}/getChat',
+        data={
+            'chat_id': '@onIy_crypto',
+        }
+    )
+    if send_rslt.status_code == 200:
+        MY_LOGGER.success(f'Успешная получена инфа о чате: {send_rslt.json()}')
+    else:
+        MY_LOGGER.warning(f'Не удалось отправить текст ошибки пользователю в телеграм: {send_rslt.text}')
     return HttpResponse(content='okay my friend !', status=200)
