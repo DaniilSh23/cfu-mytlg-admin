@@ -29,8 +29,8 @@ class NewsPostsSerializer(serializers.Serializer):
     """
     Сериалайзер для ответа на запрос новостей по конкретной теме
     """
-    posts = serializers.CharField()
-    separator = serializers.CharField()
+    text = serializers.CharField()
+    embedding = serializers.CharField()
 
 
 class WriteNewPostSerializer(serializers.Serializer):
@@ -40,6 +40,7 @@ class WriteNewPostSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=50)
     ch_pk = serializers.IntegerField()
     text = serializers.CharField()
+    embedding = serializers.CharField()
 
 
 class ChildTaskResultsSerializer(serializers.Serializer):

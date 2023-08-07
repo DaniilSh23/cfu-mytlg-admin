@@ -247,39 +247,36 @@ class RelatedNewsView(APIView):
         token = request.query_params.get("token")
         if not token or token != BOT_TOKEN:
             MY_LOGGER.warning(f'Токен неверный или отсутствует. Значение параметра token={token}')
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
 
         ch_pk = request.query_params.get("ch_pk")
         if not ch_pk or not ch_pk.isdigit():
             MY_LOGGER.warning(f'ch_pk невалидный или отсутствует. Значение параметра ch_pk={ch_pk}')
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid channel pk')
 
         try:
-            ch_obj = Channels.objects.get(pk=int(ch_pk))  # TODO: дописать select_related | prefetch_related
+            ch_obj = Channels.objects.get(pk=int(ch_pk))  # TODO: оптимизировать запрос к БД
         except ObjectDoesNotExist:
             MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_404_NOT_FOUND, data='channel not found')
 
-        # Достаём все каналы по теме
+        # Достаём все id каналов по теме
         theme_obj = ch_obj.theme if ch_obj.theme else ch_obj.sub_theme.theme
-        ch_qset = Channels.objects.filter(theme=theme_obj)
-        channels_lst = [i_ch for i_ch in ch_qset]
+        ch_qset = Channels.objects.filter(theme=theme_obj).only("id")
+        ch_ids_lst = [i_ch.pk for i_ch in ch_qset]
 
         # Достаём все подтемы по теме
-        sub_themes_qset = SubThemes.objects.filter(theme=theme_obj)
-        for i_sub_theme in sub_themes_qset:
-            i_ch_qset = Channels.objects.filter(sub_theme=i_sub_theme)
-            [channels_lst.append(i_ch) for i_ch in i_ch_qset if i_ch not in channels_lst]
+        sub_themes_qset = SubThemes.objects.filter(theme=theme_obj).only("id")
+        sub_themes_ids_lst = [i_sub_theme.pk for i_sub_theme in sub_themes_qset]
+        i_ch_qset = Channels.objects.filter(sub_theme__id__in=sub_themes_ids_lst).only("id")
+        [ch_ids_lst.append(i_ch.pk) for i_ch in i_ch_qset if i_ch.pk not in ch_ids_lst]
 
-        # По очереди достаём из каналов посты, джойним посты по разделителю в общую строку
+        # Складываем айдишники каналов и вытаскиваем из БД одним запросов все посты
         all_posts_lst = []
-        separator = '\n====================\n'
-        for i_ch in channels_lst:
-            i_ch_posts = NewsPosts.objects.filter(channel=i_ch)
-            for i_post in i_ch_posts:
-                all_posts_lst.append(i_post.text)
-        all_posts_string = separator.join(all_posts_lst)
-        ser = NewsPostsSerializer({'posts': all_posts_string, 'separator': separator})
+        i_ch_posts = NewsPosts.objects.filter(channel__id__in=ch_ids_lst).only("text", "embedding")
+        for i_post in i_ch_posts:
+            all_posts_lst.append({"text": i_post.text, "embedding": i_post.embedding})
+        ser = NewsPostsSerializer(all_posts_lst, many=True)
         return Response(data=ser.data, status=status.HTTP_200_OK)
 
     def post(self, request):

@@ -196,6 +196,7 @@ class NewsPosts(models.Model):
     """
     channel = models.ForeignKey(verbose_name='канал', to=Channels, on_delete=models.CASCADE)
     text = models.TextField(verbose_name='текст поста', max_length=10000)
+    embedding = models.TextField(verbose_name='эмбеддинг', blank=True, null=False)
     created_at = models.DateTimeField(verbose_name='дата и время', auto_now_add=True)
     is_sent = models.BooleanField(verbose_name='отправлен пользователям', default=False)
 
