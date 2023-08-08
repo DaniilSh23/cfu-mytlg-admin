@@ -296,7 +296,7 @@ class RelatedNewsView(APIView):
                 except ObjectDoesNotExist:
                     return Response(data={'result': 'channel object does not exist'})
 
-                NewsPosts.objects.create(channel=ch_obj, text=ser.data.get("text"))
+                NewsPosts.objects.create(channel=ch_obj, text=ser.data.get("text"), embedding=ser.data.get("embedding"))
                 return Response(data={'result': 'new post write successfull'}, status=status.HTTP_200_OK)
 
             else:
