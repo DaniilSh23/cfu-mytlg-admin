@@ -179,7 +179,8 @@ CELERY_TIMEZONE = "Europe/Moscow"   # Временная зона для Celery
 CELERY_BEAT_SCHEDULE = {    # Настройки шедуля
     'send_posts_to_users_task': {
         'task': 'mytlg.tasks.scheduled_task_for_send_post_to_users',
-        'schedule': env('SEND_NEWS_TIMEOUT')
+        'schedule': env('SEND_NEWS_TIMEOUT'),
+        # 'schedule': 10,
     },
     # 'test_task': {
     #     'task': 'mytlg.tasks.scheduled_task_example',

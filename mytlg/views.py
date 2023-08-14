@@ -5,6 +5,7 @@ from io import BytesIO
 import pytz
 import requests
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
@@ -20,7 +21,7 @@ from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
 from mytlg.gpt_processing import ask_the_gpt
 from mytlg.models import Themes, BotUser, Channels, TlgAccounts, SubThemes, NewsPosts, AccountTasks
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
-    WriteTaskResultSerializer
+    WriteTaskResultSerializer, UpdateChannelsSerializer
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, scheduled_task_example
 
 
@@ -421,17 +422,56 @@ class WriteTasksResults(APIView):
             return Response(data={'result': 'Not valid data'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UpdateChannelsView(APIView):  # TODO: удалить нах, потенциальная дыра системы
+class UpdateChannelsView(APIView):
     """
     Вьюшка для обновления записей каналов.
     """
     def post(self, request):
-        print(request.data)
-        ch_obj = Channels.objects.get(pk=int(request.data.get('pk')))
-        ch_obj.channel_id = request.data.get('pk')
-        ch_obj.description = request.data.get('pk')
-        ch_obj.save()
-        return Response(data={'result': f'{ch_obj} | {ch_obj.channel_id} | {ch_obj.description}'}, status=status.HTTP_200_OK)
+        MY_LOGGER.info(f'Получен POST запрос на обновление данных о каналах')
+
+        ser = UpdateChannelsSerializer(data=request.data)
+        if ser.is_valid():
+            MY_LOGGER.debug(f'Данные валидны, проверяем токен')
+
+            if ser.data.get("token") != BOT_TOKEN:
+                MY_LOGGER.warning(f'Токен неверный!')
+                return Response(data='invalid token', status=status.HTTP_400_BAD_REQUEST)
+
+            # Достаём объект Tlg аккаунта
+            try:
+                tlg_acc_obj = TlgAccounts.objects.get(pk=int(ser.data.get("acc_pk")))
+            except ObjectDoesNotExist:
+                MY_LOGGER.warning(f'Не найден TLG ACC с PK=={ser.data.get("acc_pk")!r}')
+                return Response(data=f'Not found tlg acc with PK == {ser.data.get("acc_pk")}',
+                                status=status.HTTP_404_NOT_FOUND)
+
+            # Обрабатываем каналы
+            ch_ids_lst = [int(i_ch.get("ch_pk")) for i_ch in ser.data.get('channels')]
+            ch_qset = Channels.objects.filter(id__in=ch_ids_lst)
+            for i_ch in ch_qset:
+                for j_ch in ser.data.get('channels'):
+                    if int(j_ch.get("ch_pk")) == i_ch.pk:
+                        new_ch_data = j_ch
+                        break
+                else:
+                    MY_LOGGER.warning(f'В запросе не приходила инфа по каналу с PK=={i_ch.pk!r}')
+                    ch_ids_lst.remove(i_ch.pk)
+                    continue
+                i_ch.channel_id = new_ch_data.get('ch_id')
+                i_ch.channel_name = new_ch_data.get('ch_name')
+                i_ch.subscribers_numb = new_ch_data.get('subscribers_numb')
+                i_ch.is_ready = True
+
+            MY_LOGGER.debug(f'Выполняем в транзакции 2 запроса: обновление каналов, привязка к ним акка tlg')
+            with transaction.atomic():
+                Channels.objects.bulk_update(ch_qset, ["channel_id", "channel_name", "subscribers_numb", "is_ready"])
+                tlg_acc_obj.channels.add(*ch_ids_lst)
+            MY_LOGGER.success(f'Запрос обработан, даём успешный ответ.')
+            return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
+
+        else:
+            MY_LOGGER.warning(f'Невалидные данные запроса. {ser.errors!r}')
+            return Response(data='Invalid request data', status=status.HTTP_400_BAD_REQUEST)
 
 
 def test_view(request):

@@ -76,19 +76,16 @@ def gpt_interests_processing(interests: List, tlg_id: str):
             try:
                 rel_theme = Themes.objects.get(theme_name=gpt_rslt.lower())
                 bot_usr.themes.add(rel_theme)
-                rel_channels = Channels.objects.filter(theme=rel_theme)[:5]
             except ObjectDoesNotExist:
                 try:
                     rel_theme = SubThemes.objects.get(sub_theme_name=gpt_rslt.lower())
                     bot_usr.sub_themes.add(rel_theme)
-                    rel_channels = Channels.objects.filter(sub_theme=rel_theme)[:5]
                 except ObjectDoesNotExist:
                     MY_LOGGER.warning(f'В БД не найдена тема или подтема: {gpt_rslt!r}. Пользователь не привязан.')
                     continue
-            [bot_usr.channels.add(i_ch) for i_ch in rel_channels]
         themes_rslt.append(gpt_rslt.lower())
 
-    MY_LOGGER.debug(f'Отправка в телеграм подобранных тем и каналов')
+    MY_LOGGER.debug(f'Отправка в телеграм подобранных тем.')
     send_gpt_interests_proc_rslt_to_tlg(gpt_rslts=themes_rslt, tlg_id=tlg_id)
 
     MY_LOGGER.info(f'Окончание работы задачи celery по обработке интересов пользователя, через GPT модель.')
@@ -101,10 +98,10 @@ def scheduled_task_for_send_post_to_users():
     """
     MY_LOGGER.info(f'Вызвана задача по отправке новостных постов пользователям')
 
-    news_posts_qset = NewsPosts.objects.filter(is_sent=False)
+    news_posts_qset = NewsPosts.objects.filter(is_sent=False).only('text', 'channel').prefetch_related('channel')
     for i_post in news_posts_qset:
         # Достаём юзеров, связанных с этим каналов
-        bot_users_qset = BotUser.objects.filter(channels=i_post.channel)
+        bot_users_qset = BotUser.objects.filter(themes=i_post.channel.theme).only('tlg_id')
         # Отправляем по очереди всем этим юзерам новостной пост
         for i_bot_user in bot_users_qset:
             send_message_by_bot(chat_id=i_bot_user.tlg_id, text=i_post.text)

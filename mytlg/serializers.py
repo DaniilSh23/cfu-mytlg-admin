@@ -46,6 +46,7 @@ class WriteNewPostSerializer(serializers.Serializer):
 class ChildTaskResultsSerializer(serializers.Serializer):
     """
     Сериалайзер для вложенных элементов поля results в WriteTaskResultSerializer.
+    Также используется в поле channels в UpdateChannelsSerializer.
     """
     ch_pk = serializers.CharField()
     success = serializers.BooleanField()
@@ -63,3 +64,12 @@ class WriteTaskResultSerializer(serializers.Serializer):
     task_pk = serializers.CharField(max_length=15)
     fully_completed = serializers.BooleanField()
     results = ChildTaskResultsSerializer(many=True)
+
+
+class UpdateChannelsSerializer(serializers.Serializer):
+    """
+    Сериалайзер для обновления в БД данных о каналах
+    """
+    token = serializers.CharField(max_length=50)
+    acc_pk = serializers.IntegerField()
+    channels = ChildTaskResultsSerializer(many=True)
