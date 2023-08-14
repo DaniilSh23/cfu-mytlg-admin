@@ -7,7 +7,7 @@ from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
 
-from cfu_mytlg_admin.settings import MY_LOGGER, MAX_CHANNELS_PER_ACC
+from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.gpt_processing import ask_the_gpt
 from mytlg.models import Themes, Channels, BotUser, SubThemes, NewsPosts, TlgAccounts, AccountTasks, BotSettings
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
@@ -119,7 +119,7 @@ def subscription_to_new_channels():
     """
     MY_LOGGER.info(f'Запущен таск селери по подписке аккаунтов на новые каналы.')
 
-    max_ch_per_acc = int(BotSettings.objects.get(key='max_channels_per_acc').value),
+    max_ch_per_acc = int(BotSettings.objects.get(key='max_channels_per_acc').value)
     acc_qset = TlgAccounts.objects.annotate(num_ch=Count('channels')).filter(num_ch__lt=max_ch_per_acc, is_run=True)
     ch_lst = list(Channels.objects.filter(is_ready=False))
     for i_acc in acc_qset:

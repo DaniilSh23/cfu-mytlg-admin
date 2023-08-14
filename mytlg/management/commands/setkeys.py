@@ -12,7 +12,7 @@ class Command(BaseCommand):
         logger.info('Старт команды по установке настроек')
         keys = {
             'bot_admins': '1978587604',
-            'max_channels_per_acc': '150',
+            'max_channels_per_acc': '85',
         }
         for i_key, i_val in keys.items():
             _, i_created = BotSettings.objects.update_or_create(

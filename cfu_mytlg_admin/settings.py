@@ -204,7 +204,6 @@ MY_LOGGER.add(  # системные логи в файл
 
 # Настройки для Telegram
 BOT_TOKEN = env('BOT_TOKEN')
-MAX_CHANNELS_PER_ACC = env('MAX_CHANNELS_PER_ACC')
 
 # OpenAI Token
 OPENAI_API_KEY = env('OPENAI_API_KEY')
