@@ -14,6 +14,7 @@ python manage.py migrate
 
 # Create superuser for Django
 echo "Create superuser for Django"
+echo "Username '${DJANGO_SUPERUSER_USERNAME}' | Password '${DJANGO_SUPERUSER_PASSWORD}' | mail '${DJANGO_SUPERUSER_EMAIL}'"
 echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='${DJANGO_SUPERUSER_USERNAME}').exists() or User.objects.create_superuser('${DJANGO_SUPERUSER_USERNAME}', '${DJANGO_SUPERUSER_EMAIL}', '${DJANGO_SUPERUSER_PASSWORD}')" | python manage.py shell
 
 # Set keys in Django project
