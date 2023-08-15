@@ -53,7 +53,7 @@ class ThemesAdmin(admin.ModelAdmin):
 
 
 @admin.register(SubThemes)
-class ThemesAdmin(admin.ModelAdmin):
+class SubThemesAdmin(admin.ModelAdmin):
     list_display = (
         "pk",
         "sub_theme_name",
@@ -152,11 +152,13 @@ class NewsPostsAdmin(admin.ModelAdmin):
     list_display = (
         'pk',
         'is_sent',
+        'channel',
         'created_at',
     )
     list_display_links = (
         'pk',
         'is_sent',
+        'channel',
         'created_at',
     )
 
