@@ -284,7 +284,7 @@ class RelatedNewsView(APIView):
         """
         Запись в БД нового новостного поста.
         """
-        MY_LOGGER.info(f'Пришёл POST запрос на вьюшку для записи нового новостного поста: {request.POST}')
+        MY_LOGGER.info(f'Пришёл POST запрос на вьюшку для записи нового новостного поста')
         ser = WriteNewPostSerializer(data=request.data)
         if ser.is_valid():
             MY_LOGGER.debug(f'Данные валидны, проверяем токен')
@@ -305,7 +305,7 @@ class RelatedNewsView(APIView):
                 return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
 
         else:
-            MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.data}')
+            MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.POST}')
             return Response({'result': 'Not valid data'}, status.HTTP_400_BAD_REQUEST)
 
 
