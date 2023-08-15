@@ -99,15 +99,25 @@ def scheduled_task_for_send_post_to_users():
     MY_LOGGER.info(f'Вызвана задача по отправке новостных постов пользователям')
 
     news_posts_qset = NewsPosts.objects.filter(is_sent=False).only('text', 'channel').prefetch_related('channel')
+    mailing_users_set = set()
+
+    MY_LOGGER.debug(f'Отправляем посты')
     for i_post in news_posts_qset:
         # Достаём юзеров, связанных с этим каналов
         bot_users_qset = BotUser.objects.filter(themes=i_post.channel.theme).only('tlg_id')
         # Отправляем по очереди всем этим юзерам новостной пост
         for i_bot_user in bot_users_qset:
-            send_message_by_bot(chat_id=i_bot_user.tlg_id, text=i_post.text)
+            send_message_by_bot(chat_id=i_bot_user.tlg_id, text=i_post.text, disable_notification=True)
+            mailing_users_set.add(i_bot_user.tlg_id)
         # Когда итерация по новостному посту закончена, ставим в БД посту флаг is_sent=True
         i_post.is_sent = True
         i_post.save()
+
+    # Отправляем пользователям уведомление, что для них есть новый контент
+    MY_LOGGER.debug(f'Отправляем уведомления пользователям')
+    for _ in range(len(mailing_users_set)):
+        send_message_by_bot(chat_id=mailing_users_set.pop(),
+                            text='🗞 Для Вас есть свежие новости.', disable_notification=False)
 
     MY_LOGGER.info(f'Окончание задачи по отправке новостных постов пользователям')
 
