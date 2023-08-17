@@ -120,7 +120,7 @@ class WriteInterestsView(View):
         # Проверка данных запроса
         tlg_id = request.POST.get("tlg_id")
         interests = request.POST.getlist("interest")
-        when_send_news = request.POST.get('when_send_news')
+        # when_send_news = request.POST.get('when_send_news')
 
         check_interests = [i_interest for i_interest in interests if i_interest != '']
         if len(check_interests) < 1:
@@ -128,11 +128,12 @@ class WriteInterestsView(View):
             err_msgs.error(request, f'Заполните хотя бы 1 интерес')
             return redirect(to=reverse_lazy('mytlg:write_interests'))
 
-        elif not when_send_news:
-            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. '
-                              f'В запросе отсутствует время, когда слать новости')
-            err_msgs.error(request, f'Пожалуйста, укажите время, когда хотите получать новости!')
-            return redirect(to=reverse_lazy('mytlg:write_interests'))
+        # TODO: спрятал время, когда присылать новости
+        # elif not when_send_news:
+        #     MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. '
+        #                       f'В запросе отсутствует время, когда слать новости')
+        #     err_msgs.error(request, f'Пожалуйста, укажите время, когда хотите получать новости!')
+        #     return redirect(to=reverse_lazy('mytlg:write_interests'))
 
         elif not tlg_id or not tlg_id.isdigit():
             MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. '
