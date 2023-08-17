@@ -144,19 +144,19 @@ class WriteInterestsView(View):
         MY_LOGGER.debug(f'Обрабатываем через модель GPT интересы пользователя')
         gpt_interests_processing.delay(interests=check_interests, tlg_id=tlg_id)
 
-        MY_LOGGER.debug(f'Записываем в БД пользователю время, когда он будет получать новости')
-        try:
-            bot_usr_obj = BotUser.objects.get(tlg_id=int(tlg_id))
-        except ObjectDoesNotExist:
-            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. Юзер с tlg_id=={tlg_id} не найден в БД!')
-            err_msgs.error(request, f'Пользователь: Не найден Ваш профиль! Отправьте боту команду /start')
-            return redirect(to=reverse_lazy('mytlg:write_interests'))
-        bot_usr_obj.when_send_news = when_send_news
-        bot_usr_obj.save()
+        # MY_LOGGER.debug(f'Записываем в БД пользователю время, когда он будет получать новости')
+        # try:
+        #     bot_usr_obj = BotUser.objects.get(tlg_id=int(tlg_id))
+        # except ObjectDoesNotExist:
+        #     MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. Юзер с tlg_id=={tlg_id} не найден в БД!')
+        #     err_msgs.error(request, f'Пользователь: Не найден Ваш профиль! Отправьте боту команду /start')
+        #     return redirect(to=reverse_lazy('mytlg:write_interests'))
+        # bot_usr_obj.when_send_news = when_send_news
+        # bot_usr_obj.save()
 
         context = dict(
             header='⚙️ Настройка завершена!',
-            description=f'👌 Окей. Теперь бот будет присылать Вам новости 🗞 в {when_send_news} каждый день',
+            description=f'👌 Окей. Теперь бот будет присылать Вам новости 🗞 каждый час.',
             btn_text='Хорошо, спасибо!'
         )
         return render(request, template_name='mytlg/success.html', context=context)
