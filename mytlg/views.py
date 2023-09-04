@@ -18,11 +18,10 @@ from rest_framework import status
 from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
-from mytlg.gpt_processing import ask_the_gpt
 from mytlg.models import Themes, BotUser, Channels, TlgAccounts, SubThemes, NewsPosts, AccountTasks
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     WriteTaskResultSerializer, UpdateChannelsSerializer
-from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, scheduled_task_example
+from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts
 
 
 class WriteUsrView(APIView):
@@ -473,6 +472,26 @@ class UpdateChannelsView(APIView):
         else:
             MY_LOGGER.warning(f'Невалидные данные запроса. {ser.errors!r}')
             return Response(data='Invalid request data', status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetActiveAccounts(APIView):
+    """
+    Вьюшка для запроса активных аккаунтов из БД.
+    """
+    def get(self, request):
+        """
+        Обрабатываем GET запрос и отправляем боту команды на старт нужных аккаунтов.
+        """
+        MY_LOGGER.info(f'Получен GET запрос на вьюшку для получения активных аккаунтов')
+
+        token = request.query_params.get("token")
+        if not token or token != BOT_TOKEN:
+            MY_LOGGER.warning(f'Токен неверный или отсутствует. Значение параметра token={token}')
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
+
+        # Запускаем функцию отправки боту команд для старта аккаунтов
+        start_or_stop_accounts.delay()
+        return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
 
 
 def test_view(request):

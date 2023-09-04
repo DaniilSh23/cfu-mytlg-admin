@@ -109,3 +109,16 @@ def send_file_by_bot(chat_id, caption, file, file_name, disable_notification=Fal
         return
     MY_LOGGER.success(f'Успешная отправка файла от лица бота юзеру {chat_id!r}.')
     return True
+
+
+def bot_command_for_start_or_stop_account(instance, bot_admin, bot_command: str = 'start_acc'):
+    """
+    Функция для отправки боту команды на старт или стоп аккаунта
+    """
+    file_name = instance.session_file.path.split('/')[-1]
+    command_msg = f'/{bot_command} {instance.pk} {file_name} {instance.proxy if bot_command == "start_acc" else ""}'
+    send_command_to_bot(
+        command=command_msg,
+        bot_admin=bot_admin,
+        session_file=instance.session_file.path,
+    )

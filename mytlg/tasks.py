@@ -11,7 +11,7 @@ from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.gpt_processing import ask_the_gpt
 from mytlg.models import Themes, Channels, BotUser, SubThemes, NewsPosts, TlgAccounts, AccountTasks, BotSettings
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
-    send_file_by_bot
+    send_file_by_bot, bot_command_for_start_or_stop_account
 
 
 @shared_task
@@ -166,4 +166,18 @@ def subscription_to_new_channels():
             break
 
     MY_LOGGER.info(f'Таск по отправке аккаунтам задач подписаться на каналы завершена.')
+
+
+@shared_task
+def start_or_stop_accounts(bot_command='start_acc'):
+    """
+    Отложенная задача celery для старта или остановки аккаунтов телеграмм.
+    """
+    MY_LOGGER.debug(f'Запущена задача по отправке боту команды для старта или стопа аккаунтов')
+    tlg_accounts = TlgAccounts.objects.filter(is_run=True).only("id", "session_file", "proxy")
+    bot_admin = BotSettings.objects.get(key='bot_admins').value.split()[0]
+    for i_acc in tlg_accounts:
+        bot_command_for_start_or_stop_account(instance=i_acc, bot_command=bot_command, bot_admin=bot_admin)
+        time.sleep(0.5)     # Небольшая задержка, чтобы бот успел запустить асинк таски
+    MY_LOGGER.debug(f'Задача завершена')
 

@@ -9,7 +9,7 @@ from django.dispatch import receiver
 from cfu_mytlg_admin import settings
 from cfu_mytlg_admin.settings import MY_LOGGER
 
-from mytlg.utils import send_command_to_bot
+from mytlg.utils import send_command_to_bot, bot_command_for_start_or_stop_account
 
 
 class BotUser(models.Model):
@@ -181,13 +181,9 @@ def send_bot_command(sender, instance, **kwargs):
         # TODO: разделить функционал отправки команды на старт и стоп аккаунта
         bot_command = 'start_acc' if instance.is_run else 'stop_acc'
         MY_LOGGER.info(f'Выполним отправку боту команды: {bot_command!r}')
-        file_name = instance.session_file.path.split('/')[-1]
-        command_msg = f'/{bot_command} {instance.pk} {file_name} {instance.proxy if bot_command == "start_acc" else ""}'
-        send_command_to_bot(
-            command=command_msg,
-            bot_admin=BotSettings.objects.get(key='bot_admins').value.split()[0],
-            session_file=instance.session_file.path,
-        )
+        bot_admin = BotSettings.objects.get(key='bot_admins').value.split()[0]
+        # Функция для отправки боту команды на старт или стоп аккаунта
+        bot_command_for_start_or_stop_account(instance=instance, bot_command=bot_command, bot_admin=bot_admin)
 
 
 class NewsPosts(models.Model):
