@@ -12,13 +12,14 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
-from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountTasks
+from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountTasks, AccountsErrors
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     WriteTaskResultSerializer, UpdateChannelsSerializer, AccountErrorSerializer
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts
@@ -481,6 +482,8 @@ class AccountError(APIView):
     """
     Вьюшки для ошибок аккаунта.
     """
+
+    @extend_schema(request=AccountErrorSerializer, responses=str, methods=['post'])
     def post(self, request):
         """
         Обрабатываем POST запрос, записываем в БД данные об ошибке аккаунта
@@ -489,8 +492,25 @@ class AccountError(APIView):
 
         ser = AccountErrorSerializer(data=request.data)
         if ser.is_valid():
-            pass
+            token = ser.validated_data.get("token")
+            if not token or token != BOT_TOKEN:
+                MY_LOGGER.warning(f'В запросе невалидный токен: {token}')
+                return Response(data='invalid token', status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                tlg_acc = TlgAccounts.objects.only("id").get(pk=ser.validated_data.get("account"))
+            except ObjectDoesNotExist:
+                MY_LOGGER.warning(f'Аккаунт с PK == {ser.validated_data.get("account")!r} не найден в БД.')
+                return Response(data=f'account with PK == {ser.validated_data.get("account")!r} does not exist',
+                                status=status.HTTP_404_NOT_FOUND)
+            AccountsErrors.objects.create(
+                error_type=ser.validated_data.get("error_type"),
+                error_description=ser.validated_data.get("error_description"),
+                account=tlg_acc,
+            )
+            return Response(data='success', status=status.HTTP_200_OK)
         else:
+            MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
             return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
 
 

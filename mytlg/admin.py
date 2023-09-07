@@ -149,7 +149,7 @@ class AccountTasksAdmin(admin.ModelAdmin):
 
 
 @admin.register(AccountsErrors)
-class AccountsErrors(admin.ModelAdmin):
+class AccountsErrorsAdmin(admin.ModelAdmin):
     list_display = (
         'pk',
         'error_type',
