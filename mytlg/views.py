@@ -18,9 +18,9 @@ from rest_framework import status
 from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
-from mytlg.models import Themes, BotUser, Channels, TlgAccounts, SubThemes, NewsPosts, AccountTasks
+from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountTasks
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
-    WriteTaskResultSerializer, UpdateChannelsSerializer
+    WriteTaskResultSerializer, UpdateChannelsSerializer, AccountErrorSerializer
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts
 
 
@@ -57,7 +57,7 @@ class StartSettingsView(View):
 
     def get(self, request):
         context = {
-            "themes": Themes.objects.all()
+            "themes": Categories.objects.all()
         }
         return render(request, template_name='mytlg/start_settings.html', context=context)
 
@@ -142,17 +142,6 @@ class WriteInterestsView(View):
 
         MY_LOGGER.debug(f'Обрабатываем через модель GPT интересы пользователя')
         gpt_interests_processing.delay(interests=check_interests, tlg_id=tlg_id)
-
-        # MY_LOGGER.debug(f'Записываем в БД пользователю время, когда он будет получать новости')
-        # try:
-        #     bot_usr_obj = BotUser.objects.get(tlg_id=int(tlg_id))
-        # except ObjectDoesNotExist:
-        #     MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. Юзер с tlg_id=={tlg_id} не найден в БД!')
-        #     err_msgs.error(request, f'Пользователь: Не найден Ваш профиль! Отправьте боту команду /start')
-        #     return redirect(to=reverse_lazy('mytlg:write_interests'))
-        # bot_usr_obj.when_send_news = when_send_news
-        # bot_usr_obj.save()
-
         context = dict(
             header='⚙️ Настройка завершена!',
             description=f'👌 Окей. Теперь бот будет присылать Вам новости 🗞 каждый час.',
@@ -262,15 +251,9 @@ class RelatedNewsView(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND, data='channel not found')
 
         # Достаём все id каналов по теме
-        theme_obj = ch_obj.theme if ch_obj.theme else ch_obj.sub_theme.theme
+        theme_obj = ch_obj.category
         ch_qset = Channels.objects.filter(theme=theme_obj).only("id")
         ch_ids_lst = [i_ch.pk for i_ch in ch_qset]
-
-        # Достаём все подтемы по теме
-        sub_themes_qset = SubThemes.objects.filter(theme=theme_obj).only("id")
-        sub_themes_ids_lst = [i_sub_theme.pk for i_sub_theme in sub_themes_qset]
-        i_ch_qset = Channels.objects.filter(sub_theme__id__in=sub_themes_ids_lst).only("id")
-        [ch_ids_lst.append(i_ch.pk) for i_ch in i_ch_qset if i_ch.pk not in ch_ids_lst]
 
         # Складываем айдишники каналов и вытаскиваем из БД одним запросов все посты
         all_posts_lst = []
@@ -339,9 +322,9 @@ class UploadNewChannels(View):
 
         for i_json_file in request.FILES.getlist("json_files"):
             i_file_dct = json.loads(i_json_file.read().decode('utf-8'))
-            theme_obj, theme_created = Themes.objects.get_or_create(
-                theme_name=i_file_dct.get("category").lower(),
-                defaults={"theme_name": i_file_dct.get("category").lower()},
+            theme_obj, theme_created = Categories.objects.get_or_create(
+                category_name=i_file_dct.get("category").lower(),
+                defaults={"category_name": i_file_dct.get("category").lower()},
             )
             MY_LOGGER.debug(f'{"Создали" if theme_created else "Достали из БД"} тему {theme_obj}!')
 
@@ -492,6 +475,23 @@ class GetActiveAccounts(APIView):
         # Запускаем функцию отправки боту команд для старта аккаунтов
         start_or_stop_accounts.delay()
         return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
+
+
+class AccountError(APIView):
+    """
+    Вьюшки для ошибок аккаунта.
+    """
+    def post(self, request):
+        """
+        Обрабатываем POST запрос, записываем в БД данные об ошибке аккаунта
+        """
+        MY_LOGGER.info(f'POST запрос на вьюшку ошибок аккаунта.')
+
+        ser = AccountErrorSerializer(data=request.data)
+        if ser.is_valid():
+            pass
+        else:
+            return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
 
 
 def test_view(request):

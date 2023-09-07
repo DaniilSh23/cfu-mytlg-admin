@@ -73,3 +73,13 @@ class UpdateChannelsSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=50)
     acc_pk = serializers.IntegerField()
     channels = ChildTaskResultsSerializer(many=True)
+
+
+class AccountErrorSerializer(serializers.Serializer):
+    """
+    Сериалайзер для записи в БД данных об ошибке аккаунта
+    """
+    token = serializers.CharField(max_length=50)
+    error_type = serializers.CharField(max_length=40)
+    error_description = serializers.CharField()
+    account = serializers.IntegerField()

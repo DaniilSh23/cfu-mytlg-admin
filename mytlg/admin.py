@@ -1,11 +1,8 @@
 from django.contrib import admin
-from django.urls import path, reverse
-from django.utils.html import format_html
 
 from mytlg.admin_mixins import ExportAsJSONMixin
-from mytlg.models import BotUser, BotSettings, Themes, Channels, SubThemes, ThemesWeight, TlgAccounts, NewsPosts, \
-    AccountTasks
-from mytlg.views import UploadNewChannels
+from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
+    AccountTasks, AccountsErrors
 
 
 @admin.register(BotUser)
@@ -38,30 +35,16 @@ class BotSettingsAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(Themes)
-class ThemesAdmin(admin.ModelAdmin):
+@admin.register(Categories)
+class CategoriesAdmin(admin.ModelAdmin):
     list_display = (
         "pk",
-        "theme_name",
+        "category_name",
         "created_at",
     )
     list_display_links = (
         "pk",
-        "theme_name",
-        "created_at",
-    )
-
-
-@admin.register(SubThemes)
-class SubThemesAdmin(admin.ModelAdmin):
-    list_display = (
-        "pk",
-        "sub_theme_name",
-        "created_at",
-    )
-    list_display_links = (
-        "pk",
-        "sub_theme_name",
+        "category_name",
         "created_at",
     )
 
@@ -77,8 +60,7 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "channel_name",
         "channel_link",
         "created_at",
-        "theme",
-        "sub_theme",
+        "category",
         "is_ready",
     )
     list_display_links = (
@@ -87,25 +69,8 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "channel_name",
         "channel_link",
         "created_at",
-        "theme",
-        "sub_theme",
+        "category",
         "is_ready",
-    )
-
-
-@admin.register(ThemesWeight)
-class ThemesWeightAdmin(admin.ModelAdmin):
-    list_display = (
-        'bot_user',
-        'theme',
-        'sub_theme',
-        'weight',
-    )
-    list_display_links = (
-        'bot_user',
-        'theme',
-        'sub_theme',
-        'weight',
     )
 
 
@@ -162,12 +127,6 @@ class NewsPostsAdmin(admin.ModelAdmin):
         'created_at',
     )
 
-    # add_form_template = 'mytlg/upload_new_channels.html'
-    # def custom_link(self, obj):
-    #     url = reverse('mytlg:upload_new_channels')  # Замените 'your_custom_page' на имя вашего URL-шаблона
-    #     return format_html('<a class="button" href="{}">Моя ссылка</a>', url)
-    # custom_link.short_description = 'Кастомная ссылка'
-
 
 @admin.register(AccountTasks)
 class AccountTasksAdmin(admin.ModelAdmin):
@@ -187,3 +146,26 @@ class AccountTasksAdmin(admin.ModelAdmin):
         'completed_at',
         'fully_completed',
     )
+
+
+@admin.register(AccountsErrors)
+class AccountsErrors(admin.ModelAdmin):
+    list_display = (
+        'pk',
+        'error_type',
+        'description_short',
+        'created_at',
+        'account',
+    )
+    list_display_links = (
+        'pk',
+        'error_type',
+        'description_short',
+        'created_at',
+        'account',
+    )
+
+    def description_short(self, obj: AccountsErrors) -> str:
+        if len(obj.error_description) < 48:
+            return obj.error_description
+        return obj.error_description[:48] + "..."

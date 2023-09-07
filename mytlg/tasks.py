@@ -9,7 +9,7 @@ from django.db.models import Count
 
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.gpt_processing import ask_the_gpt
-from mytlg.models import Themes, Channels, BotUser, SubThemes, NewsPosts, TlgAccounts, AccountTasks, BotSettings
+from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountTasks, BotSettings
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
     send_file_by_bot, bot_command_for_start_or_stop_account
 
@@ -33,10 +33,8 @@ def gpt_interests_processing(interests: List, tlg_id: str):
     MY_LOGGER.info('Запускаем задачу celery по отбору тематик по формулировкам пользователя')
 
     MY_LOGGER.debug(f'Складываем общий список из тем и подтем в строку')
-    themes_qset = Themes.objects.all()
-    sub_themes_qset = SubThemes.objects.all()
-    all_themes_lst = [i_theme.theme_name for i_theme in themes_qset]
-    all_themes_lst.extend([i_sub_th.sub_theme_name for i_sub_th in sub_themes_qset])
+    themes_qset = Categories.objects.all()
+    all_themes_lst = [i_theme.category_name for i_theme in themes_qset]
     themes_str = '\n'.join([i_theme for i_theme in all_themes_lst])
 
     MY_LOGGER.debug(f'Получаем объект BotUser и очищаем связи Many2Many для каналов и тем')
@@ -74,15 +72,11 @@ def gpt_interests_processing(interests: List, tlg_id: str):
         else:
             MY_LOGGER.debug(f'Привязываем пользователя к подтеме и каналам')
             try:
-                rel_theme = Themes.objects.get(theme_name=gpt_rslt.lower())
+                rel_theme = Categories.objects.get(category_name=gpt_rslt.lower())
                 bot_usr.themes.add(rel_theme)
             except ObjectDoesNotExist:
-                try:
-                    rel_theme = SubThemes.objects.get(sub_theme_name=gpt_rslt.lower())
-                    bot_usr.sub_themes.add(rel_theme)
-                except ObjectDoesNotExist:
-                    MY_LOGGER.warning(f'В БД не найдена тема или подтема: {gpt_rslt!r}. Пользователь не привязан.')
-                    continue
+                MY_LOGGER.warning(f'В БД не найдена категория: {gpt_rslt!r}. Пользователь не привязан.')
+                continue
         themes_rslt.append(gpt_rslt.lower())
 
     MY_LOGGER.debug(f'Отправка в телеграм подобранных тем.')

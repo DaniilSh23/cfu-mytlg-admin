@@ -1,15 +1,13 @@
 import os
-import shutil
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.db.models.signals import pre_delete, post_save, pre_save
+from django.db.models.signals import pre_delete, pre_save
 from django.dispatch import receiver
 
-from cfu_mytlg_admin import settings
 from cfu_mytlg_admin.settings import MY_LOGGER
 
-from mytlg.utils import send_command_to_bot, bot_command_for_start_or_stop_account
+from mytlg.utils import bot_command_for_start_or_stop_account
 
 
 class BotUser(models.Model):
@@ -19,8 +17,7 @@ class BotUser(models.Model):
     tlg_id = models.CharField(verbose_name='tlg_id', max_length=30, db_index=True)
     tlg_username = models.CharField(verbose_name='username', max_length=100, blank=False, null=True)
     start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
-    themes = models.ManyToManyField(verbose_name='темы', related_name='bot_user', to='Themes', blank=True)
-    sub_themes = models.ManyToManyField(verbose_name='подтемы', related_name='bot_user', to='SubThemes', blank=True)
+    category = models.ManyToManyField(verbose_name='категории', related_name='bot_user', to='Categories', blank=True)
     channels = models.ManyToManyField(verbose_name='каналы', related_name='bot_user', to='Channels', blank=True)
     when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
 
@@ -46,37 +43,20 @@ class BotSettings(models.Model):
         verbose_name_plural = 'настройки бота'
 
 
-class Themes(models.Model):
+class Categories(models.Model):
     """
     Модель для таблицы с темами каналов.
     """
-    theme_name = models.CharField(verbose_name='имя темы', max_length=200)
+    category_name = models.CharField(verbose_name='имя категории', max_length=200)
     created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
 
     def __str__(self):
-        return self.theme_name
+        return self.category_name
 
     class Meta:
         ordering = ['id']
-        verbose_name = 'тема'
-        verbose_name_plural = 'темы'
-
-
-class SubThemes(models.Model):
-    """
-    Модель для таблицы с подтемами каналов
-    """
-    theme = models.ForeignKey(verbose_name='связанная тема', to=Themes, on_delete=models.CASCADE, blank=True, null=False)
-    sub_theme_name = models.CharField(verbose_name='имя подтмемы', max_length=200)
-    created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
-
-    def __str__(self):
-        return self.sub_theme_name
-
-    class Meta:
-        ordering = ['id']
-        verbose_name = 'подтема'
-        verbose_name_plural = 'подтемы'
+        verbose_name = 'категория'
+        verbose_name_plural = 'категории'
 
 
 class Channels(models.Model):
@@ -89,8 +69,7 @@ class Channels(models.Model):
     description = models.TextField(verbose_name='описание', max_length=500, blank=True, null=False)
     subscribers_numb = models.IntegerField(verbose_name='кол-во подписчиков', default=0)
     created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
-    theme = models.ForeignKey(verbose_name='тема канала', to=Themes, on_delete=models.CASCADE, blank=True, null=True)
-    sub_theme = models.ForeignKey(verbose_name='подтема канала', to=SubThemes, on_delete=models.CASCADE, blank=True, null=True)
+    category = models.ForeignKey(verbose_name='категория канала', to=Categories, on_delete=models.CASCADE, blank=True, null=True)
     is_ready = models.BooleanField(verbose_name='готов', default=False)
 
     def __str__(self):
@@ -100,24 +79,6 @@ class Channels(models.Model):
         ordering = ['-id']
         verbose_name = 'канал'
         verbose_name_plural = 'каналы'
-
-
-class ThemesWeight(models.Model):
-    """
-    'Вес' темы или подтемы для каждого пользователя
-    """
-    bot_user = models.ForeignKey(verbose_name='юзер бота', to=BotUser, on_delete=models.CASCADE)
-    theme = models.ForeignKey(verbose_name='тема', to=Themes, on_delete=models.CASCADE, blank=True, null=False)
-    sub_theme = models.ForeignKey(verbose_name='подтема', to=SubThemes, on_delete=models.CASCADE, blank=True, null=False)
-    weight = models.FloatField(verbose_name='вес')
-
-    def __str__(self):
-        return f'(под)тема:{self.theme if self.theme else self.sub_theme}|юзер:{self.bot_user}|вес:{self.weight}'
-
-    class Meta:
-        ordering = ['-id']
-        verbose_name = 'вес (под)темы'
-        verbose_name_plural = 'веса (под)тем'
 
 
 class TlgAccounts(models.Model):
@@ -130,6 +91,7 @@ class TlgAccounts(models.Model):
     tlg_last_name = models.CharField(verbose_name='tlg_last_name', max_length=50, blank=True, null=False)
     proxy = models.CharField(verbose_name='proxy', max_length=200, blank=True, null=False)
     is_run = models.BooleanField(verbose_name='аккаунт запущен', default=False)
+    waiting = models.BooleanField(verbose_name='ожидание', default=False)
     created_at = models.DateTimeField(verbose_name='дата и время добавления акка', auto_now_add=True)
     channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='tlg_accounts', blank=True)
     subscribed_numb_of_channels = models.IntegerField(verbose_name='кол-во подписок на каналы', default=0)
@@ -153,17 +115,6 @@ def delete_session_file(sender, instance, **kwargs):
         os.remove(instance.session_file.path)
     return
 
-    # TODO: ниже логика для soft delete, потом возможно убрать
-    MY_LOGGER.info(f'Получен сигнал pre_delete от модели TlgAccounts. Выполняем soft-delete файла сессии')
-    if not os.path.exists(os.path.join(settings.MEDIA_ROOT, 'del_sessions')):   # Если нет папки del_sessions
-        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'del_sessions'))     # То создаём
-
-    if instance.session_file:
-        file_path_string = os.path.join(settings.MEDIA_ROOT, instance.session_file.name)
-        if os.path.exists(file_path_string):
-            MY_LOGGER.debug(f'Перемещаем файл сессии {file_path_string!r} в папку "del_sessions"!')
-            shutil.move(file_path_string, os.path.join(settings.MEDIA_ROOT, 'del_sessions'))
-
 
 @receiver(pre_save, sender=TlgAccounts)
 def send_bot_command(sender, instance, **kwargs):
@@ -184,6 +135,24 @@ def send_bot_command(sender, instance, **kwargs):
         bot_admin = BotSettings.objects.get(key='bot_admins').value.split()[0]
         # Функция для отправки боту команды на старт или стоп аккаунта
         bot_command_for_start_or_stop_account(instance=instance, bot_command=bot_command, bot_admin=bot_admin)
+
+
+class AccountsErrors(models.Model):
+    """
+    Модель для сохранения ошибок, с которыми сталкиваются аккаунты в процессе своей работы
+    """
+    error_type = models.CharField(verbose_name='тип ошибки', max_length=40)
+    error_description = models.TextField(verbose_name='описание ошибки')
+    created_at = models.DateTimeField(verbose_name='дата и время', auto_now_add=True)
+    account = models.ForeignKey(verbose_name='аккаунт', to=TlgAccounts, on_delete=models.CASCADE)
+
+    def short_description(self):
+        return
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'ошибка аккаунта'
+        verbose_name_plural = 'ошибки аккаунтов'
 
 
 class NewsPosts(models.Model):
@@ -221,4 +190,3 @@ class AccountTasks(models.Model):
         ordering = ['-id']
         verbose_name = 'задача аккаунту'
         verbose_name_plural = 'задачи аккаунтам'
-
