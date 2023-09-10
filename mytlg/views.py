@@ -1,6 +1,5 @@
 import datetime
 import json
-from io import BytesIO
 
 import pytz
 import requests
@@ -151,32 +150,42 @@ class WriteInterestsView(View):
         return render(request, template_name='mytlg/success.html', context=context)
 
 
-class SetAccRunFlag(APIView):
+class SetAccFlags(APIView):
     """
-    Установка флага запуска аккаунта
+    Установка флагов для аккаунта
     """
 
+    @extend_schema(request=SetAccDataSerializer, responses=str, methods=['post'])
     def post(self, request):
-        MY_LOGGER.info(f'Получен POST запрос на вьюшку установки флага запуска аккаунта')
+        MY_LOGGER.info(f'Получен POST запрос на вьюшку установки флагов аккаунта')
         ser = SetAccDataSerializer(data=request.data)
 
         if ser.is_valid():
             MY_LOGGER.debug(f'Данные валидны, проверяем токен')
 
-            if ser.data.get("token") == BOT_TOKEN:
+            if ser.validated_data.get("token") == BOT_TOKEN:
                 MY_LOGGER.debug(f'Токен успешно проверен')
 
-                try:
-                    TlgAccounts.objects.filter(pk=int(ser.data.get("acc_pk"))).update(is_run=ser.data.get("is_run"))
-                except ObjectDoesNotExist:
-                    MY_LOGGER.warning(f'Не найден в БД объект TlgAccounts с PK={ser.data.get("acc_pk")}')
-                    return Response(data={'result': f'Not found object with primary key == {ser.data.get("acc_pk")}'},
-                                    status=status.HTTP_404_NOT_FOUND)
+                dct = dict()
+                for i_param in ('is_run', 'waiting', 'banned'):
+                    if ser.validated_data.get(i_param) is not None:
+                        dct[i_param] = ser.validated_data.get(i_param)
 
-                return Response(data={'result': 'is_run flag successfully changed'}, status=status.HTTP_200_OK)
+                try:
+                    TlgAccounts.objects.filter(pk=int(ser.validated_data.get("acc_pk"))).update(**dct)
+
+                except ObjectDoesNotExist:
+                    MY_LOGGER.warning(f'Не найден в БД объект TlgAccounts с PK={ser.validated_data.get("acc_pk")}')
+                    return Response(
+                        data={'result': f'Not found object with primary key == {ser.validated_data.get("acc_pk")}'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                return Response(data={'result': f'flags successfully changed'}, status=status.HTTP_200_OK)
 
             else:
-                MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. Полученный токен: {ser.data.get("token")}')
+                MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. '
+                                  f'Полученный токен: {ser.validated_data.get("token")}')
                 return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
 
         else:
@@ -350,6 +359,7 @@ class WriteTasksResults(APIView):
     """
     Вьюшки для записи результатов заданий аккаунтов.
     """
+
     def post(self, request):
         MY_LOGGER.info(f'Получен POST запрос на вьюшку записи результатов задачи аккаунта')
 
@@ -410,6 +420,7 @@ class UpdateChannelsView(APIView):
     """
     Вьюшка для обновления записей каналов.
     """
+
     def post(self, request):
         MY_LOGGER.info(f'Получен POST запрос на обновление данных о каналах')
 
@@ -462,6 +473,7 @@ class GetActiveAccounts(APIView):
     """
     Вьюшка для запроса активных аккаунтов из БД.
     """
+
     def get(self, request):
         """
         Обрабатываем GET запрос и отправляем боту команды на старт нужных аккаунтов.

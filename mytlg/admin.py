@@ -88,23 +88,25 @@ class TlgAccountsAdmin(admin.ModelAdmin):
     # ]
     list_display = (
         'pk',
-        "session_file",
+        # "session_file",
         "acc_tlg_id",
         "tlg_first_name",
         "tlg_last_name",
-        "proxy",
+        # "proxy",
         "is_run",
-        "created_at",
+        'waiting',
+        'banned',
+        # "created_at",
         "subscribed_numb_of_channels",
     )
     list_display_links = (
         "pk",
-        "session_file",
+        # "session_file",
         "acc_tlg_id",
         "tlg_first_name",
         "tlg_last_name",
-        "proxy",
-        "created_at",
+        # "proxy",
+        # "created_at",
         "subscribed_numb_of_channels",
     )
     list_editable = (

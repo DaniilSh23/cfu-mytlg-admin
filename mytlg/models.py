@@ -92,6 +92,7 @@ class TlgAccounts(models.Model):
     proxy = models.CharField(verbose_name='proxy', max_length=200, blank=True, null=False)
     is_run = models.BooleanField(verbose_name='аккаунт запущен', default=False)
     waiting = models.BooleanField(verbose_name='ожидание', default=False)
+    banned = models.BooleanField(verbose_name='забанен', default=False)
     created_at = models.DateTimeField(verbose_name='дата и время добавления акка', auto_now_add=True)
     channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='tlg_accounts', blank=True)
     subscribed_numb_of_channels = models.IntegerField(verbose_name='кол-во подписок на каналы', default=0)
