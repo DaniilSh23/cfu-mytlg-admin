@@ -1,6 +1,12 @@
 from django.contrib import admin
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import render, redirect
+from django.urls import path
 
+from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.admin_mixins import ExportAsJSONMixin
+from mytlg.common import save_json_channels
+from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
     AccountTasks, AccountsErrors
 
@@ -51,6 +57,7 @@ class CategoriesAdmin(admin.ModelAdmin):
 
 @admin.register(Channels)
 class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
+    change_list_template = 'admin/channels_change_list.html'    # Шаблон для страницы со списком сущностей
     actions = [     # список доп. действий в админке для записей данной модели
         'export_json',   # export_csv - имя метода в миксине ExportAsCSVMixin
     ]
@@ -72,6 +79,56 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "category",
         "is_ready",
     )
+
+    def import_json(self, request: HttpRequest) -> HttpResponse:
+        """
+        Это вьюшка для кастомной формы админки, которая даёт возможность загрузить данные из файла json
+        :param request:
+        :return:
+        """
+        MY_LOGGER.info(f'Получен запрос {request.method!r} на вьюшку загрузки каналов из JSON')
+        if request.method == "GET":
+            # Рендерим форму
+            form = JSONImportForm()  # TODO: остановился тут. Это вьюшка для формы админки
+            context = {
+                'form': form,
+            }
+            return render(request, template_name='admin/json_form.html', context=context)
+
+        # Обрабатываем загрузку файла csv
+        form = JSONImportForm(request.POST, request.FILES)
+        if not form.is_valid():
+            # Даём ответ если форма невалидна
+            context = {
+                'form': form,
+            }
+            return render(request, template_name='admin/json_form.html', context=context, status=400)
+
+        # Обрабатываем загруженный csv файл
+        save_json_channels(
+            file=form.files.get("json_file").file,
+            encoding=request.encoding,
+        )
+
+        # Это сообщение пользователю на странице в админке
+        self.message_user(request, message='Data from CSV was imported')
+        return redirect("..")  # Редиректим на одну страницу выше (к списку Product)
+
+    def get_urls(self):
+        """
+        Переопределяем метод класса для того, чтобы расширить урлы для базовой страницы в админке кнопкой
+        для формы загрузки данных из CSV
+        :return:
+        """
+        urls = super().get_urls()   # Достаём дефолтные урлы класса
+        new_urls = [    # Создаём свой список урлов с путём к форме
+            path(
+                "import-channels-json",  # Указываем путь
+                self.import_json,    # Указываем вьюшку
+                name="import_channels_json",
+            )
+        ]
+        return new_urls + urls  # Обязательно новые урлы раньше дефолтных
 
 
 # class ChannelsInline(admin.TabularInline):
