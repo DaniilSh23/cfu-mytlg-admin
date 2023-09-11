@@ -8,7 +8,7 @@ from mytlg.admin_mixins import ExportAsJSONMixin
 from mytlg.common import save_json_channels
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
-    AccountTasks, AccountsErrors
+    AccountsErrors, AccountsSubscriptionTasks
 
 
 @admin.register(BotUser)
@@ -187,24 +187,35 @@ class NewsPostsAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(AccountTasks)
-class AccountTasksAdmin(admin.ModelAdmin):
+@admin.register(AccountsSubscriptionTasks)
+class AccountsSubscriptionTasksAdmin(admin.ModelAdmin):
     list_display = (
         'pk',
-        'task_name',
+        'status',
+        'total_channels',
+        'successful_subs',
+        'failed_subs',
+        'short_action_story',
+        'started_at',
+        'ends_at',
         'tlg_acc',
-        'created_at',
-        'completed_at',
-        'fully_completed',
     )
     list_display_links = (
         'pk',
-        'task_name',
+        'status',
+        'total_channels',
+        'successful_subs',
+        'failed_subs',
+        'short_action_story',
+        'started_at',
+        'ends_at',
         'tlg_acc',
-        'created_at',
-        'completed_at',
-        'fully_completed',
     )
+
+    def short_action_story(self, obj: AccountsSubscriptionTasks) -> str:
+        if len(obj.action_story) < 48:
+            return obj.action_story
+        return obj.action_story[:48] + "..."
 
 
 @admin.register(AccountsErrors)

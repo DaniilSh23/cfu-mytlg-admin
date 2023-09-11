@@ -9,7 +9,7 @@ from django.db.models import Count
 
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.gpt_processing import ask_the_gpt
-from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountTasks, BotSettings
+from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
     send_file_by_bot, bot_command_for_start_or_stop_account
 
@@ -135,7 +135,7 @@ def subscription_to_new_channels():
             "cmd": "subscribe_to_channels",
             "data": [(i_ch.pk, i_ch.channel_link) for i_ch in i_acc_channels_lst],
         }
-        acc_task = AccountTasks.objects.create(
+        acc_task = AccountsSubscriptionTasks.objects.create(
             task_name='подписаться на каналы',
             tlg_acc=i_acc,
             initial_data=json.dumps(command_data),

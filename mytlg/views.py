@@ -19,7 +19,7 @@ from rest_framework import status
 from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
-from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountTasks, AccountsErrors
+from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, AccountsErrors
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     WriteTaskResultSerializer, UpdateChannelsSerializer, AccountErrorSerializer
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts
@@ -384,7 +384,7 @@ class WriteTasksResults(APIView):
                 MY_LOGGER.debug(f'Токен успешно проверен')
 
                 try:
-                    task_obj = AccountTasks.objects.get(pk=int(ser.data.get("task_pk")))
+                    task_obj = AccountsSubscriptionTasks.objects.get(pk=int(ser.data.get("task_pk")))
                 except ObjectDoesNotExist:
                     return Response(data={'result': 'account task object does not exist'},
                                     status=status.HTTP_404_NOT_FOUND)

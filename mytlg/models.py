@@ -172,22 +172,30 @@ class NewsPosts(models.Model):
         verbose_name_plural = 'новостные посты'
 
 
-class AccountTasks(models.Model):
+class AccountsSubscriptionTasks(models.Model):
     """
-    Модель для задач аккаунтам телеграм.
+    Модель для задач аккаунтам телеграм на подписку.
     """
-    task_name = models.CharField(verbose_name='название задачи', max_length=100)
+    statuses = (
+        ('success', 'успешно завершено'),
+        ('at_work', 'в работе'),
+        ('error', 'завершено с ошибкой'),
+    )
+
+    status = models.CharField(verbose_name='статус', choices=statuses, max_length=10, default='at_work')
+    total_channels = models.IntegerField(verbose_name='всего каналов', default=0)
+    successful_subs = models.IntegerField(verbose_name='успешная подписка', default=0)
+    failed_subs = models.IntegerField(verbose_name='неудачная подписка', default=0)
+    action_story = models.TextField(verbose_name='история действий')
+    started_at = models.DateTimeField(verbose_name='старт', auto_now_add=True)
+    ends_at = models.DateTimeField(verbose_name='окончание', blank=True, null=True)
     tlg_acc = models.ForeignKey(verbose_name='аккаунт', to=TlgAccounts, on_delete=models.CASCADE)
     initial_data = models.TextField(verbose_name='исходные данные', max_length=5000)
-    created_at = models.DateTimeField(verbose_name='когда создана', auto_now_add=True)
-    execution_result = models.TextField(verbose_name='результат выполнения', max_length=5000, blank=True, null=False)
-    completed_at = models.DateTimeField(verbose_name='когда завершена', blank=True, null=True)
-    fully_completed = models.BooleanField(verbose_name='завершена полностью', default=False)
 
     def __str__(self):
-        return f'задача {self.task_name!r} {self.tlg_acc!r}'
+        return f'задача на подписку для аккаунта: {self.tlg_acc!r}'
 
     class Meta:
         ordering = ['-id']
-        verbose_name = 'задача аккаунту'
-        verbose_name_plural = 'задачи аккаунтам'
+        verbose_name = 'задача аккаунту на подписку'
+        verbose_name_plural = 'задачи аккаунтам на подписку'
