@@ -117,7 +117,7 @@ def scheduled_task_for_send_post_to_users():
 
 
 @shared_task
-def subscription_to_new_channels():
+def subscription_to_new_channels():     # TODO: эту хуйню переписал, но не тестил
     """
     Таск селери для подписки аккаунтов на новые каналы.
     """
@@ -125,7 +125,10 @@ def subscription_to_new_channels():
 
     max_ch_per_acc = int(BotSettings.objects.get(key='max_channels_per_acc').value)
     acc_qset = TlgAccounts.objects.annotate(num_ch=Count('channels')).filter(num_ch__lt=max_ch_per_acc, is_run=True)
-    ch_lst = list(Channels.objects.filter(is_ready=False))
+    subs_tasks_qset = AccountsSubscriptionTasks.objects.exclude(channels=None).only('channels')
+    excluded_ids = [channel.id for task in subs_tasks_qset
+                       for channel in task.channels.all()]
+    ch_lst = Channels.objects.filter(is_ready=False).exclude(id__in=excluded_ids).only("id", "channel_link")
     for i_acc in acc_qset:
         ch_available_numb = max_ch_per_acc - i_acc.channels.count()    # Считаем кол-во доступных для подписки каналов
         i_acc_channels_lst = ch_lst[:ch_available_numb]     # Срезаем нужные каналы для аккаунта в отдельный список
@@ -136,10 +139,11 @@ def subscription_to_new_channels():
             "data": [(i_ch.pk, i_ch.channel_link) for i_ch in i_acc_channels_lst],
         }
         acc_task = AccountsSubscriptionTasks.objects.create(
-            task_name='подписаться на каналы',
+            total_channels=len(i_acc_channels_lst),
             tlg_acc=i_acc,
             initial_data=json.dumps(command_data),
         )
+        acc_task.add(*i_acc_channels_lst)
 
         MY_LOGGER.debug(f'Отправляем через бота задачу аккаунту')
         command_data['task_pk'] = acc_task.pk

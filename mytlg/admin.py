@@ -9,6 +9,7 @@ from mytlg.common import save_json_channels
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
     AccountsErrors, AccountsSubscriptionTasks
+from mytlg.tasks import subscription_to_new_channels
 
 
 @admin.register(BotUser)
@@ -89,13 +90,13 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         MY_LOGGER.info(f'Получен запрос {request.method!r} на вьюшку загрузки каналов из JSON')
         if request.method == "GET":
             # Рендерим форму
-            form = JSONImportForm()  # TODO: остановился тут. Это вьюшка для формы админки
+            form = JSONImportForm()
             context = {
                 'form': form,
             }
             return render(request, template_name='admin/json_form.html', context=context)
 
-        # Обрабатываем загрузку файла csv
+        # Обрабатываем загрузку файла json
         form = JSONImportForm(request.POST, request.FILES)
         if not form.is_valid():
             # Даём ответ если форма невалидна
@@ -104,14 +105,17 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
             }
             return render(request, template_name='admin/json_form.html', context=context, status=400)
 
-        # Обрабатываем загруженный csv файл
+        # Обрабатываем загруженный json файл
         save_json_channels(
             file=form.files.get("json_file").file,
             encoding=request.encoding,
         )
 
+        # Запускаем таск celery на старт подписки аккаунтов
+        subscription_to_new_channels.delay()
+
         # Это сообщение пользователю на странице в админке
-        self.message_user(request, message='Data from CSV was imported')
+        self.message_user(request, message='Data from JSON was imported')
         return redirect("..")  # Редиректим на одну страницу выше (к списку Product)
 
     def get_urls(self):
@@ -189,6 +193,7 @@ class NewsPostsAdmin(admin.ModelAdmin):
 
 @admin.register(AccountsSubscriptionTasks)
 class AccountsSubscriptionTasksAdmin(admin.ModelAdmin):
+    # change_list_template = 'admin/subs_tasks_change_list.html'
     list_display = (
         'pk',
         'status',

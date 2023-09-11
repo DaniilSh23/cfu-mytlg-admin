@@ -191,6 +191,7 @@ class AccountsSubscriptionTasks(models.Model):
     ends_at = models.DateTimeField(verbose_name='окончание', blank=True, null=True)
     tlg_acc = models.ForeignKey(verbose_name='аккаунт', to=TlgAccounts, on_delete=models.CASCADE)
     initial_data = models.TextField(verbose_name='исходные данные', max_length=5000)
+    channels = models.ManyToManyField(verbose_name='каналы', to=Channels,  related_name='subs_task', blank=True)
 
     def __str__(self):
         return f'задача на подписку для аккаунта: {self.tlg_acc!r}'
