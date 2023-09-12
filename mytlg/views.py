@@ -523,6 +523,8 @@ def test_view(request):
     """
     Тестовая вьюшка. Тестим всякое
     """
+    dct = {'key1': 1}
+    return dct['key2']
     # themes = Themes.objects.all()
     # themes_str = '\n'.join([i_theme.theme_name for i_theme in themes])
     # rslt = ask_the_gpt(
