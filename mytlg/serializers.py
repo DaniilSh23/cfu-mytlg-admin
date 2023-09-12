@@ -58,14 +58,17 @@ class ChildTaskResultsSerializer(serializers.Serializer):
     subscribers_numb = serializers.IntegerField(required=False, default=0)
 
 
-class WriteTaskResultSerializer(serializers.Serializer):
+class WriteSubsResultSerializer(serializers.Serializer):
     """
-    Сериалайзер для записи в БД резульатов задачи аккаунта.
+    Сериалайзер для записи в БД резульатов подписок аккаунта.
     """
     token = serializers.CharField(max_length=50)
-    task_pk = serializers.CharField(max_length=15)
-    fully_completed = serializers.BooleanField()
-    results = ChildTaskResultsSerializer(many=True)
+    task_pk = serializers.IntegerField()
+    actions_story = serializers.CharField()
+    success_subs = serializers.IntegerField()
+    fail_subs = serializers.IntegerField()
+    status = serializers.CharField(max_length=10)
+    end_flag = serializers.BooleanField()
 
 
 class UpdateChannelsSerializer(serializers.Serializer):

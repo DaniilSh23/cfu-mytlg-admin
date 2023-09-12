@@ -143,7 +143,7 @@ def subscription_to_new_channels():     # TODO: эту хуйню перепис
             tlg_acc=i_acc,
             initial_data=json.dumps(command_data),
         )
-        acc_task.add(*i_acc_channels_lst)
+        acc_task.channels.add(*i_acc_channels_lst)
 
         MY_LOGGER.debug(f'Отправляем через бота задачу аккаунту')
         command_data['task_pk'] = acc_task.pk
