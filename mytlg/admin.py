@@ -8,7 +8,7 @@ from mytlg.admin_mixins import ExportAsJSONMixin
 from mytlg.common import save_json_channels
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
-    AccountsErrors, AccountsSubscriptionTasks
+    AccountsErrors, AccountsSubscriptionTasks, Proxys
 from mytlg.tasks import subscription_to_new_channels
 
 
@@ -140,6 +140,29 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
 #     Отображение связанных объектов модели Channels в модели TlgAccounts
 #     """
 #     model = TlgAccounts.channels.through
+
+
+@admin.register(Proxys)
+class ProxysAdmin(admin.ModelAdmin):
+    list_display = (
+        "pk",
+        "display_proxy_data_together",
+        "is_checked",
+        "last_check",
+    )
+    list_display_links = (
+        "pk",
+        "display_proxy_data_together",
+        "is_checked",
+        "last_check",
+    )
+
+    def display_proxy_data_together(self, obj: Proxys):
+        """
+        Функция для отображения данных прокси вместе, через двоеточие
+        """
+        return (f'{obj.protocol}:{obj.port}:{obj.host}:{obj.username if obj.username else ""}'
+                f':{obj.password if obj.password else ""}')
 
 
 @admin.register(TlgAccounts)

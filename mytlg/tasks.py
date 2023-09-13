@@ -117,7 +117,7 @@ def scheduled_task_for_send_post_to_users():
 
 
 @shared_task
-def subscription_to_new_channels():     # TODO: эту хуйню переписал, но не тестил
+def subscription_to_new_channels():
     """
     Таск селери для подписки аккаунтов на новые каналы.
     """
@@ -172,7 +172,7 @@ def start_or_stop_accounts(bot_command='start_acc'):
     Отложенная задача celery для старта или остановки аккаунтов телеграмм.
     """
     MY_LOGGER.debug(f'Запущена задача по отправке боту команды для старта или стопа аккаунтов')
-    tlg_accounts = TlgAccounts.objects.filter(is_run=True).only("id", "session_file", "proxy")
+    tlg_accounts = TlgAccounts.objects.filter(is_run=True).only("id", "session_file", "proxy").prefetch_related("proxy")
     bot_admin = BotSettings.objects.get(key='bot_admins').value.split()[0]
     for i_acc in tlg_accounts:
         bot_command_for_start_or_stop_account(instance=i_acc, bot_command=bot_command, bot_admin=bot_admin)

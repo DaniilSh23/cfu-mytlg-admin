@@ -81,6 +81,34 @@ class Channels(models.Model):
         verbose_name_plural = 'каналы'
 
 
+class Proxys(models.Model):
+    """
+    Модель для таблицы хранения проксей
+    """
+    protocols = (
+        ('socks5', 'socks5'),
+        ('http', 'http'),
+        ('https', 'https'),
+        ('socks4', 'socks4'),
+    )
+    protocol = models.CharField(verbose_name='протокол', choices=protocols, max_length=6)
+    host = models.CharField(verbose_name='хост', max_length=200)
+    port = models.IntegerField(verbose_name='порт', default=65565)
+    username = models.CharField(verbose_name='юзернейм', max_length=200, blank=True, null=True)
+    password = models.CharField(verbose_name='пароль', max_length=200, blank=True, null=True)
+    is_checked = models.BooleanField(verbose_name='проверена', default=False)
+    last_check = models.DateTimeField(verbose_name='крайняя проверка', blank=True, null=True)
+
+    def __str__(self):
+        return (f'{self.protocol}:{self.port}:{self.host}:{self.username if self.username else ""}'
+                f':{self.password if self.password else ""}')
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'прокся'
+        verbose_name_plural = 'прокси'
+
+
 class TlgAccounts(models.Model):
     """
     TG аккаунты для работы.
@@ -89,7 +117,8 @@ class TlgAccounts(models.Model):
     acc_tlg_id = models.CharField(verbose_name='tlg_id аккаунта', max_length=50, blank=True, null=False)
     tlg_first_name = models.CharField(verbose_name='tlg_first_name', max_length=50, blank=True, null=False)
     tlg_last_name = models.CharField(verbose_name='tlg_last_name', max_length=50, blank=True, null=False)
-    proxy = models.CharField(verbose_name='proxy', max_length=200, blank=True, null=False)
+    # proxy = models.CharField(verbose_name='proxy', max_length=200, blank=True, null=False)
+    proxy = models.ForeignKey(verbose_name='прокси', to=Proxys, on_delete=models.DO_NOTHING)
     is_run = models.BooleanField(verbose_name='аккаунт запущен', default=False)
     waiting = models.BooleanField(verbose_name='ожидание', default=False)
     banned = models.BooleanField(verbose_name='забанен', default=False)
