@@ -58,9 +58,9 @@ class CategoriesAdmin(admin.ModelAdmin):
 
 @admin.register(Channels)
 class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
-    change_list_template = 'admin/channels_change_list.html'    # Шаблон для страницы со списком сущностей
-    actions = [     # список доп. действий в админке для записей данной модели
-        'export_json',   # export_csv - имя метода в миксине ExportAsCSVMixin
+    change_list_template = 'admin/channels_change_list.html'  # Шаблон для страницы со списком сущностей
+    actions = [  # список доп. действий в админке для записей данной модели
+        'export_json',  # export_csv - имя метода в миксине ExportAsCSVMixin
     ]
     list_display = (
         "pk",
@@ -124,11 +124,11 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         для формы загрузки данных из CSV
         :return:
         """
-        urls = super().get_urls()   # Достаём дефолтные урлы класса
-        new_urls = [    # Создаём свой список урлов с путём к форме
+        urls = super().get_urls()  # Достаём дефолтные урлы класса
+        new_urls = [  # Создаём свой список урлов с путём к форме
             path(
                 "import-channels-json",  # Указываем путь
-                self.import_json,    # Указываем вьюшку
+                self.import_json,  # Указываем вьюшку
                 name="import_channels_json",
             )
         ]
@@ -161,7 +161,7 @@ class ProxysAdmin(admin.ModelAdmin):
         """
         Функция для отображения данных прокси вместе, через двоеточие
         """
-        return (f'{obj.protocol}:{obj.port}:{obj.host}:{obj.username if obj.username else ""}'
+        return (f'{obj.protocol}:{obj.host}:{obj.port}:{obj.username if obj.username else ""}'
                 f':{obj.password if obj.password else ""}')
 
 
@@ -220,27 +220,33 @@ class AccountsSubscriptionTasksAdmin(admin.ModelAdmin):
     list_display = (
         'pk',
         'status',
+        'tlg_acc',
         'total_channels',
         'successful_subs',
         'failed_subs',
-        'short_action_story',
+        # 'short_action_story',
         'started_at',
         'ends_at',
-        'tlg_acc',
     )
     list_display_links = (
         'pk',
         'status',
+        'tlg_acc',
         'total_channels',
         'successful_subs',
         'failed_subs',
-        'short_action_story',
+        # 'short_action_story',
         'started_at',
         'ends_at',
-        'tlg_acc',
+    )
+    list_filter = (
+        'status',
     )
 
     def short_action_story(self, obj: AccountsSubscriptionTasks) -> str:
+        """
+        Функция для отображения значения поля action_story в сокращённом варианте
+        """
         if len(obj.action_story) < 48:
             return obj.action_story
         return obj.action_story[:48] + "..."

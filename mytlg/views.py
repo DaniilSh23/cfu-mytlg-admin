@@ -275,10 +275,10 @@ class RelatedNewsView(APIView):
 
         # Достаём все id каналов по теме
         theme_obj = ch_obj.category
-        ch_qset = Channels.objects.filter(theme=theme_obj).only("id")
-        ch_ids_lst = [i_ch.pk for i_ch in ch_qset]
+        ch_qset = Channels.objects.filter(category=theme_obj).only("id")
 
         # Складываем айдишники каналов и вытаскиваем из БД одним запросов все посты
+        ch_ids_lst = [i_ch.pk for i_ch in ch_qset]
         all_posts_lst = []
         i_ch_posts = NewsPosts.objects.filter(channel__id__in=ch_ids_lst).only("text", "embedding")
         for i_post in i_ch_posts:
@@ -390,9 +390,9 @@ class WriteSubsResults(APIView):
                                     status=status.HTTP_404_NOT_FOUND)
 
                 MY_LOGGER.debug(f'Обновляем данные в БД по задаче аккаунта c PK=={task_obj.pk}')
-                task_obj.successful_subs = ser.validated_data.get("success_subs")
-                task_obj.failed_subs = ser.validated_data.get("fail_subs")
-                task_obj.action_story = ser.validated_data.get("actions_story")
+                task_obj.successful_subs = task_obj.successful_subs + ser.validated_data.get("success_subs")
+                task_obj.failed_subs = task_obj.failed_subs + ser.validated_data.get("fail_subs")
+                task_obj.action_story = f'{ser.validated_data.get("actions_story")}\n{task_obj.action_story}'
                 task_obj.status = ser.validated_data.get("status")
                 if ser.validated_data.get("end_flag"):
                     task_obj.ends_at = datetime.datetime.now()

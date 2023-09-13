@@ -124,16 +124,34 @@ def subscription_to_new_channels():
     MY_LOGGER.info(f'Запущен таск селери по подписке аккаунтов на новые каналы.')
 
     max_ch_per_acc = int(BotSettings.objects.get(key='max_channels_per_acc').value)
-    acc_qset = TlgAccounts.objects.annotate(num_ch=Count('channels')).filter(num_ch__lt=max_ch_per_acc, is_run=True)
-    subs_tasks_qset = AccountsSubscriptionTasks.objects.exclude(channels=None).only('channels')
+
+    # Берём аккаунты, у которых число каналов < чем переменная max_ch_per_acc
+    # TODO: тут додумать only()
+    acc_qset = (TlgAccounts.objects.annotate(num_ch=Count('channels')).filter(num_ch__lt=max_ch_per_acc, is_run=True)
+                .only("channels", "acc_tlg_id").prefetch_related("channels"))
+
+    # Достаём таски на подписку, которые в работе и имеют связанные каналы
+    subs_tasks_qset = (AccountsSubscriptionTasks.objects.exclude(channels=None).filters(status='at_work')
+                       .only('channels', 'tlg_acc'))
+
+    # # Формируем список с ID каналов, на которые подписываться не надо.
+    # Тут исключаем каналы, на которые сейчас подписываются аккаунты.
     excluded_ids = [channel.id for task in subs_tasks_qset
-                       for channel in task.channels.all()]
+                    for channel in task.channels.all()]
+    # Тут исключаем каналы по аккаунтам, которые уже на них подписаны.
+    accs = TlgAccounts.objects.filter(is_run=True).only('channels').prefetch_related('channels')
+    for i_acc in accs:
+        excluded_ids.extend([i_ch.id for i_ch in i_acc.channels])
+    excluded_ids = list(set(excluded_ids))  # Избавляемся от дублей
+
+    # Достаём каналы и распределяем их по аккаунтам
     ch_lst = Channels.objects.filter(is_ready=False).exclude(id__in=excluded_ids).only("id", "channel_link")
     for i_acc in acc_qset:
-        ch_available_numb = max_ch_per_acc - i_acc.channels.count()    # Считаем кол-во доступных для подписки каналов
-        i_acc_channels_lst = ch_lst[:ch_available_numb]     # Срезаем нужные каналы для аккаунта в отдельный список
+        ch_available_numb = max_ch_per_acc - i_acc.channels.count()  # На сколько каналов может подписаться акк
+        i_acc_channels_lst = ch_lst[:ch_available_numb]  # Срезаем нужные каналы для аккаунта в отдельный список
 
         MY_LOGGER.debug(f'Создаём в БД запись о задаче аккаунту')
+        # Команда для бота (её данные)
         command_data = {
             "cmd": "subscribe_to_channels",
             "data": [(i_ch.pk, i_ch.channel_link) for i_ch in i_acc_channels_lst],
@@ -155,10 +173,10 @@ def subscription_to_new_channels():
         )
         if not task_is_set:
             MY_LOGGER.warning(f'Не удалось поставить аккаунту задачу! {i_acc!r}')
-            acc_task.delete()   # Удаляем из БД задачу аккаунта
+            acc_task.delete()  # Удаляем из БД задачу аккаунта
             continue
 
-        ch_lst = ch_lst[ch_available_numb - 1:]     # Отрезаем из общего списка каналы, которые забрал аккаунт
+        ch_lst = ch_lst[ch_available_numb:]  # Отрезаем из общего списка каналы, которые забрал аккаунт
         if len(ch_lst) < 0:
             MY_LOGGER.debug('Список каталов закончился, останавливаем цикл итерации по аккаунтам')
             break
@@ -176,6 +194,5 @@ def start_or_stop_accounts(bot_command='start_acc'):
     bot_admin = BotSettings.objects.get(key='bot_admins').value.split()[0]
     for i_acc in tlg_accounts:
         bot_command_for_start_or_stop_account(instance=i_acc, bot_command=bot_command, bot_admin=bot_admin)
-        time.sleep(0.5)     # Небольшая задержка, чтобы бот успел запустить асинк таски
+        time.sleep(0.5)  # Небольшая задержка, чтобы бот успел запустить асинк таски
     MY_LOGGER.debug(f'Задача завершена')
-
