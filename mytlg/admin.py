@@ -1,8 +1,15 @@
 from django.contrib import admin
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import render, redirect
+from django.urls import path
 
+from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.admin_mixins import ExportAsJSONMixin
+from mytlg.common import save_json_channels
+from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
-    AccountTasks, AccountsErrors
+    AccountsErrors, AccountsSubscriptionTasks, Proxys
+from mytlg.tasks import subscription_to_new_channels
 
 
 @admin.register(BotUser)
@@ -51,6 +58,7 @@ class CategoriesAdmin(admin.ModelAdmin):
 
 @admin.register(Channels)
 class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
+    change_list_template = 'admin/channels_change_list.html'    # Шаблон для страницы со списком сущностей
     actions = [     # список доп. действий в админке для записей данной модели
         'export_json',   # export_csv - имя метода в миксине ExportAsCSVMixin
     ]
@@ -73,12 +81,88 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "is_ready",
     )
 
+    def import_json(self, request: HttpRequest) -> HttpResponse:
+        """
+        Это вьюшка для кастомной формы админки, которая даёт возможность загрузить данные из файла json
+        :param request:
+        :return:
+        """
+        MY_LOGGER.info(f'Получен запрос {request.method!r} на вьюшку загрузки каналов из JSON')
+        if request.method == "GET":
+            # Рендерим форму
+            form = JSONImportForm()
+            context = {
+                'form': form,
+            }
+            return render(request, template_name='admin/json_form.html', context=context)
+
+        # Обрабатываем загрузку файла json
+        form = JSONImportForm(request.POST, request.FILES)
+        if not form.is_valid():
+            # Даём ответ если форма невалидна
+            context = {
+                'form': form,
+            }
+            return render(request, template_name='admin/json_form.html', context=context, status=400)
+
+        # Обрабатываем загруженный json файл
+        save_json_channels(
+            file=form.files.get("json_file").file,
+            encoding=request.encoding,
+        )
+
+        # Запускаем таск celery на старт подписки аккаунтов
+        subscription_to_new_channels.delay()
+
+        # Это сообщение пользователю на странице в админке
+        self.message_user(request, message='Data from JSON was imported')
+        return redirect("..")  # Редиректим на одну страницу выше (к списку Product)
+
+    def get_urls(self):
+        """
+        Переопределяем метод класса для того, чтобы расширить урлы для базовой страницы в админке кнопкой
+        для формы загрузки данных из CSV
+        :return:
+        """
+        urls = super().get_urls()   # Достаём дефолтные урлы класса
+        new_urls = [    # Создаём свой список урлов с путём к форме
+            path(
+                "import-channels-json",  # Указываем путь
+                self.import_json,    # Указываем вьюшку
+                name="import_channels_json",
+            )
+        ]
+        return new_urls + urls  # Обязательно новые урлы раньше дефолтных
+
 
 # class ChannelsInline(admin.TabularInline):
 #     """
 #     Отображение связанных объектов модели Channels в модели TlgAccounts
 #     """
 #     model = TlgAccounts.channels.through
+
+
+@admin.register(Proxys)
+class ProxysAdmin(admin.ModelAdmin):
+    list_display = (
+        "pk",
+        "display_proxy_data_together",
+        "is_checked",
+        "last_check",
+    )
+    list_display_links = (
+        "pk",
+        "display_proxy_data_together",
+        "is_checked",
+        "last_check",
+    )
+
+    def display_proxy_data_together(self, obj: Proxys):
+        """
+        Функция для отображения данных прокси вместе, через двоеточие
+        """
+        return (f'{obj.protocol}:{obj.port}:{obj.host}:{obj.username if obj.username else ""}'
+                f':{obj.password if obj.password else ""}')
 
 
 @admin.register(TlgAccounts)
@@ -88,23 +172,25 @@ class TlgAccountsAdmin(admin.ModelAdmin):
     # ]
     list_display = (
         'pk',
-        "session_file",
+        # "session_file",
         "acc_tlg_id",
         "tlg_first_name",
         "tlg_last_name",
-        "proxy",
+        # "proxy",
         "is_run",
-        "created_at",
+        'waiting',
+        'banned',
+        # "created_at",
         "subscribed_numb_of_channels",
     )
     list_display_links = (
         "pk",
-        "session_file",
+        # "session_file",
         "acc_tlg_id",
         "tlg_first_name",
         "tlg_last_name",
-        "proxy",
-        "created_at",
+        # "proxy",
+        # "created_at",
         "subscribed_numb_of_channels",
     )
     list_editable = (
@@ -128,28 +214,40 @@ class NewsPostsAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(AccountTasks)
-class AccountTasksAdmin(admin.ModelAdmin):
+@admin.register(AccountsSubscriptionTasks)
+class AccountsSubscriptionTasksAdmin(admin.ModelAdmin):
+    # change_list_template = 'admin/subs_tasks_change_list.html'
     list_display = (
         'pk',
-        'task_name',
+        'status',
+        'total_channels',
+        'successful_subs',
+        'failed_subs',
+        'short_action_story',
+        'started_at',
+        'ends_at',
         'tlg_acc',
-        'created_at',
-        'completed_at',
-        'fully_completed',
     )
     list_display_links = (
         'pk',
-        'task_name',
+        'status',
+        'total_channels',
+        'successful_subs',
+        'failed_subs',
+        'short_action_story',
+        'started_at',
+        'ends_at',
         'tlg_acc',
-        'created_at',
-        'completed_at',
-        'fully_completed',
     )
+
+    def short_action_story(self, obj: AccountsSubscriptionTasks) -> str:
+        if len(obj.action_story) < 48:
+            return obj.action_story
+        return obj.action_story[:48] + "..."
 
 
 @admin.register(AccountsErrors)
-class AccountsErrors(admin.ModelAdmin):
+class AccountsErrorsAdmin(admin.ModelAdmin):
     list_display = (
         'pk',
         'error_type',

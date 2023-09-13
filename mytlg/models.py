@@ -81,6 +81,34 @@ class Channels(models.Model):
         verbose_name_plural = 'каналы'
 
 
+class Proxys(models.Model):
+    """
+    Модель для таблицы хранения проксей
+    """
+    protocols = (
+        ('socks5', 'socks5'),
+        ('http', 'http'),
+        ('https', 'https'),
+        ('socks4', 'socks4'),
+    )
+    protocol = models.CharField(verbose_name='протокол', choices=protocols, max_length=6)
+    host = models.CharField(verbose_name='хост', max_length=200)
+    port = models.IntegerField(verbose_name='порт', default=65565)
+    username = models.CharField(verbose_name='юзернейм', max_length=200, blank=True, null=True)
+    password = models.CharField(verbose_name='пароль', max_length=200, blank=True, null=True)
+    is_checked = models.BooleanField(verbose_name='проверена', default=False)
+    last_check = models.DateTimeField(verbose_name='крайняя проверка', blank=True, null=True)
+
+    def __str__(self):
+        return (f'{self.protocol}:{self.port}:{self.host}:{self.username if self.username else ""}'
+                f':{self.password if self.password else ""}')
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'прокся'
+        verbose_name_plural = 'прокси'
+
+
 class TlgAccounts(models.Model):
     """
     TG аккаунты для работы.
@@ -89,9 +117,11 @@ class TlgAccounts(models.Model):
     acc_tlg_id = models.CharField(verbose_name='tlg_id аккаунта', max_length=50, blank=True, null=False)
     tlg_first_name = models.CharField(verbose_name='tlg_first_name', max_length=50, blank=True, null=False)
     tlg_last_name = models.CharField(verbose_name='tlg_last_name', max_length=50, blank=True, null=False)
-    proxy = models.CharField(verbose_name='proxy', max_length=200, blank=True, null=False)
+    # proxy = models.CharField(verbose_name='proxy', max_length=200, blank=True, null=False)
+    proxy = models.ForeignKey(verbose_name='прокси', to=Proxys, on_delete=models.DO_NOTHING)
     is_run = models.BooleanField(verbose_name='аккаунт запущен', default=False)
     waiting = models.BooleanField(verbose_name='ожидание', default=False)
+    banned = models.BooleanField(verbose_name='забанен', default=False)
     created_at = models.DateTimeField(verbose_name='дата и время добавления акка', auto_now_add=True)
     channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='tlg_accounts', blank=True)
     subscribed_numb_of_channels = models.IntegerField(verbose_name='кол-во подписок на каналы', default=0)
@@ -171,22 +201,31 @@ class NewsPosts(models.Model):
         verbose_name_plural = 'новостные посты'
 
 
-class AccountTasks(models.Model):
+class AccountsSubscriptionTasks(models.Model):
     """
-    Модель для задач аккаунтам телеграм.
+    Модель для задач аккаунтам телеграм на подписку.
     """
-    task_name = models.CharField(verbose_name='название задачи', max_length=100)
+    statuses = (
+        ('success', 'успешно завершено'),
+        ('at_work', 'в работе'),
+        ('error', 'завершено с ошибкой'),
+    )
+
+    status = models.CharField(verbose_name='статус', choices=statuses, max_length=10, default='at_work')
+    total_channels = models.IntegerField(verbose_name='всего каналов', default=0)
+    successful_subs = models.IntegerField(verbose_name='успешная подписка', default=0)
+    failed_subs = models.IntegerField(verbose_name='неудачная подписка', default=0)
+    action_story = models.TextField(verbose_name='история действий')
+    started_at = models.DateTimeField(verbose_name='старт', auto_now_add=True)
+    ends_at = models.DateTimeField(verbose_name='окончание', blank=True, null=True)
     tlg_acc = models.ForeignKey(verbose_name='аккаунт', to=TlgAccounts, on_delete=models.CASCADE)
     initial_data = models.TextField(verbose_name='исходные данные', max_length=5000)
-    created_at = models.DateTimeField(verbose_name='когда создана', auto_now_add=True)
-    execution_result = models.TextField(verbose_name='результат выполнения', max_length=5000, blank=True, null=False)
-    completed_at = models.DateTimeField(verbose_name='когда завершена', blank=True, null=True)
-    fully_completed = models.BooleanField(verbose_name='завершена полностью', default=False)
+    channels = models.ManyToManyField(verbose_name='каналы', to=Channels,  related_name='subs_task', blank=True)
 
     def __str__(self):
-        return f'задача {self.task_name!r} {self.tlg_acc!r}'
+        return f'задача на подписку для аккаунта: {self.tlg_acc!r}'
 
     class Meta:
         ordering = ['-id']
-        verbose_name = 'задача аккаунту'
-        verbose_name_plural = 'задачи аккаунтам'
+        verbose_name = 'задача аккаунту на подписку'
+        verbose_name_plural = 'задачи аккаунтам на подписку'

@@ -1,6 +1,8 @@
+from socket import socket
 from typing import List
 
 import requests
+import socks
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 
@@ -52,7 +54,6 @@ def send_command_to_bot(command: str, bot_admin, session_file, disable_notificat
     """
     Отправка боту команды на старт или стоп аккаунта. Также шлём и файл сессии
     """
-    # TODO: доработать так, чтобы при стопе аккаунта файл сессии не отправлять
     MY_LOGGER.info(f'Выполняем функцию для отправки команды боту: {command}.')
     url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument'
     data = {'chat_id': bot_admin, 'caption': command, 'disable_notification': disable_notification}
@@ -116,9 +117,61 @@ def bot_command_for_start_or_stop_account(instance, bot_admin, bot_command: str 
     Функция для отправки боту команды на старт или стоп аккаунта
     """
     file_name = instance.session_file.path.split('/')[-1]
-    command_msg = f'/{bot_command} {instance.pk} {file_name} {instance.proxy if bot_command == "start_acc" else ""}'
+    command_msg = f'/{bot_command} {instance.pk} {file_name}'
+    if bot_command == 'start_acc':
+        proxy_str = (f"{instance.proxy.protocol}:{instance.proxy.host}:{instance.proxy.port}:{instance.proxy.username}"
+                     f":{instance.proxy.password}")
+        command_msg = f"{command_msg} {proxy_str}"
+
     send_command_to_bot(
         command=command_msg,
         bot_admin=bot_admin,
         session_file=instance.session_file.path,
     )
+
+
+def check_proxy(protocol, host, port, username=None, password=None):
+    """
+    Функция для проверки работоспособности прокси
+    """
+    # Формируем URL для теста прокси
+    url = f'https://t.me'
+
+    # Настройка прокси-сервера
+    proxy_types = {
+        'http': socks.HTTP,
+        'https': socks.HTTP,
+        'socks4': socks.SOCKS4,
+        'socks5': socks.SOCKS5,
+    }
+
+    # Настройка прокси-сервера
+    proxy_type = proxy_types[protocol]
+    socks.set_default_proxy(proxy_type, host, port, username=username, password=password)
+
+    # Применение прокси к сокетам
+    socket.socket = socks.socksocket
+
+    # Настройка прокси-сервера
+    proxies = {
+        'http': f'{protocol}://{host}:{port}',
+        'https': f'{protocol}://{host}:{port}'
+    }
+
+    # Если есть логин и пароль, добавляем их в прокси-сервер
+    if username and password:
+        proxies['http'] = f'{protocol}://{username}:{password}@{host}:{port}'
+        proxies['https'] = f'{protocol}://{username}:{password}@{host}:{port}'
+
+    try:
+        # Отправляем запрос через прокси
+        response = requests.get(url, proxies=proxies, timeout=5)
+        # Проверяем, получен ли успешный статус код
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+    except Exception as err:
+        MY_LOGGER.warning(f'Ошибка при проверке прокси {protocol}://{host}:{port} -> {err}')
+        # Если возникла ошибка, считаем прокси нерабочим
+        return False

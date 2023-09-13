@@ -20,7 +20,7 @@ import loguru
 # Это отсюда https://django-environ.readthedocs.io/en/latest/quickstart.html
 env = environ.Env(
     # set casting, default value
-    DEBUG=bool,     # Для переменной DEBUG указываем тип данных, когда достаём из .env
+    DEBUG=bool,  # Для переменной DEBUG указываем тип данных, когда достаём из .env
     SECRET_KEY=str,
     DOMAIN_NAME=str,
     REDIS_HOST=str,
@@ -35,6 +35,8 @@ env = environ.Env(
     BOT_TOKEN=str,
     OPENAI_KEY=str,
     SEND_NEWS_TIMEOUT=int,
+    SHOW_SQL_LOG=bool,
+    SENTRY_DSN=str,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -56,7 +58,6 @@ DEBUG = env('DEBUG')
 ALLOWED_HOSTS = ['*']
 DOMAIN_NAME = env('DOMAIN_NAME')
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -72,6 +73,8 @@ INSTALLED_APPS = [
 
     # сторонние приложения
     'rest_framework',
+    'drf_spectacular',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -104,7 +107,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'cfu_mytlg_admin.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
@@ -118,7 +120,6 @@ DATABASES = {
         'PORT': env('DATABASE_PORT'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -138,6 +139,21 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# REST FRAMEWORK settings
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+}
+
+# DRF SPECTACULAR settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'YourTelegram API',
+    'DESCRIPTION': 'API for YourTelegram Project',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
@@ -150,7 +166,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
@@ -162,8 +177,8 @@ if DEBUG:
 else:
     STATIC_ROOT = BASE_DIR / "static"
 
-MEDIA_URL = '/media/'   # путь в адресной строке для получения медиа-файлов
-MEDIA_ROOT = BASE_DIR / 'media'    # путь к медиа-файлам на диске
+MEDIA_URL = '/media/'  # путь в адресной строке для получения медиа-файлов
+MEDIA_ROOT = BASE_DIR / 'media'  # путь к медиа-файлам на диске
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
@@ -173,10 +188,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Celery settings
 REDIS_HOST = env('REDIS_HOST')
 REDIS_PORT = env('REDIS_PORT')
-CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"    # Это адрес брокера сообщений (у нас Redis)
-CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}"    # Это адрес бэкэнда результатов (тоже у нас Redis)
-CELERY_TIMEZONE = "Europe/Moscow"   # Временная зона для Celery
-CELERY_BEAT_SCHEDULE = {    # Настройки шедуля
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"  # Это адрес брокера сообщений (у нас Redis)
+CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}"  # Это адрес бэкэнда результатов (тоже у нас Redis)
+CELERY_TIMEZONE = "Europe/Moscow"  # Временная зона для Celery
+CELERY_BEAT_SCHEDULE = {  # Настройки шедуля
     'send_posts_to_users_task': {
         'task': 'mytlg.tasks.scheduled_task_for_send_post_to_users',
         'schedule': env('SEND_NEWS_TIMEOUT'),
@@ -191,7 +206,7 @@ CELERY_BEAT_SCHEDULE = {    # Настройки шедуля
 # Настройки логгера
 MY_LOGGER = loguru.logger
 MY_LOGGER.remove()  # Удаляем все предыдущие обработчики логов
-MY_LOGGER.add(sink=sys.stdout, level='DEBUG')   # Все логи от DEBUG и выше в stdout
+MY_LOGGER.add(sink=sys.stdout, level='DEBUG')  # Все логи от DEBUG и выше в stdout
 MY_LOGGER.add(  # системные логи в файл
     sink=f'{BASE_DIR}/logs/sys_log.log',
     level='DEBUG',
@@ -214,24 +229,47 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
 # Настройка логирование запросов к БД
-# LOGGING = {
-#     'version': 1,
-#     'filters': {
-#         'require_debug_true': {
-#             '()': 'django.utils.log.RequireDebugTrue',
-#         },
-#     },
-#     'handlers': {
-#         'console': {
-#             'level': 'DEBUG',
-#             'filters': ['require_debug_true'],
-#             'class': 'logging.StreamHandler',
-#         },
-#     },
-#     'loggers': {
-#         'django.db.backends': {
-#             'level': 'DEBUG',
-#             'handlers': ['console'],
-#         },
-#     },
-# }
+SHOW_SQL_LOG = env('SHOW_SQL_LOG')
+if SHOW_SQL_LOG:
+    LOGGING = {
+        'version': 1,
+        'filters': {
+            'require_debug_true': {
+                '()': 'django.utils.log.RequireDebugTrue',
+            },
+        },
+        'handlers': {
+            'console': {
+                'level': 'DEBUG',
+                'filters': ['require_debug_true'],
+                'class': 'logging.StreamHandler',
+            },
+        },
+        'loggers': {
+            'django.db.backends': {
+                'level': 'DEBUG',
+                'handlers': ['console'],
+            },
+        },
+    }
+
+# Настройка sentry для отлова ошибок
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
+SENTRY_DSN = env("SENTRY_DSN")
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    integrations=[DjangoIntegration()],
+    # If you wish to associate users to errors (assuming you are using
+    # django.contrib.auth) you may enable sending PII data.
+    send_default_pii=True,
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+)

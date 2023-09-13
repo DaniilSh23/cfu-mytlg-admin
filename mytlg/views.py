@@ -1,26 +1,27 @@
 import datetime
 import json
-from io import BytesIO
 
 import pytz
 import requests
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
-from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountTasks
+from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, AccountsErrors
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
-    WriteTaskResultSerializer, UpdateChannelsSerializer, AccountErrorSerializer
+    UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts
 
 
@@ -150,32 +151,42 @@ class WriteInterestsView(View):
         return render(request, template_name='mytlg/success.html', context=context)
 
 
-class SetAccRunFlag(APIView):
+class SetAccFlags(APIView):
     """
-    Установка флага запуска аккаунта
+    Установка флагов для аккаунта
     """
 
+    @extend_schema(request=SetAccDataSerializer, responses=str, methods=['post'])
     def post(self, request):
-        MY_LOGGER.info(f'Получен POST запрос на вьюшку установки флага запуска аккаунта')
+        MY_LOGGER.info(f'Получен POST запрос на вьюшку установки флагов аккаунта')
         ser = SetAccDataSerializer(data=request.data)
 
         if ser.is_valid():
             MY_LOGGER.debug(f'Данные валидны, проверяем токен')
 
-            if ser.data.get("token") == BOT_TOKEN:
+            if ser.validated_data.get("token") == BOT_TOKEN:
                 MY_LOGGER.debug(f'Токен успешно проверен')
 
-                try:
-                    TlgAccounts.objects.filter(pk=int(ser.data.get("acc_pk"))).update(is_run=ser.data.get("is_run"))
-                except ObjectDoesNotExist:
-                    MY_LOGGER.warning(f'Не найден в БД объект TlgAccounts с PK={ser.data.get("acc_pk")}')
-                    return Response(data={'result': f'Not found object with primary key == {ser.data.get("acc_pk")}'},
-                                    status=status.HTTP_404_NOT_FOUND)
+                dct = dict()
+                for i_param in ('is_run', 'waiting', 'banned'):
+                    if ser.validated_data.get(i_param) is not None:
+                        dct[i_param] = ser.validated_data.get(i_param)
 
-                return Response(data={'result': 'is_run flag successfully changed'}, status=status.HTTP_200_OK)
+                try:
+                    TlgAccounts.objects.filter(pk=int(ser.validated_data.get("acc_pk"))).update(**dct)
+
+                except ObjectDoesNotExist:
+                    MY_LOGGER.warning(f'Не найден в БД объект TlgAccounts с PK={ser.validated_data.get("acc_pk")}')
+                    return Response(
+                        data={'result': f'Not found object with primary key == {ser.validated_data.get("acc_pk")}'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                return Response(data={'result': f'flags successfully changed'}, status=status.HTTP_200_OK)
 
             else:
-                MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. Полученный токен: {ser.data.get("token")}')
+                MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. '
+                                  f'Полученный токен: {ser.validated_data.get("token")}')
                 return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
 
         else:
@@ -205,20 +216,32 @@ class GetChannelsListView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            # Достаём из БД каналы, с которыми связан аккаунт
             channels_qset = TlgAccounts.objects.get(pk=int(acc_pk)).channels.all()
         except ObjectDoesNotExist:
             MY_LOGGER.warning(f'Запрошены каналы для несуществующего аккаунта (PK аккаунта == {acc_pk!r}')
             return Response(status=status.HTTP_400_BAD_REQUEST, data='Object does not exists')
 
-        channels_lst = [
-            {
-                "pk": i_ch.pk,
-                "channel_id": i_ch.channel_id,
-                "channel_name": i_ch.channel_name,
-                "channel_link": i_ch.channel_link,
-            }
-            for i_ch in channels_qset
-        ]
+        channels_lst = []
+        for i_channel in channels_qset:
+            # Достаём из БД список других аккаунтов, с которым связан каждый канал
+            acc_lst = i_channel.tlg_accounts.all().exclude(Q(pk=int(acc_pk)))
+            discard_channel = False     # Флаг "отбросить канал"
+            for i_acc in acc_lst:
+                if i_acc.is_run:    # Если другой аккаунт уже запущен и слушает данный канал
+                    discard_channel = True  # Поднимаем флаг
+                    break
+            if not discard_channel:     # Если флаг опущен
+                # Записываем данные о канале в список
+                channels_lst.append(
+                    {
+                        "pk": i_channel.pk,
+                        "channel_id": i_channel.channel_id,
+                        "channel_name": i_channel.channel_name,
+                        "channel_link": i_channel.channel_link,
+                    }
+                )
+
         serializer = ChannelsSerializer(channels_lst, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
@@ -345,14 +368,15 @@ class UploadNewChannels(View):
         return HttpResponse(content=f'Получил файлы, спасибо.')
 
 
-class WriteTasksResults(APIView):
+class WriteSubsResults(APIView):
     """
-    Вьюшки для записи результатов заданий аккаунтов.
+    Вьюшки для записи результатов подписок аккаунтов.
     """
-    def post(self, request):
-        MY_LOGGER.info(f'Получен POST запрос на вьюшку записи результатов задачи аккаунта')
 
-        ser = WriteTaskResultSerializer(data=request.data)
+    def post(self, request):
+        MY_LOGGER.info(f'Получен POST запрос на вьюшку записи результатов подписки аккаунта')
+
+        ser = WriteSubsResultSerializer(data=request.data)
         if ser.is_valid():
             MY_LOGGER.debug(f'Данные валидны, проверяем токен')
 
@@ -360,41 +384,21 @@ class WriteTasksResults(APIView):
                 MY_LOGGER.debug(f'Токен успешно проверен')
 
                 try:
-                    task_obj = AccountTasks.objects.get(pk=int(ser.data.get("task_pk")))
+                    task_obj = AccountsSubscriptionTasks.objects.get(pk=int(ser.validated_data.get("task_pk")))
                 except ObjectDoesNotExist:
                     return Response(data={'result': 'account task object does not exist'},
                                     status=status.HTTP_404_NOT_FOUND)
 
                 MY_LOGGER.debug(f'Обновляем данные в БД по задаче аккаунта c PK=={task_obj.pk}')
-                task_obj.execution_result = ser.data.get("results")
-                task_obj.fully_completed = ser.data.get("fully_completed")
-                task_obj.completed_at = datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
+                task_obj.successful_subs = ser.validated_data.get("success_subs")
+                task_obj.failed_subs = ser.validated_data.get("fail_subs")
+                task_obj.action_story = ser.validated_data.get("actions_story")
+                task_obj.status = ser.validated_data.get("status")
+                if ser.validated_data.get("end_flag"):
+                    task_obj.ends_at = datetime.datetime.now()
                 task_obj.save()
 
-                tlg_acc = task_obj.tlg_acc
-
-                MY_LOGGER.debug(f'Обновляем в БД каналы')
-                for i_ch in ser.data.get("results"):
-                    try:
-                        ch_obj = Channels.objects.get(pk=int(i_ch.get("ch_pk")))
-                    except ObjectDoesNotExist:
-                        MY_LOGGER.warning(f'Объект канала с PK=={i_ch.get("ch_pk")} не найден в БД. Пропускаем...')
-                        continue
-                    if not i_ch.get("success"):
-                        MY_LOGGER.debug(f'Канал {ch_obj!r} имеет success=={i_ch.get("success")}. Пропускаем...')
-                        continue
-                    ch_obj.channel_id = i_ch.get("ch_id")
-                    ch_obj.channel_name = i_ch.get("ch_name")
-                    ch_obj.description = i_ch.get("description")
-                    ch_obj.subscribers_numb = i_ch.get("subscribers_numb")
-                    ch_obj.is_ready = True
-                    ch_obj.save()
-                    tlg_acc.channels.add(ch_obj)
-                    tlg_acc.subscribed_numb_of_channels += 1
-                    tlg_acc.save()
-                    MY_LOGGER.debug(f'Канал {ch_obj!r} обновлён и связан с аккаунтом {tlg_acc!r}.')
-
-                return Response(data={'result': 'task result write successful'}, status=status.HTTP_200_OK)
+                return Response(data={'result': 'task status changed successful'}, status=status.HTTP_200_OK)
 
             else:
                 MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. Полученный токен: {ser.data.get("token")}')
@@ -409,6 +413,7 @@ class UpdateChannelsView(APIView):
     """
     Вьюшка для обновления записей каналов.
     """
+
     def post(self, request):
         MY_LOGGER.info(f'Получен POST запрос на обновление данных о каналах')
 
@@ -461,6 +466,7 @@ class GetActiveAccounts(APIView):
     """
     Вьюшка для запроса активных аккаунтов из БД.
     """
+
     def get(self, request):
         """
         Обрабатываем GET запрос и отправляем боту команды на старт нужных аккаунтов.
@@ -481,6 +487,8 @@ class AccountError(APIView):
     """
     Вьюшки для ошибок аккаунта.
     """
+
+    @extend_schema(request=AccountErrorSerializer, responses=str, methods=['post'])
     def post(self, request):
         """
         Обрабатываем POST запрос, записываем в БД данные об ошибке аккаунта
@@ -489,8 +497,25 @@ class AccountError(APIView):
 
         ser = AccountErrorSerializer(data=request.data)
         if ser.is_valid():
-            pass
+            token = ser.validated_data.get("token")
+            if not token or token != BOT_TOKEN:
+                MY_LOGGER.warning(f'В запросе невалидный токен: {token}')
+                return Response(data='invalid token', status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                tlg_acc = TlgAccounts.objects.only("id").get(pk=ser.validated_data.get("account"))
+            except ObjectDoesNotExist:
+                MY_LOGGER.warning(f'Аккаунт с PK == {ser.validated_data.get("account")!r} не найден в БД.')
+                return Response(data=f'account with PK == {ser.validated_data.get("account")!r} does not exist',
+                                status=status.HTTP_404_NOT_FOUND)
+            AccountsErrors.objects.create(
+                error_type=ser.validated_data.get("error_type"),
+                error_description=ser.validated_data.get("error_description"),
+                account=tlg_acc,
+            )
+            return Response(data='success', status=status.HTTP_200_OK)
         else:
+            MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
             return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -498,6 +523,8 @@ def test_view(request):
     """
     Тестовая вьюшка. Тестим всякое
     """
+    dct = {'key1': 1}
+    return dct['key2']
     # themes = Themes.objects.all()
     # themes_str = '\n'.join([i_theme.theme_name for i_theme in themes])
     # rslt = ask_the_gpt(

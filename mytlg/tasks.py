@@ -9,7 +9,7 @@ from django.db.models import Count
 
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.gpt_processing import ask_the_gpt
-from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountTasks, BotSettings
+from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
     send_file_by_bot, bot_command_for_start_or_stop_account
 
@@ -125,7 +125,10 @@ def subscription_to_new_channels():
 
     max_ch_per_acc = int(BotSettings.objects.get(key='max_channels_per_acc').value)
     acc_qset = TlgAccounts.objects.annotate(num_ch=Count('channels')).filter(num_ch__lt=max_ch_per_acc, is_run=True)
-    ch_lst = list(Channels.objects.filter(is_ready=False))
+    subs_tasks_qset = AccountsSubscriptionTasks.objects.exclude(channels=None).only('channels')
+    excluded_ids = [channel.id for task in subs_tasks_qset
+                       for channel in task.channels.all()]
+    ch_lst = Channels.objects.filter(is_ready=False).exclude(id__in=excluded_ids).only("id", "channel_link")
     for i_acc in acc_qset:
         ch_available_numb = max_ch_per_acc - i_acc.channels.count()    # Считаем кол-во доступных для подписки каналов
         i_acc_channels_lst = ch_lst[:ch_available_numb]     # Срезаем нужные каналы для аккаунта в отдельный список
@@ -135,11 +138,12 @@ def subscription_to_new_channels():
             "cmd": "subscribe_to_channels",
             "data": [(i_ch.pk, i_ch.channel_link) for i_ch in i_acc_channels_lst],
         }
-        acc_task = AccountTasks.objects.create(
-            task_name='подписаться на каналы',
+        acc_task = AccountsSubscriptionTasks.objects.create(
+            total_channels=len(i_acc_channels_lst),
             tlg_acc=i_acc,
             initial_data=json.dumps(command_data),
         )
+        acc_task.channels.add(*i_acc_channels_lst)
 
         MY_LOGGER.debug(f'Отправляем через бота задачу аккаунту')
         command_data['task_pk'] = acc_task.pk
@@ -168,7 +172,7 @@ def start_or_stop_accounts(bot_command='start_acc'):
     Отложенная задача celery для старта или остановки аккаунтов телеграмм.
     """
     MY_LOGGER.debug(f'Запущена задача по отправке боту команды для старта или стопа аккаунтов')
-    tlg_accounts = TlgAccounts.objects.filter(is_run=True).only("id", "session_file", "proxy")
+    tlg_accounts = TlgAccounts.objects.filter(is_run=True).only("id", "session_file", "proxy").prefetch_related("proxy")
     bot_admin = BotSettings.objects.get(key='bot_admins').value.split()[0]
     for i_acc in tlg_accounts:
         bot_command_for_start_or_stop_account(instance=i_acc, bot_command=bot_command, bot_admin=bot_admin)
