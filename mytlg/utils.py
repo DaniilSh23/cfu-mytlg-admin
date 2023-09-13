@@ -54,7 +54,6 @@ def send_command_to_bot(command: str, bot_admin, session_file, disable_notificat
     """
     Отправка боту команды на старт или стоп аккаунта. Также шлём и файл сессии
     """
-    # TODO: доработать так, чтобы при стопе аккаунта файл сессии не отправлять
     MY_LOGGER.info(f'Выполняем функцию для отправки команды боту: {command}.')
     url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument'
     data = {'chat_id': bot_admin, 'caption': command, 'disable_notification': disable_notification}
@@ -167,32 +166,12 @@ def check_proxy(protocol, host, port, username=None, password=None):
     try:
         # Отправляем запрос через прокси
         response = requests.get(url, proxies=proxies, timeout=5)
-        print(response)
         # Проверяем, получен ли успешный статус код
         if response.status_code == 200:
             return True
         else:
             return False
-    except Exception as e:
-        print(f'Ошибка: {e}')
+    except Exception as err:
+        MY_LOGGER.warning(f'Ошибка при проверке прокси {protocol}://{host}:{port} -> {err}')
         # Если возникла ошибка, считаем прокси нерабочим
         return False
-
-
-# # Пример использования функции для тестирования прокси
-# protocol='socks5'  # Здесь выберите нужный протокол (http, https, socks4 или socks5)
-# host="217.29.62.212"  # Замените на свой хост
-# port=10811  # Замените на свой порт
-# username='ur1zqX' # Замените на свой логин (если не требуется, установите None)
-# password='p9fgYM'  # Замените на свой пароль (если не требуется, установите None)
-#
-# # protocol='http'  # Здесь выберите нужный протокол (http, https, socks4 или socks5)
-# # host="168.196.239.179"  # Замените на свой хост
-# # port=9750  # Замените на свой порт
-# # username='0SMbAz' # Замените на свой логин (если не требуется, установите None)
-# # password='rWLoCZ'  # Замените на свой пароль (если не требуется, установите None)
-#
-# if check_proxy(protocol, host, port, username, password):
-#     print(f'Прокси {protocol}://{host}:{port} работает')
-# else:
-#     print(f'Прокси {protocol}://{host}:{port} не работает')
