@@ -2,7 +2,7 @@ import os
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.db.models.signals import pre_delete, pre_save
+from django.db.models.signals import pre_delete, pre_save, m2m_changed
 from django.dispatch import receiver
 
 from cfu_mytlg_admin.settings import MY_LOGGER
@@ -100,7 +100,7 @@ class Proxys(models.Model):
     last_check = models.DateTimeField(verbose_name='крайняя проверка', blank=True, null=True)
 
     def __str__(self):
-        return (f'{self.protocol}:{self.port}:{self.host}:{self.username if self.username else ""}'
+        return (f'{self.protocol}:{self.host}:{self.port}:{self.username if self.username else ""}'
                 f':{self.password if self.password else ""}')
 
     class Meta:
@@ -133,6 +133,18 @@ class TlgAccounts(models.Model):
         ordering = ['-id']
         verbose_name = 'tlg аккаунт'
         verbose_name_plural = 'tlg аккаунты'
+
+
+@receiver(m2m_changed, sender=TlgAccounts.channels.through)
+def update_subscribed_numb_of_channels(sender, instance, action, **kwargs):
+    """
+    Сигнал на изменения связей M2M. Пересчитывает кол-во каналов и записывает в нужное поле.
+    """
+    if action in ['post_add', 'post_remove', 'post_clear']:
+        # Вычисляем новое значение для subscribed_numb_of_channels
+        instance.subscribed_numb_of_channels = instance.channels.count()
+        instance.save()
+        MY_LOGGER.debug(f'Пересчитали и сохранили новое кол-во каналов == {instance.channels.count()}')
 
 
 @receiver(pre_delete, sender=TlgAccounts)
