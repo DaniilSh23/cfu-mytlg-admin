@@ -176,7 +176,7 @@ def subscription_to_new_channels():
             continue
 
         ch_lst = ch_lst[ch_available_numb:]  # Отрезаем из общего списка каналы, которые забрал аккаунт
-        if len(ch_lst) < 0:
+        if len(ch_lst) <= 0:
             MY_LOGGER.debug('Список каталов закончился, останавливаем цикл итерации по аккаунтам')
             break
     MY_LOGGER.info(f'Таск по отправке аккаунтам задач подписаться на каналы завершена.')
