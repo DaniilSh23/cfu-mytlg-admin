@@ -413,9 +413,9 @@ class UpdateChannelsView(APIView):
     """
     Вьюшка для обновления записей каналов.
     """
-
+    @extend_schema(request=UpdateChannelsSerializer, responses=str, methods=['post'])
     def post(self, request):
-        MY_LOGGER.info(f'Получен POST запрос на обновление данных о каналах')
+        MY_LOGGER.info(f'Получен POST запрос на обновление данных о каналах | {request.data!r}')
 
         ser = UpdateChannelsSerializer(data=request.data)
         if ser.is_valid():
@@ -435,6 +435,8 @@ class UpdateChannelsView(APIView):
 
             # Обрабатываем каналы
             ch_ids_lst = [int(i_ch.get("ch_pk")) for i_ch in ser.data.get('channels')]
+            acc_channels = tlg_acc_obj.channels.all()  # Достаём все связи с каналами для аккаунта
+            [ch_ids_lst.append(i_ch.pk) for i_ch in acc_channels]
             ch_qset = Channels.objects.filter(id__in=ch_ids_lst)
             for i_ch in ch_qset:
                 for j_ch in ser.data.get('channels'):

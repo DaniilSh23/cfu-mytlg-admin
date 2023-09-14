@@ -144,6 +144,7 @@ def update_subscribed_numb_of_channels(sender, instance, action, **kwargs):
         # Вычисляем новое значение для subscribed_numb_of_channels
         instance.subscribed_numb_of_channels = instance.channels.count()
         instance.save()
+        MY_LOGGER.debug(f'Пересчитали и сохранили новое кол-во каналов == {instance.channels.count()}')
 
 
 @receiver(pre_delete, sender=TlgAccounts)

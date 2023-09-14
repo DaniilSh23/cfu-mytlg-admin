@@ -126,12 +126,11 @@ def subscription_to_new_channels():
     max_ch_per_acc = int(BotSettings.objects.get(key='max_channels_per_acc').value)
 
     # Берём аккаунты, у которых число каналов < чем переменная max_ch_per_acc
-    # TODO: тут додумать only()
     acc_qset = (TlgAccounts.objects.annotate(num_ch=Count('channels')).filter(num_ch__lt=max_ch_per_acc, is_run=True)
                 .only("channels", "acc_tlg_id").prefetch_related("channels"))
 
     # Достаём таски на подписку, которые в работе и имеют связанные каналы
-    subs_tasks_qset = (AccountsSubscriptionTasks.objects.exclude(channels=None).filters(status='at_work')
+    subs_tasks_qset = (AccountsSubscriptionTasks.objects.filter(status='at_work', channels__isnull=False)
                        .only('channels', 'tlg_acc'))
 
     # # Формируем список с ID каналов, на которые подписываться не надо.
@@ -141,7 +140,7 @@ def subscription_to_new_channels():
     # Тут исключаем каналы по аккаунтам, которые уже на них подписаны.
     accs = TlgAccounts.objects.filter(is_run=True).only('channels').prefetch_related('channels')
     for i_acc in accs:
-        excluded_ids.extend([i_ch.id for i_ch in i_acc.channels])
+        excluded_ids.extend([i_ch.id for i_ch in i_acc.channels.all()])
     excluded_ids = list(set(excluded_ids))  # Избавляемся от дублей
 
     # Достаём каналы и распределяем их по аккаунтам
@@ -180,7 +179,6 @@ def subscription_to_new_channels():
         if len(ch_lst) < 0:
             MY_LOGGER.debug('Список каталов закончился, останавливаем цикл итерации по аккаунтам')
             break
-
     MY_LOGGER.info(f'Таск по отправке аккаунтам задач подписаться на каналы завершена.')
 
 
