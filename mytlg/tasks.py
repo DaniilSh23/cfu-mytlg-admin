@@ -39,7 +39,7 @@ def gpt_interests_processing(interests: List, tlg_id: str):
 
     MY_LOGGER.debug(f'Получаем объект BotUser и очищаем связи Many2Many для каналов и тем')
     bot_usr = BotUser.objects.get(tlg_id=tlg_id)
-    bot_usr.themes.clear()
+    bot_usr.category.clear()
     bot_usr.channels.clear()
 
     themes_rslt = list()
@@ -73,7 +73,7 @@ def gpt_interests_processing(interests: List, tlg_id: str):
             MY_LOGGER.debug(f'Привязываем пользователя к подтеме и каналам')
             try:
                 rel_theme = Categories.objects.get(category_name=gpt_rslt.lower())
-                bot_usr.themes.add(rel_theme)
+                bot_usr.category.add(rel_theme)
             except ObjectDoesNotExist:
                 MY_LOGGER.warning(f'В БД не найдена категория: {gpt_rslt!r}. Пользователь не привязан.')
                 continue
@@ -98,7 +98,7 @@ def scheduled_task_for_send_post_to_users():
     MY_LOGGER.debug(f'Отправляем посты')
     for i_post in news_posts_qset:
         # Достаём юзеров, связанных с этим каналов
-        bot_users_qset = BotUser.objects.filter(themes=i_post.channel.theme).only('tlg_id')
+        bot_users_qset = BotUser.objects.filter(category=i_post.channel.category).only('tlg_id')
         # Отправляем по очереди всем этим юзерам новостной пост
         for i_bot_user in bot_users_qset:
             send_message_by_bot(chat_id=i_bot_user.tlg_id, text=i_post.text, disable_notification=True)
