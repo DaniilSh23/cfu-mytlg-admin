@@ -116,7 +116,22 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
 
         # Это сообщение пользователю на странице в админке
         self.message_user(request, message='Data from JSON was imported')
-        return redirect("..")  # Редиректим на одну страницу выше (к списку Product)
+        return redirect("..")  # Редиректим на одну страницу выше
+
+    def check_ch_and_start_subs(self, request: HttpRequest) -> HttpResponse:
+        """
+        Вьюшка для POST запроса из админки. Проверка списка каналов и запуск подписки по ним.
+        """
+        MY_LOGGER.info(f"Пришел запрос на вьюшку проверки каналов и запуска подписки")
+
+        if request.method != 'POST':
+            MY_LOGGER.debug(f'Запрос с неразрешенным методом {request.method!r}')
+            return HttpResponse(content='Method not allowed', status=405)
+
+        # Вызываем таск celery по старту подписок на каналы
+        subscription_to_new_channels.delay()
+
+        return redirect(to='../accountssubscriptiontasks/')
 
     def get_urls(self):
         """
@@ -130,7 +145,12 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
                 "import-channels-json",  # Указываем путь
                 self.import_json,  # Указываем вьюшку
                 name="import_channels_json",
-            )
+            ),
+            path(
+                "check_channels_and_start_subscription",
+                self.check_ch_and_start_subs,
+                name="check_channels_and_start_subscription",
+            ),
         ]
         return new_urls + urls  # Обязательно новые урлы раньше дефолтных
 

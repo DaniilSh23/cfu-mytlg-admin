@@ -173,6 +173,7 @@ class SetAccFlags(APIView):
                         dct[i_param] = ser.validated_data.get(i_param)
 
                 try:
+                    MY_LOGGER.debug(f'Акк {ser.validated_data.get("acc_pk")} | Устанавливаем следующие флаги {dct!r}')
                     TlgAccounts.objects.filter(pk=int(ser.validated_data.get("acc_pk"))).update(**dct)
 
                 except ObjectDoesNotExist:
@@ -190,7 +191,7 @@ class SetAccFlags(APIView):
                 return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
 
         else:
-            MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.data}')
+            MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.data!r} | Ошибки: {ser.errors!r}')
             return Response({'result': 'Not valid data'}, status.HTTP_400_BAD_REQUEST)
 
 
@@ -303,7 +304,8 @@ class RelatedNewsView(APIView):
                 except ObjectDoesNotExist:
                     return Response(data={'result': 'channel object does not exist'})
 
-                NewsPosts.objects.create(channel=ch_obj, text=ser.data.get("text"), embedding=ser.data.get("embedding"))
+                obj = NewsPosts.objects.create(channel=ch_obj, text=ser.data.get("text"), embedding=ser.data.get("embedding"))
+                MY_LOGGER.success(f'Новый пост успешно создан, его PK == {obj.pk!r}')
                 return Response(data={'result': 'new post write successfull'}, status=status.HTTP_200_OK)
 
             else:
@@ -435,8 +437,11 @@ class UpdateChannelsView(APIView):
 
             # Обрабатываем каналы
             ch_ids_lst = [int(i_ch.get("ch_pk")) for i_ch in ser.data.get('channels')]
+
+            # TODO: кажись две строки ниже нафиг не нужны, надо пересмотреть на свежую голову
             acc_channels = tlg_acc_obj.channels.all()  # Достаём все связи с каналами для аккаунта
             [ch_ids_lst.append(i_ch.pk) for i_ch in acc_channels]
+
             ch_qset = Channels.objects.filter(id__in=ch_ids_lst)
             for i_ch in ch_qset:
                 for j_ch in ser.data.get('channels'):
