@@ -10,4 +10,14 @@
             </div>
         </form>
     </div>
+    <hr>
+    <div>
+        <form action="{% url 'admin:check_channels_and_start_subscription' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="check_and_start" value="1">
+            <div class="submit-row">
+                <input type="submit" value="Проверить список каналов и запустить подписку">
+            </div>
+        </form>
+    </div>
 {% endblock %}

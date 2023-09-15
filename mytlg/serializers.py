@@ -12,9 +12,9 @@ class SetAccDataSerializer(serializers.Serializer):
     tlg_first_name = serializers.CharField(required=False)
     tlg_last_name = serializers.CharField(required=False)
     proxy = serializers.CharField(required=False)
-    is_run = serializers.BooleanField(required=False)
-    waiting = serializers.BooleanField(required=False)
-    banned = serializers.BooleanField(required=False)
+    is_run = serializers.BooleanField(required=False, allow_null=True)
+    waiting = serializers.BooleanField(required=False, allow_null=True)
+    banned = serializers.BooleanField(required=False, allow_null=True)
 
 
 class ChannelsSerializer(serializers.Serializer):
