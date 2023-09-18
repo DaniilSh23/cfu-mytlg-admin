@@ -1,3 +1,4 @@
+import datetime
 from socket import socket
 from typing import List
 
@@ -175,3 +176,35 @@ def check_proxy(protocol, host, port, username=None, password=None):
         MY_LOGGER.warning(f'Ошибка при проверке прокси {protocol}://{host}:{port} -> {err}')
         # Если возникла ошибка, считаем прокси нерабочим
         return False
+
+
+def calculate_sending_datetime(last_send: datetime, when_send: datetime.time = None,
+                               send_period: str = None) -> datetime:
+    """
+    Рассчитать дату и время отправки.
+    """
+    now_dt = datetime.datetime.now()
+    # Если период отправки не установлен или установлен, как now, то возвращаем текущую дату и время
+    if not send_period or send_period == 'now':
+        return now_dt
+
+    # Отправка в фиксированное время
+    elif send_period == 'fixed_time':
+        # Если время для отправки ещё не наступило
+        if now_dt.time() < when_send:
+            sending_dt = datetime.datetime.combine(
+                date=now_dt.date(),
+                time=when_send,
+            )
+        # Время для отправки на сегодня уже прошло, планируем на завтра
+        else:
+            sending_dt = datetime.datetime.combine(
+                date=(now_dt + datetime.timedelta(days=1)).date(),
+                time=when_send,
+            )
+        return sending_dt
+
+    # Отправка через определённые промежутки времени
+    else:
+        time_shift = datetime.timedelta(hours=when_send.hour, minutes=when_send.minute, seconds=when_send.second)
+        return last_send + time_shift

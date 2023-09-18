@@ -3,13 +3,17 @@ import json
 import time
 from io import BytesIO
 from typing import List
+
+import pytz
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
+from langchain.embeddings import OpenAIEmbeddings
 
-from cfu_mytlg_admin.settings import MY_LOGGER
+from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
 from mytlg.gpt_processing import ask_the_gpt
-from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings
+from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings, \
+    Interests, ScheduledPosts
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
     send_file_by_bot, bot_command_for_start_or_stop_account
 
@@ -24,18 +28,19 @@ def scheduled_task_example():
 
 
 @shared_task
-def gpt_interests_processing(interests: List, tlg_id: str):
+def gpt_interests_processing(interests: List[Interests], tlg_id: str):
+    # TODO: требует рефакторинга. Нужно разделить подбор категорий для интересов и формирование эмбеддингов для них
     """
-    Обработка интересов пользователя, через GPT модель.
-    interests - список с формулировками интересов пользователя
+    Обработка интересов пользователя, через GPT модели.
+    interests - список с объектами модели Interests
     tlg_id - Telegram ID пользователя
     """
-    MY_LOGGER.info('Запускаем задачу celery по отбору тематик по формулировкам пользователя')
+    MY_LOGGER.info('Запускаем задачу celery по обработке интересов пользователя')
 
-    MY_LOGGER.debug(f'Складываем общий список из тем и подтем в строку')
-    themes_qset = Categories.objects.all()
-    all_themes_lst = [i_theme.category_name for i_theme in themes_qset]
-    themes_str = '\n'.join([i_theme for i_theme in all_themes_lst])
+    MY_LOGGER.debug(f'Складываем общий список из категорий в строку')
+    categories_qset = Categories.objects.all()
+    all_categories_lst = [category.category_name for category in categories_qset]
+    categories_str = '\n'.join([category for category in all_categories_lst])
 
     MY_LOGGER.debug(f'Получаем объект BotUser и очищаем связи Many2Many для каналов и тем')
     bot_usr = BotUser.objects.get(tlg_id=tlg_id)
@@ -43,20 +48,20 @@ def gpt_interests_processing(interests: List, tlg_id: str):
     bot_usr.channels.clear()
 
     themes_rslt = list()
+    prompt = BotSettings.objects.get(key='prompt_for_interests_category').value
     for i_interest in interests:
-        MY_LOGGER.debug(f'Шлём запрос к gpt по интересу: {i_interest!r}')
+
+        # Пилим эмбеддинги для интереса
+        MY_LOGGER.debug(f'Пилим эмбеддинги для интереса: {i_interest.interest}')
+        embeddings = OpenAIEmbeddings(max_retries=2)
+        # TODO: эту хуйню надо в try-except, но я не вьехал че там экзептиться может, потому что я уже заебался и выпил
+        i_interest.embedding = embeddings.embed_query(i_interest.interest)
+
+        MY_LOGGER.debug(f'Шлём запрос к gpt для определения категории интереса: {i_interest.interest!r}')
         gpt_rslt = ask_the_gpt(
-            base_text=themes_str,
-            query=f'Подбери подходящую тематику для следующего интереса пользователя: {i_interest}',
-            system='Ты ответственный помощник и твоя задача - это классификация интересов пользователей по '
-                   'определённым тематикам. На вход ты будешь получать данные с информацией для ответа пользователю - '
-                   'это список тематик (каждая тематика с новой строки) и запрос пользователя, который будет содержать '
-                   'формулировку его интереса. Твоя задача определить только одну тематику из переданного списка, '
-                   'которая с большей вероятностью подходит под интерес пользователя и написать в ответ только эту '
-                   'тематику и никакого больше текста в твоём ответе не должно быть. Не придумывай ничего от себя, '
-                   'выбирай тематику строго из того списка, который получил. Если интерес пользователя не подходит '
-                   'ни под одну из предоставленных тебе тематик, то пришли в ответ только фразу no themes и никакого '
-                   'больше текста.',
+            base_text=categories_str,
+            query=f'Подбери подходящую тематику для следующего интереса пользователя: {i_interest.interest}',
+            system=prompt,
             temp=0.3,
         )
         if not gpt_rslt:
@@ -70,19 +75,25 @@ def gpt_interests_processing(interests: List, tlg_id: str):
             MY_LOGGER.info(f'GPT не определил тем для интереса пользователя: {i_interest!r} и прислал {gpt_rslt!r}')
             gpt_rslt = 'gpt не определил тему'
         else:
-            MY_LOGGER.debug(f'Привязываем пользователя к подтеме и каналам')
+            MY_LOGGER.debug(f'Привязываем пользователя к категории и каналам')
             try:
-                rel_theme = Categories.objects.get(category_name=gpt_rslt.lower())
-                bot_usr.category.add(rel_theme)
+                category = Categories.objects.get(category_name=gpt_rslt.lower())
+                bot_usr.category.add(category)
+                i_interest.category = category
             except ObjectDoesNotExist:
                 MY_LOGGER.warning(f'В БД не найдена категория: {gpt_rslt!r}. Пользователь не привязан.')
                 continue
         themes_rslt.append(gpt_rslt.lower())
+        time.sleep(1)  # Задержечка, чтобы модель OpenAI не охуела от частоты запросов
+        # TODO: надо дописать использование другой модели и чередование их между интересами
+
+    MY_LOGGER.debug(f'Создаём за раз несколько записей в БД по модели Interests')
+    Interests.objects.bulk_create(interests)
 
     MY_LOGGER.debug(f'Отправка в телеграм подобранных тем.')
     send_gpt_interests_proc_rslt_to_tlg(gpt_rslts=themes_rslt, tlg_id=tlg_id)
 
-    MY_LOGGER.info(f'Окончание работы задачи celery по обработке интересов пользователя, через GPT модель.')
+    MY_LOGGER.info(f'Окончание работы задачи celery по обработке интересов пользователя.')
 
 
 @shared_task
@@ -92,6 +103,23 @@ def scheduled_task_for_send_post_to_users():
     """
     MY_LOGGER.info(f'Вызвана задача по отправке новостных постов пользователям')
 
+    # Достаём посты, которые должны быть отправлены
+    posts = ScheduledPosts.objects.filter(
+        is_sent=False,
+        when_send__lte=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
+    ).prefetch_related("bot_user").prefetch_related("news_post")
+
+    # Получаем пользователей
+    bot_user_ids = set(posts.values_list('bot_user', flat=True))
+    bot_users = BotUser.objects.filter(id__in=bot_user_ids)
+
+    # Поочереди достаём посты для конкретного юзера
+    for i_usr in bot_users:
+        i_usr_posts = posts.filter(bot_user=i_usr)
+
+    # TODO: дальше надо ещё чёт сделать
+
+    '''СТАРОЕ НИЖЕ'''
     news_posts_qset = NewsPosts.objects.filter(is_sent=False).only('text', 'channel').prefetch_related('channel')
     mailing_users_set = set()
 

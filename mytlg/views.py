@@ -1,8 +1,6 @@
 import datetime
 import json
 
-import pytz
-import requests
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
@@ -18,8 +16,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib import messages as err_msgs
 
-from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
-from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, AccountsErrors
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
+from mytlg.common import scheduling_post_for_sending
+from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, \
+    AccountsErrors, Interests
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts
@@ -94,20 +94,23 @@ class WriteInterestsView(View):
     """
     Вьюшки обработки запросов для записи интересов пользователя
     """
+    interests_examples = (
+        # 'Футбол, лига чемпионов и всё в этом духе',
+        'Криптовалюта, финансы и акции топовых компаний',
+        # 'Животные, но в основном милые. Такие как котики и собачки, но не крокодилы и змеи.',
+        'Технологии, искусственный интеллект и вот это вот всё',
+        'Бизнес, то на чём можно зарабатывать, стартапы и прорывные идеи!',
+    )
 
     def get(self, request):
         """
         Показываем страничку с формой для заполнения 5 интересов.
         """
         MY_LOGGER.info(f'Получен GET запрос на вьюшку для записи интересов.')
+        send_periods = Interests.periods
         context = {
-            'interest_examples': (
-                # 'Футбол, лига чемпионов и всё в этом духе',
-                'Криптовалюта, финансы и акции топовых компаний',
-                # 'Животные, но в основном милые. Такие как котики и собачки, но не крокодилы и змеи.',
-                'Технологии, искусственный интеллект и вот это вот всё',
-                'Бизнес, то на чём можно зарабатывать, стартапы и прорывные идеи!'
-            )
+            'interest_examples': self.interests_examples,
+            'send_periods': send_periods,
         }
         return render(request, template_name='mytlg/write_interests.html', context=context)
 
@@ -119,21 +122,12 @@ class WriteInterestsView(View):
 
         # Проверка данных запроса
         tlg_id = request.POST.get("tlg_id")
-        interests = request.POST.getlist("interest")
-        # when_send_news = request.POST.get('when_send_news')
+        check_interests = map(lambda i: request.POST.get(f"interest{i + 1}") != '', range(len(self.interests_examples)))
 
-        check_interests = [i_interest for i_interest in interests if i_interest != '']
-        if len(check_interests) < 1:
+        if all(check_interests) is False:
             MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. В запросе отсутствует хотя бы 1 интерес')
             err_msgs.error(request, f'Заполните хотя бы 1 интерес')
             return redirect(to=reverse_lazy('mytlg:write_interests'))
-
-        # TODO: спрятал время, когда присылать новости
-        # elif not when_send_news:
-        #     MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. '
-        #                       f'В запросе отсутствует время, когда слать новости')
-        #     err_msgs.error(request, f'Пожалуйста, укажите время, когда хотите получать новости!')
-        #     return redirect(to=reverse_lazy('mytlg:write_interests'))
 
         elif not tlg_id or not tlg_id.isdigit():
             MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. '
@@ -141,11 +135,23 @@ class WriteInterestsView(View):
             err_msgs.error(request, f'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:write_interests'))
 
-        MY_LOGGER.debug(f'Обрабатываем через модель GPT интересы пользователя')
-        gpt_interests_processing.delay(interests=check_interests, tlg_id=tlg_id)
+        new_interests_objs = [
+            Interests(
+                interest=request.POST.get(f"interest{i + 1}"),
+                send_period=request.POST.get(f"send_period{i + 1}"),
+                when_send=request.POST.get(f"when_send{i + 1}"),
+                last_send=datetime.datetime.now(),
+                bot_user=BotUser.objects.get(tlg_id=tlg_id),
+            )
+            for i in range(len(self.interests_examples))
+        ]
+
+        MY_LOGGER.debug(f'Обрабатываем через модели GPT интересы пользователя')
+        gpt_interests_processing.delay(interests=new_interests_objs, tlg_id=tlg_id)
         context = dict(
             header='⚙️ Настройка завершена!',
-            description=f'👌 Окей. Теперь бот будет присылать Вам новости 🗞 каждый час.',
+            description=f'👌 Окей. Сейчас бот занят обработкой интересов через нейро-модели. '
+                        f'Нужно немного подождать, прежде чем он начнёт присылать Вам релевантные новости 🗞',
             btn_text='Хорошо, спасибо!'
         )
         return render(request, template_name='mytlg/success.html', context=context)
@@ -227,12 +233,12 @@ class GetChannelsListView(APIView):
         for i_channel in channels_qset:
             # Достаём из БД список других аккаунтов, с которым связан каждый канал
             acc_lst = i_channel.tlg_accounts.all().exclude(Q(pk=int(acc_pk)))
-            discard_channel = False     # Флаг "отбросить канал"
+            discard_channel = False  # Флаг "отбросить канал"
             for i_acc in acc_lst:
-                if i_acc.is_run:    # Если другой аккаунт уже запущен и слушает данный канал
+                if i_acc.is_run:  # Если другой аккаунт уже запущен и слушает данный канал
                     discard_channel = True  # Поднимаем флаг
                     break
-            if not discard_channel:     # Если флаг опущен
+            if not discard_channel:  # Если флаг опущен
                 # Записываем данные о канале в список
                 channels_lst.append(
                     {
@@ -304,8 +310,13 @@ class RelatedNewsView(APIView):
                 except ObjectDoesNotExist:
                     return Response(data={'result': 'channel object does not exist'})
 
-                obj = NewsPosts.objects.create(channel=ch_obj, text=ser.data.get("text"), embedding=ser.data.get("embedding"))
+                obj = NewsPosts.objects.create(channel=ch_obj, text=ser.data.get("text"),
+                                               embedding=ser.data.get("embedding"))
                 MY_LOGGER.success(f'Новый пост успешно создан, его PK == {obj.pk!r}')
+
+                # Планируем пост к отправке для конкретных юзеров
+                scheduling_post_for_sending(post=obj)
+
                 return Response(data={'result': 'new post write successfull'}, status=status.HTTP_200_OK)
 
             else:
@@ -415,6 +426,7 @@ class UpdateChannelsView(APIView):
     """
     Вьюшка для обновления записей каналов.
     """
+
     @extend_schema(request=UpdateChannelsSerializer, responses=str, methods=['post'])
     def post(self, request):
         MY_LOGGER.info(f'Получен POST запрос на обновление данных о каналах | {request.data!r}')
@@ -530,8 +542,6 @@ def test_view(request):
     """
     Тестовая вьюшка. Тестим всякое
     """
-    dct = {'key1': 1}
-    return dct['key2']
     # themes = Themes.objects.all()
     # themes_str = '\n'.join([i_theme.theme_name for i_theme in themes])
     # rslt = ask_the_gpt(
@@ -572,16 +582,19 @@ def test_view(request):
     # scheduled_task_example.delay()
     # return HttpResponse(content='okay my friend !', status=200)
 
-    # Получение ботом инфы о каналах
-    MY_LOGGER.info(f'Получаем инфу о канале ботом')
-    send_rslt = requests.post(
-        url=f'https://api.telegram.org/bot{BOT_TOKEN}/getChat',
-        data={
-            'chat_id': '@onIy_crypto',
-        }
-    )
-    if send_rslt.status_code == 200:
-        MY_LOGGER.success(f'Успешная получена инфа о чате: {send_rslt.json()}')
-    else:
-        MY_LOGGER.warning(f'Не удалось отправить текст ошибки пользователю в телеграм: {send_rslt.text}')
+    # # Получение ботом инфы о каналах
+    # MY_LOGGER.info(f'Получаем инфу о канале ботом')
+    # send_rslt = requests.post(
+    #     url=f'https://api.telegram.org/bot{BOT_TOKEN}/getChat',
+    #     data={
+    #         'chat_id': '@onIy_crypto',
+    #     }
+    # )
+    # if send_rslt.status_code == 200:
+    #     MY_LOGGER.success(f'Успешная получена инфа о чате: {send_rslt.json()}')
+    # else:
+    #     MY_LOGGER.warning(f'Не удалось отправить текст ошибки пользователю в телеграм: {send_rslt.text}')
+
+    scheduling_post_for_sending(post=NewsPosts.objects.first())
+
     return HttpResponse(content='okay my friend !', status=200)

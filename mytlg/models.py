@@ -241,3 +241,42 @@ class AccountsSubscriptionTasks(models.Model):
         ordering = ['-id']
         verbose_name = 'задача аккаунту на подписку'
         verbose_name_plural = 'задачи аккаунтам на подписку'
+
+
+class Interests(models.Model):
+    """
+    Модель для интересов пользователей
+    """
+    periods = (
+        ('now', '⚡ сразу'),
+        ('fixed_time', '🕒 фиксированное время'),
+        ('every_time_period', '🔄 каждый N промежуток времени'),
+    )
+
+    interest = models.CharField(verbose_name='интерес', max_length=200)
+    embedding = models.TextField(verbose_name='эмбеддинги')
+    when_send = models.TimeField(verbose_name='когда присылать посты', blank=True, null=True)
+    send_period = models.CharField(verbose_name='период отправки', choices=periods, blank=True, null=True)
+    last_send = models.DateTimeField(verbose_name='крайняя отправка', auto_now_add=True)
+    bot_user = models.ForeignKey(verbose_name='юзер бота', to=BotUser, on_delete=models.CASCADE)
+    category = models.ForeignKey(verbose_name='категория', to=Categories, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'интерес'
+        verbose_name_plural = 'интересы'
+
+
+class ScheduledPosts(models.Model):
+    """
+    Посты, планируемые к отправке.
+    """
+    bot_user = models.ForeignKey(verbose_name='юзер бота', to=BotUser, on_delete=models.CASCADE)
+    news_post = models.ForeignKey(verbose_name='пост', to=NewsPosts, on_delete=models.CASCADE)
+    when_send = models.DateTimeField(verbose_name='когда отправить')
+    is_sent = models.BooleanField(verbose_name='отправлено', default=False)
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'запланированный пост'
+        verbose_name_plural = 'запланированные посты'
