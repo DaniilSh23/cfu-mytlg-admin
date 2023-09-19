@@ -18,8 +18,9 @@ from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.common import scheduling_post_for_sending
+from mytlg.gpt_processing import gpt_text_reduction
 from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, \
-    AccountsErrors, Interests
+    AccountsErrors, Interests, BotSettings
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts
@@ -135,13 +136,20 @@ class WriteInterestsView(View):
             err_msgs.error(request, f'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:write_interests'))
 
+        bot_user = BotUser.objects.get(tlg_id=tlg_id)
+
+        active_interests = (Interests.objects.filter(bot_user=bot_user, is_active=True, interest_type='main')
+                            .only('pk', 'is_active'))
+        active_interests.update(is_active=False)
+
         new_interests_objs = [
-            Interests(
+            dict(
                 interest=request.POST.get(f"interest{i + 1}"),
                 send_period=request.POST.get(f"send_period{i + 1}"),
-                when_send=request.POST.get(f"when_send{i + 1}"),
+                when_send=datetime.datetime.strptime(request.POST.get(f"when_send{i + 1}"), '%H:%M').time()
+                if request.POST.get(f"when_send{i + 1}") else None,
                 last_send=datetime.datetime.now(),
-                bot_user=BotUser.objects.get(tlg_id=tlg_id),
+                # bot_user=bot_user,
             )
             for i in range(len(self.interests_examples))
         ]
@@ -310,8 +318,16 @@ class RelatedNewsView(APIView):
                 except ObjectDoesNotExist:
                     return Response(data={'result': 'channel object does not exist'})
 
-                obj = NewsPosts.objects.create(channel=ch_obj, text=ser.data.get("text"),
-                                               embedding=ser.data.get("embedding"))
+                prompt = BotSettings.objects.get(key='prompt_for_text_reducing').value
+                short_post = gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
+
+                obj = NewsPosts.objects.create(
+                    channel=ch_obj,
+                    text=ser.validated_data.get("text"),
+                    post_link=ser.validated_data.get("post_link"),
+                    embedding=ser.validated_data.get("embedding"),
+                    short_text=short_post,
+                )
                 MY_LOGGER.success(f'Новый пост успешно создан, его PK == {obj.pk!r}')
 
                 # Планируем пост к отправке для конкретных юзеров

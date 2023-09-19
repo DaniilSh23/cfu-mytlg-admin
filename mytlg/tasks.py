@@ -2,7 +2,7 @@ import datetime
 import json
 import time
 from io import BytesIO
-from typing import List
+from typing import List, Dict
 
 import pytz
 from celery import shared_task
@@ -28,11 +28,11 @@ def scheduled_task_example():
 
 
 @shared_task
-def gpt_interests_processing(interests: List[Interests], tlg_id: str):
+def gpt_interests_processing(interests, tlg_id):
     # TODO: требует рефакторинга. Нужно разделить подбор категорий для интересов и формирование эмбеддингов для них
     """
     Обработка интересов пользователя, через GPT модели.
-    interests - список с объектами модели Interests
+    interests - список со словарями, где лежат данные об интересах
     tlg_id - Telegram ID пользователя
     """
     MY_LOGGER.info('Запускаем задачу celery по обработке интересов пользователя')
@@ -52,15 +52,19 @@ def gpt_interests_processing(interests: List[Interests], tlg_id: str):
     for i_interest in interests:
 
         # Пилим эмбеддинги для интереса
-        MY_LOGGER.debug(f'Пилим эмбеддинги для интереса: {i_interest.interest}')
+        MY_LOGGER.debug(f'Пилим эмбеддинги для интереса: {i_interest.get("interest")}')
         embeddings = OpenAIEmbeddings(max_retries=2)
         # TODO: эту хуйню надо в try-except, но я не вьехал че там экзептиться может, потому что я уже заебался и выпил
-        i_interest.embedding = embeddings.embed_query(i_interest.interest)
 
-        MY_LOGGER.debug(f'Шлём запрос к gpt для определения категории интереса: {i_interest.interest!r}')
+        # Пилим эмбеддинги для интереса и соединяем их через пробел (методу join нужна str, а не float)
+        i_interest["embedding"] = ' '.join(
+            map(lambda elem: str(elem), embeddings.embed_query(text=i_interest.get("interest")))
+        )
+
+        MY_LOGGER.debug(f'Шлём запрос к gpt для определения категории интереса: {i_interest.get("interest")!r}')
         gpt_rslt = ask_the_gpt(
             base_text=categories_str,
-            query=f'Подбери подходящую тематику для следующего интереса пользователя: {i_interest.interest}',
+            query=f'Подбери подходящую тематику для следующего интереса пользователя: {i_interest.get("interest")}',
             system=prompt,
             temp=0.3,
         )
@@ -70,25 +74,33 @@ def gpt_interests_processing(interests: List[Interests], tlg_id: str):
                                                       'Вас темы. Пожалуйста, попробуйте позже 🔄', tlg_id=tlg_id)
             return
 
-        MY_LOGGER.debug(f'Получили ответ от GPT {gpt_rslt!r} по интересу пользователя {i_interest!r}')
-        if gpt_rslt == 'no themes':
-            MY_LOGGER.info(f'GPT не определил тем для интереса пользователя: {i_interest!r} и прислал {gpt_rslt!r}')
-            gpt_rslt = 'gpt не определил тему'
+        MY_LOGGER.debug(f'Получили ответ от GPT {gpt_rslt!r} по интересу пользователя {i_interest.get("interest")!r}')
+        if gpt_rslt == 'no_themes':
+            MY_LOGGER.info(f'GPT не определил тем для интереса пользователя: {i_interest.get("interest")!r} '
+                           f'и прислал {gpt_rslt!r}. Привязываем юзера к категории тест')
+            gpt_rslt = 'общее 🆕'
+            category = Categories.objects.get(category_name='тест')
         else:
             MY_LOGGER.debug(f'Привязываем пользователя к категории и каналам')
             try:
                 category = Categories.objects.get(category_name=gpt_rslt.lower())
-                bot_usr.category.add(category)
-                i_interest.category = category
             except ObjectDoesNotExist:
                 MY_LOGGER.warning(f'В БД не найдена категория: {gpt_rslt!r}. Пользователь не привязан.')
                 continue
+
+        bot_usr.category.add(category)
+        i_interest["category"] = category
         themes_rslt.append(gpt_rslt.lower())
         time.sleep(1)  # Задержечка, чтобы модель OpenAI не охуела от частоты запросов
         # TODO: надо дописать использование другой модели и чередование их между интересами
 
-    MY_LOGGER.debug(f'Создаём за раз несколько записей в БД по модели Interests')
-    Interests.objects.bulk_create(interests)
+    MY_LOGGER.debug(f'Создаём за раз несколько записей в БД для модели Interests')
+    interests_objs = []
+    for interest in interests:
+        interest['bot_user'] = bot_usr
+        interests_objs.append(Interests(**interest))
+        print(interests_objs)
+    Interests.objects.bulk_create(interests_objs)
 
     MY_LOGGER.debug(f'Отправка в телеграм подобранных тем.')
     send_gpt_interests_proc_rslt_to_tlg(gpt_rslts=themes_rslt, tlg_id=tlg_id)
@@ -113,35 +125,47 @@ def scheduled_task_for_send_post_to_users():
     bot_user_ids = set(posts.values_list('bot_user', flat=True))
     bot_users = BotUser.objects.filter(id__in=bot_user_ids)
 
-    # Поочереди достаём посты для конкретного юзера
+    # Поочереди достаём посты для конкретного юзера и отправляем их сокращенный вариант
     for i_usr in bot_users:
         i_usr_posts = posts.filter(bot_user=i_usr)
+        posts_str = '🗞 Есть новости для Вас:'
+        for i_post in i_usr_posts:
+            posts_str = f"{posts_str}\n\n🔹{i_post.news_post.short_text}\n🔗 Оригинал: {i_post.news_post.post_link}"
+        MY_LOGGER.debug(f'Отправляем сокращенный вариант постов юзеру {i_usr!r}')
+        send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=posts_str)
 
-    # TODO: дальше надо ещё чёт сделать
+        if not send_result:
+            MY_LOGGER.warning(f'Не удалось отправить сокращенный вариант постов юзеру {i_usr!r}')
+            continue
 
-    '''СТАРОЕ НИЖЕ'''
-    news_posts_qset = NewsPosts.objects.filter(is_sent=False).only('text', 'channel').prefetch_related('channel')
-    mailing_users_set = set()
-
-    MY_LOGGER.debug(f'Отправляем посты')
-    for i_post in news_posts_qset:
-        # Достаём юзеров, связанных с этим каналов
-        bot_users_qset = BotUser.objects.filter(category=i_post.channel.category).only('tlg_id')
-        # Отправляем по очереди всем этим юзерам новостной пост
-        for i_bot_user in bot_users_qset:
-            send_message_by_bot(chat_id=i_bot_user.tlg_id, text=i_post.text, disable_notification=True)
-            mailing_users_set.add(i_bot_user.tlg_id)
-        # Когда итерация по новостному посту закончена, ставим в БД посту флаг is_sent=True
-        i_post.is_sent = True
-        i_post.save()
-
-    # Отправляем пользователям уведомление, что для них есть новый контент
-    MY_LOGGER.debug(f'Отправляем уведомления пользователям')
-    for _ in range(len(mailing_users_set)):
-        send_message_by_bot(chat_id=mailing_users_set.pop(),
-                            text='🗞 Для Вас есть свежие новости.', disable_notification=False)
+        # Обновляем флаг is_sent у запланированных к отправке постов
+        i_usr_posts.update(is_sent=True)
 
     MY_LOGGER.info(f'Окончание задачи по отправке новостных постов пользователям')
+
+    '''СТАРОЕ НИЖЕ'''
+    # news_posts_qset = NewsPosts.objects.filter(is_sent=False).only('text', 'channel').prefetch_related('channel')
+    # mailing_users_set = set()
+    #
+    # MY_LOGGER.debug(f'Отправляем посты')
+    # for i_post in news_posts_qset:
+    #     # Достаём юзеров, связанных с этим каналов
+    #     bot_users_qset = BotUser.objects.filter(category=i_post.channel.category).only('tlg_id')
+    #     # Отправляем по очереди всем этим юзерам новостной пост
+    #     for i_bot_user in bot_users_qset:
+    #         send_message_by_bot(chat_id=i_bot_user.tlg_id, text=i_post.text, disable_notification=True)
+    #         mailing_users_set.add(i_bot_user.tlg_id)
+    #     # Когда итерация по новостному посту закончена, ставим в БД посту флаг is_sent=True
+    #     i_post.is_sent = True
+    #     i_post.save()
+    #
+    # # Отправляем пользователям уведомление, что для них есть новый контент
+    # MY_LOGGER.debug(f'Отправляем уведомления пользователям')
+    # for _ in range(len(mailing_users_set)):
+    #     send_message_by_bot(chat_id=mailing_users_set.pop(),
+    #                         text='🗞 Для Вас есть свежие новости.', disable_notification=False)
+    #
+    # MY_LOGGER.info(f'Окончание задачи по отправке новостных постов пользователям')
 
 
 @shared_task
