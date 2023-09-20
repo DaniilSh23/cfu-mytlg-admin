@@ -4,7 +4,7 @@ import json
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpRequest
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
@@ -18,9 +18,10 @@ from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.common import scheduling_post_for_sending
+from mytlg.forms import BlackListForm
 from mytlg.gpt_processing import gpt_text_reduction
 from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, \
-    AccountsErrors, Interests, BotSettings
+    AccountsErrors, Interests, BotSettings, BlackLists
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts
@@ -552,6 +553,63 @@ class AccountError(APIView):
         else:
             MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
             return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
+
+
+class BlackListView(View):
+    """
+    Вьюшки для функции черного списка.
+    """
+
+    def get(self, request: HttpRequest):
+        MY_LOGGER.info(f'Поступил GET запрос на вьюшку BlackListView')
+
+        if request.GET.get("tlg_id") and not request.GET.get("tlg_id").isdigit:
+            MY_LOGGER.warning(f'Параметр запроса tlg_id не является числом! Даём ответ 400')
+            return HttpResponse(status=400, content='invalid query params')
+
+        context = dict()
+        if request.GET.get("tlg_id"):
+            try:
+                black_list = BlackLists.objects.get(bot_user__tlg_id=request.GET.get("tlg_id"))
+                context["keywords"] = black_list.keywords
+            except ObjectDoesNotExist:
+                context["keywords_placeholder"] = ('ключевые слова (фраза) 1\nключевые слова (фраза) 2\n'
+                                                   'Например: я не хочу смотреть контент про бэтмэна\n'
+                                                   'И ещё не хочу смотреть контент про покемонов\n'
+                                                   'Алла Пугачёва\nГруппа USB из Comedy Club')
+
+        return render(request, 'mytlg/black_list.html', context=context)
+
+    def post(self, request):
+        MY_LOGGER.info(f'Поступил POST запрос на вьюшку черного списка')
+
+        form = BlackListForm(request.POST)
+        if form.is_valid():
+            try:
+                bot_user_obj = BotUser.objects.get(tlg_id=form.cleaned_data.get("tlg_id"))
+            except ObjectDoesNotExist:
+                MY_LOGGER.warning(f'В БД не найден BotUser с tlg_id=={form.cleaned_data.get("tlg_id")}')
+                return HttpResponse(status=404, content='Bot User not found')
+
+            obj, created = BlackLists.objects.update_or_create(
+                bot_user__tlg_id=form.cleaned_data.get("tlg_id"),
+                defaults={
+                    "bot_user": bot_user_obj,
+                    "keywords": form.cleaned_data.get("keywords"),
+                }
+            )
+            MY_LOGGER.success(f'В БД {"создан" if created else "обновлён"} черный список для юзера {bot_user_obj}')
+            context = dict(
+                header=f'✔️ Черный список {"создан" if created else "обновлён"}',
+                description=f'Теперь я буду фильтровать контент для Вас, если в нём будут присутствовать данные '
+                            f'ключевые слова',
+                btn_text='Хорошо, спасибо!'
+            )
+            return render(request, template_name='mytlg/success.html', context=context)
+        else:
+            MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
+            err_msgs.error(request, f'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            return redirect(to=reverse_lazy('mytlg:black_list'))
 
 
 def test_view(request):

@@ -8,7 +8,7 @@ from mytlg.admin_mixins import ExportAsJSONMixin
 from mytlg.common import save_json_channels
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
-    AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts
+    AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists
 from mytlg.tasks import subscription_to_new_channels
 
 
@@ -59,7 +59,7 @@ class CategoriesAdmin(admin.ModelAdmin):
 @admin.register(Channels)
 class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
     change_list_template = 'admin/channels_change_list.html'  # Шаблон для страницы со списком сущностей
-    actions = [  # список доп. действий в админке для записей данной модели
+    actions = [  # Список доп. действий в админке для записей данной модели
         'export_json',  # export_csv - имя метода в миксине ExportAsCSVMixin
     ]
     list_display = (
@@ -342,3 +342,25 @@ class ScheduledPostsAdmin(admin.ModelAdmin):
         'when_send',
         'is_sent',
     )
+
+
+@admin.register(BlackLists)
+class BlackListsAdmin(admin.ModelAdmin):
+    list_display = (
+        'pk',
+        'bot_user',
+        'keywords_short',
+    )
+    list_display_links = (
+        'pk',
+        'bot_user',
+        'keywords_short',
+    )
+
+    def keywords_short(self, obj: BlackLists):
+        """
+        Метод для сокращенного отображения в админке поля с ключевыми словами.
+        """
+        if len(obj.keywords) < 48:
+            return obj.keywords
+        return obj.keywords[:48]
