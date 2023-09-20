@@ -8,7 +8,7 @@ from mytlg.admin_mixins import ExportAsJSONMixin
 from mytlg.common import save_json_channels
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
-    AccountsErrors, AccountsSubscriptionTasks, Proxys
+    AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts
 from mytlg.tasks import subscription_to_new_channels
 
 
@@ -293,3 +293,52 @@ class AccountsErrorsAdmin(admin.ModelAdmin):
         if len(obj.error_description) < 48:
             return obj.error_description
         return obj.error_description[:48] + "..."
+
+
+@admin.register(Interests)
+class InterestsAdmin(admin.ModelAdmin):
+    list_display = (
+        'pk',
+        'is_active',
+        'interest_short',
+        'when_send',
+        'send_period',
+        'last_send',
+        'bot_user',
+        'category',
+    )
+    list_display_links = (
+        'pk',
+        'interest_short',
+        'when_send',
+        'send_period',
+        'last_send',
+        'bot_user',
+        'category',
+    )
+
+    def interest_short(self, obj: Interests) -> str:
+        """
+        Метод для сокращения интереса пользователя при отображении в админке
+        """
+        if len(obj.interest) < 48:
+            return obj.interest
+        return obj.interest[:48] + "..."
+
+
+@admin.register(ScheduledPosts)
+class ScheduledPostsAdmin(admin.ModelAdmin):
+    list_display = (
+        'pk',
+        'bot_user',
+        'news_post',
+        'when_send',
+        'is_sent',
+    )
+    list_display_links = (
+        'pk',
+        'bot_user',
+        'news_post',
+        'when_send',
+        'is_sent',
+    )

@@ -33,6 +33,7 @@ def relevant_text_preparation(base_text: str, query: str) -> str | None:
     return '\n'.join([i_rel_p[0].page_content for i_rel_p in filtered_rel_pieces])
 
 
+# TODO: эта функция и функция ниже требуют рефакторинга. У них есть лишь незначительные отличия и надо их объединить
 def ask_the_gpt(system, query, base_text, temp=0):
     """
     Функция для того, чтобы отправить запрос к модели GPT и получить ответ.
@@ -59,3 +60,24 @@ def ask_the_gpt(system, query, base_text, temp=0):
     return answer  # возвращает ответ
 
 
+def gpt_text_reduction(prompt, text, temp=0.3):
+    """
+    Функция для сокращения текста, через модель GPT.
+    prompt - промпт для модели
+    text - текст, который надо сократить
+    """
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": f"Текст, который надо сократить:\n\n{text}"}
+    ]
+    try:
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            temperature=temp
+        )
+    except openai.error.ServiceUnavailableError as err:
+        MY_LOGGER.error(f'Серверы OpenAI перегружены или недоступны. {err}')
+        return False
+    answer = completion.choices[0].message.content
+    return answer  # возвращает ответ

@@ -43,6 +43,7 @@ class WriteNewPostSerializer(serializers.Serializer):
     ch_pk = serializers.IntegerField()
     text = serializers.CharField()
     embedding = serializers.CharField()
+    post_link = serializers.URLField(required=False)
 
 
 class ChildTaskResultsSerializer(serializers.Serializer):

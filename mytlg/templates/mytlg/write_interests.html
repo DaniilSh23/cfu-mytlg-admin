@@ -29,24 +29,30 @@
 
                   {% for i_interest in interest_examples %}
                     <div class="row mb-3">
-                      <small class="text-light fw-semibold">Интерес № {{ forloop.counter }}:</small>
-  <!--                    <label class="col-sm-2 form-label" for="basic-icon-default-message">Интерес №1</label>-->
-                      <div class="col-sm-10">
-                        <div class="input-group input-group-merge">
-<!--                          <span id="basic-icon-default-message2" class="input-group-text"><i class="bx bx-comment"></i></span>-->
-                          <textarea id="basic-icon-default-message" name="interest" class="form-control my-filling-fields" rows="2" maxlength="30" placeholder="{{ i_interest }}" aria-label="{{ i_interest }}" aria-describedby="basic-icon-default-message2"></textarea>
+                        <small class="text-light fw-semibold">Интерес № {{ forloop.counter }}:</small>
+                        <div class="col-sm-10">
+                            <div class="input-group input-group-merge">
+                                <textarea id="basic-icon-default-message" name="interest{{ forloop.counter }}" class="form-control my-filling-fields" rows="2" maxlength="300" placeholder="{{ i_interest }}" aria-label="{{ i_interest }}" aria-describedby="basic-icon-default-message2"></textarea>
+                            </div>
+                            <div>
+                                <small class="text-light fw-semibold">Когда присылать новости?</small>
+                                <select id="selectPeriod{{ forloop.counter }}" class="form-select my-filling-fields" name="send_period{{ forloop.counter }}">
+                                    <option value="not_select">➖➖➖➖➖</option>
+                                    {% for i_period in send_periods %}
+                                        <option value="{{ i_period.0 }}" selected>{{ i_period.1 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <!--Блок div с классом, который отвечает за ширину поля-->
+                                <div class="col-sm-3">
+                                    <input id="timePeriod{{ forloop.counter }}" class="form-control my-filling-fields" name="when_send{{ forloop.counter }}" type="time" value="12:30:00">
+                                </div>
+                            </div>
                         </div>
-                      </div>
                     </div>
+                    <hr>
                   {% endfor %}
-<!--                  <hr class="mb-2 mt-3">-->
-<!--                  <div class="mb-0 row">-->
-<!--                    <small class="text-light fw-semibold">Когда присылать новости?</small>-->
-<!--&lt;!&ndash;                    <label for="whenSendNews" class="col-md-2 col-form-label">Когда присылать новости?</label>&ndash;&gt;-->
-<!--                    <div class="col-md-10">-->
-<!--                      <input class="form-control" name="when_send_news" type="time" value="12:30:00" id="whenSendNews" required>-->
-<!--                    </div>-->
-<!--                  </div>-->
 
                   <div class="mb-1 mt-3">
                     <button id="writeInterestsBtn" type="submit" class="btn btn-info my-btn-clr">Отправить</button>
@@ -64,6 +70,34 @@
       </div>
     </div>
   </div>
+
+<!--СКРИПТ ДЛЯ ОТКЛЮЧЕНИЯ ВОЗМОЖНОСТИ ВВОДА ВРЕМЕНИ В ПОЛЕ input ПРИ ЗНАЧЕНИИ "сразу" ТЕГА select-->
+    {% for i_interest in interest_examples %}
+        <script>
+            console.log("элемент есть : selectPeriod{{ forloop.counter }}");
+            // Получите ссылки на элементы select и input
+            var selectPeriodElement{{ forloop.counter }} = document.getElementById("selectPeriod{{ forloop.counter }}");
+            var inputTimeElement{{ forloop.counter }} = document.getElementById("timePeriod{{ forloop.counter }}");
+
+            // Добавьте обработчик события change для select
+            selectPeriodElement{{ forloop.counter }}.addEventListener("change", function() {
+                // Проверьте, выбрано ли определенное значение
+                if (selectPeriodElement{{ forloop.counter }}.value === "fixed_time" || selectPeriodElement{{ forloop.counter }}.value === "every_time_period") {
+                    // Сделайте поле ввода времени только для чтения
+                    inputTimeElement{{ forloop.counter }}.readOnly = false;
+                    inputTimeElement{{ forloop.counter }}.style.display = "block";
+                    inputTimeElement{{ forloop.counter }}.setAttribute("required", "required");
+                } else {
+                    console.log('показываем время для элемента timePeriod{{ forloop.counter }} | selectPeriodElement{{ forloop.counter }}.value ===', selectPeriodElement{{ forloop.counter }}.value);
+                    // В противном случае, сделайте его доступным для редактирования
+                    inputTimeElement{{ forloop.counter }}.readOnly = true;
+                    inputTimeElement{{ forloop.counter }}.setAttribute("value", "");
+                    inputTimeElement{{ forloop.counter }}.style.display = "none";
+                    inputTimeElement{{ forloop.counter }}.removeAttribute("required");
+                }
+            });
+        </script>
+    {% endfor %}
 
   <!--СКРИПТ ДЛЯ ОТПРАВКИ ДАННЫХ О ВЫБРАННЫХ ТЕМАТИКАХ И ОБНОВЛЕНИЕ ФОРМЫ КАНАЛАМИ ДЛЯ ЭТИХ ТЕМАТИК-->
 <!--  <script>-->
