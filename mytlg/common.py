@@ -137,7 +137,7 @@ def black_list_check(news_post: NewsPosts, black_list: BlackLists) -> bool:
     check_rslt = True
 
     # Достаём нужную инфу
-    black_keywords_lst = black_list.keywords.split()
+    black_keywords_lst = black_list.keywords.split('\n')
     channel_link = news_post.channel.channel_link.lower()
     channel_name = news_post.channel.channel_name.lower()
     channel_description = news_post.channel.description.lower()
