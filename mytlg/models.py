@@ -288,3 +288,16 @@ class ScheduledPosts(models.Model):
         ordering = ['-id']
         verbose_name = 'запланированный пост'
         verbose_name_plural = 'запланированные посты'
+
+
+class BlackLists(models.Model):
+    """
+    Черные списки, создаваемые пользователями для фильтрации контента.
+    """
+    bot_user = models.ForeignKey(verbose_name='юзер', to=BotUser, on_delete=models.CASCADE)
+    keywords = models.TextField(verbose_name='ключевые слова')
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'черный список'
+        verbose_name_plural = 'черные списки'

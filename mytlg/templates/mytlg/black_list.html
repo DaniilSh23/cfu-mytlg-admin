@@ -1,0 +1,57 @@
+{% extends 'mytlg/base.html' %}
+
+{% block 'title' %}
+    Черный список
+{% endblock %}
+
+{% block 'body' %}
+
+  <div class="row">
+    <h4 class="fw-bold py-3 mb-1"><span class="text-muted fw-light">Черный список /</span> Ключевые слова</h4>
+    <div class="col-xl-6 my-form-border">
+      <div class="card mb-1 my-form-area">
+        <h5 class="card-header mb-0 pb-0">Укажите ключевые слова для черного списка:</h5>
+        <div class="card-body">
+          <div class="row gy-3">
+            <div class="col-md">
+              <div class="demo-inline-spacing mt-1">
+
+                <form id="interestsForm" action="{% url 'mytlg:black_list' %}" method="post">
+                  {% csrf_token %}
+                  {% if messages %}
+                      <ul class="messages">
+                          {% for message in messages %}
+                              <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                          {% endfor %}
+                      </ul>
+                  {% endif %}
+                  <input class="my-filling-fields" type="text" id="tg-id-input" value="" name="tlg_id">
+
+                    <div class="row mb-3">
+                        <small class="text-light fw-semibold">Ключевые слова (фразы) необходимо указать каждое с новой строки</small>
+                        <div class="col-sm-10">
+                            <div class="input-group input-group-merge">
+                                <textarea id="basic-icon-default-message" name="keywords" class="form-control my-filling-fields" rows="10" maxlength="1000" placeholder="{% if keywords_placeholder %}{{ keywords_placeholder }}{% endif %}" aria-label="" aria-describedby="basic-icon-default-message2">{% if keywords %}{{ keywords }}{% endif %}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+
+                  <div class="mb-1 mt-3">
+                    <button id="writeInterestsBtn" type="submit" class="btn btn-info my-btn-clr">Отправить</button>
+                  </div>
+                </form>
+
+              </div>
+
+              <div id="ajaxResult">
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
