@@ -124,37 +124,40 @@ class WriteInterestsView(View):
         """
         MY_LOGGER.info(f'Получен POST запрос для записи интересов пользователя. {request.POST}')
 
-        # Проверка данных запроса
+        # Проверка валидности tlg_id
         tlg_id = request.POST.get("tlg_id")
-        check_interests = map(lambda i: request.POST.get(f"interest{i + 1}") != '', range(len(self.interests_examples)))
-
-        if all(check_interests) is False:
-            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. В запросе отсутствует хотя бы 1 интерес')
-            err_msgs.error(request, f'Заполните хотя бы 1 интерес')
-            return redirect(to=reverse_lazy('mytlg:write_interests'))
-
-        elif not tlg_id or not tlg_id.isdigit():
+        if not tlg_id or not tlg_id.isdigit():
             MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. '
                               f'В запросе отсутствует tlg_id')
             err_msgs.error(request, f'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:write_interests'))
 
-        bot_user = BotUser.objects.get(tlg_id=tlg_id)
+        # Проверка, что заполнен хотя бы один интерес
+        interests_indxs = []
+        for i in range(len(self.interests_examples)):
+            if request.POST.get(f"interest{i + 1}") != '':
+                interests_indxs.append(i)
+        if not interests_indxs:
+            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. В запросе отсутствует хотя бы 1 интерес')
+            err_msgs.error(request, f'Заполните хотя бы 1 интерес')
+            return redirect(to=reverse_lazy('mytlg:write_interests'))
 
+        # Обработка валидного запроса
+        bot_user = BotUser.objects.get(tlg_id=tlg_id)
         active_interests = (Interests.objects.filter(bot_user=bot_user, is_active=True, interest_type='main')
                             .only('pk', 'is_active'))
         active_interests.update(is_active=False)
 
         new_interests_objs = [
             dict(
-                interest=request.POST.get(f"interest{i + 1}"),
-                send_period=request.POST.get(f"send_period{i + 1}"),
-                when_send=datetime.datetime.strptime(request.POST.get(f"when_send{i + 1}"), '%H:%M').time()
-                if request.POST.get(f"when_send{i + 1}") else None,
+                interest=request.POST.get(f"interest{indx + 1}"),
+                send_period=request.POST.get(f"send_period{indx + 1}"),
+                when_send=datetime.datetime.strptime(request.POST.get(f"when_send{indx + 1}")[:5], '%H:%M').time()
+                if request.POST.get(f"when_send{indx + 1}") else None,
                 last_send=datetime.datetime.now(),
                 # bot_user=bot_user,
             )
-            for i in range(len(self.interests_examples))
+            for indx in interests_indxs
         ]
 
         MY_LOGGER.debug(f'Обрабатываем через модели GPT интересы пользователя')
