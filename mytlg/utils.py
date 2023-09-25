@@ -207,7 +207,7 @@ def calculate_sending_datetime(last_send: datetime, when_send: datetime.time = N
     # Отправка через определённые промежутки времени
     else:
         time_shift = datetime.timedelta(hours=when_send.hour, minutes=when_send.minute, seconds=when_send.second)
-        next_send = last_send + time_shift
-        if next_send.day < now_dt.day or next_send.month < now_dt.month or next_send.year < now_dt.year:
-            next_send.replace(day=now_dt.day, month=now_dt.month, year=now_dt.year)
-        return next_send
+        sending_dt = last_send + time_shift
+        if sending_dt.day < now_dt.day or sending_dt.month < now_dt.month or sending_dt.year < now_dt.year:
+            sending_dt.replace(day=now_dt.day, month=now_dt.month, year=now_dt.year)
+        return sending_dt
