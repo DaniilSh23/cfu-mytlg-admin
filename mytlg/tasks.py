@@ -79,14 +79,21 @@ def gpt_interests_processing(interests, tlg_id):
             MY_LOGGER.info(f'GPT не определил тем для интереса пользователя: {i_interest.get("interest")!r} '
                            f'и прислал {gpt_rslt!r}. Привязываем юзера к категории тест')
             gpt_rslt = 'общее 🆕'
-            category = Categories.objects.get(category_name='тест')
+            category, created = Categories.objects.get_or_create(
+                category_name='тест',
+                defaults={"category_name": "тест"}
+            )
         else:
             MY_LOGGER.debug(f'Привязываем пользователя к категории и каналам')
             try:
                 category = Categories.objects.get(category_name=gpt_rslt.lower())
             except ObjectDoesNotExist:
-                MY_LOGGER.warning(f'В БД не найдена категория: {gpt_rslt!r}. Пользователь не привязан.')
-                continue
+                MY_LOGGER.warning(f'В БД не найдена категория: {gpt_rslt!r}. '
+                                  f'Привязывем по стандарту к категории "тест".')
+                category, created = Categories.objects.get_or_create(
+                    category_name='тест',
+                    defaults={"category_name": "тест"}
+                )
 
         bot_usr.category.add(category)
         i_interest["category"] = category
@@ -99,7 +106,6 @@ def gpt_interests_processing(interests, tlg_id):
     for interest in interests:
         interest['bot_user'] = bot_usr
         interests_objs.append(Interests(**interest))
-        print(interests_objs)
     Interests.objects.bulk_create(interests_objs)
 
     MY_LOGGER.debug(f'Отправка в телеграм подобранных тем.')
@@ -130,7 +136,8 @@ def scheduled_task_for_send_post_to_users():
         i_usr_posts = posts.filter(bot_user=i_usr)
         posts_str = '🗞 Есть новости для Вас:'
         for i_post in i_usr_posts:
-            posts_str = f"{posts_str}\n\n🔹{i_post.news_post.short_text}\n🔗 Оригинал: {i_post.news_post.post_link}"
+            posts_str = (f"{posts_str}\n\n🔹{i_post.news_post.short_text}\n🔗 Оригинал: {i_post.news_post.post_link}"
+                         f"{'-' * 20}")
         MY_LOGGER.debug(f'Отправляем сокращенный вариант постов юзеру {i_usr!r}')
         send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=posts_str)
 
