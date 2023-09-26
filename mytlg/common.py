@@ -102,6 +102,7 @@ def scheduling_post_for_sending(post: NewsPosts):
             continue
 
         sending_datetime = None
+        interest = interests[0]
         for i_interest in interests:
             if filtered_rel_pieces[0][0].page_content == i_interest.interest:
                 MY_LOGGER.debug(f'Найден релевантный интерес у юзера {i_user.pk!r}')
@@ -111,6 +112,7 @@ def scheduling_post_for_sending(post: NewsPosts):
                     send_period=i_interest.send_period,
                     when_send=i_interest.when_send,
                 )
+                interest = i_interest
                 break
 
         # Создаём запись в таблице спланированных постов
@@ -118,6 +120,7 @@ def scheduling_post_for_sending(post: NewsPosts):
             bot_user=i_user,
             news_post=post,
             when_send=sending_datetime,
+            interest=interest,
         )
 
 

@@ -133,6 +133,8 @@ def scheduled_task_for_send_post_to_users():
     bot_user_ids = set(posts.values_list('bot_user', flat=True))
     bot_users = BotUser.objects.filter(id__in=bot_user_ids)
 
+    interests_ids = list()  # Список для хранения айди интересов
+
     # Поочереди достаём посты для конкретного юзера и отправляем их сокращенный вариант
     for i_usr in bot_users:
         i_usr_posts = posts.filter(bot_user=i_usr)
@@ -154,6 +156,11 @@ def scheduled_task_for_send_post_to_users():
 
         # Обновляем флаг is_sent у запланированных к отправке постов
         i_usr_posts.update(is_sent=True)
+
+    # Обновляем дату и время крайней отправки у интересов
+    Interests.objects.filter(id__in=set(interests_ids)).update(
+        last_send=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
+    )
 
     MY_LOGGER.info(f'Окончание задачи по отправке новостных постов пользователям')
 
