@@ -40,11 +40,13 @@ class WriteUsrView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
 
         MY_LOGGER.debug(f'Записываем/обновляем данные о юзере в БД')
+        print(request.data)
         bot_usr_obj, created = BotUser.objects.update_or_create(
             tlg_id=request.data.get("tlg_id"),
             defaults={
                 "tlg_id": request.data.get("tlg_id"),
                 "tlg_username": request.data.get("tlg_username"),
+                "language_code": request.data.get("language_code"),
             }
         )
         MY_LOGGER.success(f'Данные о юзере успешно {"созданы" if created else "обновлены"} даём ответ на запрос.')

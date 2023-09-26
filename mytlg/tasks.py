@@ -11,8 +11,8 @@ from django.db.models import Count
 from langchain.embeddings import OpenAIEmbeddings
 
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
-from mytlg.gpt_processing import ask_the_gpt
-from mytlg.models import Categories, Channels, BotUser, TlgAccounts, AccountsSubscriptionTasks, BotSettings, \
+from mytlg.gpt_processing import ask_the_gpt, gpt_text_language_detection_and_translate
+from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings, \
     Interests, ScheduledPosts
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
     send_file_by_bot, bot_command_for_start_or_stop_account
@@ -127,6 +127,8 @@ def scheduled_task_for_send_post_to_users():
         when_send__lte=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
     ).prefetch_related("bot_user").prefetch_related("news_post")
 
+    # Получаем промт для перевода
+    prompt = BotSettings.objects.get(key='promt_for_detect_and_translate_posts_language').value
     # Получаем пользователей
     bot_user_ids = set(posts.values_list('bot_user', flat=True))
     bot_users = BotUser.objects.filter(id__in=bot_user_ids)
@@ -138,10 +140,14 @@ def scheduled_task_for_send_post_to_users():
         i_usr_posts = posts.filter(bot_user=i_usr)
         posts_str = '🗞 Есть новости для Вас:'
         for i_post in i_usr_posts:
-            posts_str = (f"{posts_str}\n\n🔹{i_post.news_post.short_text}\n🔗 Оригинал: {i_post.news_post.post_link}"
-                         f"{'-' * 20}")
-            interests_ids.append(i_post.interest.id)
+            original_short_text = i_post.news_post.short_text
+            short_text = gpt_text_language_detection_and_translate(prompt=prompt,
+                                                                   text=original_short_text,
+                                                                   user_language_code=i_usr.language_code,
+                                                                   temp=0.3)
+            posts_str = f"{posts_str}\n\n🔹{short_text}\n🔗 Оригинал: {i_post.news_post.post_link}"
         MY_LOGGER.debug(f'Отправляем сокращенный вариант постов юзеру {i_usr!r}')
+
         send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=posts_str)
 
         if not send_result:

@@ -81,3 +81,26 @@ def gpt_text_reduction(prompt, text, temp=0.3):
         return False
     answer = completion.choices[0].message.content
     return answer  # возвращает ответ
+
+
+def gpt_text_language_detection_and_translate(prompt, text, user_language_code, temp=0.3):
+    """
+    Функция для определения языка текста и при необходимости перевода текста на язык пользователя, через модель GPT.
+    prompt - промпт для модели
+    text - текст, который надо исследовать и перевести
+    """
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": f'user_language_code={user_language_code}. Текст для исследования: {text}'}
+    ]
+    try:
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            temperature=temp
+        )
+    except openai.error.ServiceUnavailableError as err:
+        MY_LOGGER.error(f'Серверы OpenAI перегружены или недоступны. {err}')
+        return False
+    answer = completion.choices[0].message.content
+    return answer  # возвращает ответ
