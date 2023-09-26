@@ -35,6 +35,13 @@ class Command(BaseCommand):
                                         'принять решение стоит ли ему потратить время на ознакомление с оригинальным '
                                         'текстом или же нет.  В качестве своего ответа верни только сокращенный вариант '
                                         'текста и ничего более.',
+            'promt_for_detect_and_translate_posts_language': 'Determine the language of the text sent to you and if '
+                                                             'the sent user_language_code differs from the languaga '
+                                                             'code of the text, then return only the translated text '
+                                                             'in the language corresponding to the user_language_code '
+                                                             'and nothing else. do not send information about the '
+                                                             'language_code and the fact that you translate the text. '
+                                                             'Send only the translated text in the response',
         }
         for i_key, i_val in keys.items():
             _, i_created = BotSettings.objects.update_or_create(
