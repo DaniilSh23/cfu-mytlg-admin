@@ -140,16 +140,25 @@ def scheduled_task_for_send_post_to_users():
         i_usr_posts = posts.filter(bot_user=i_usr)
         posts_str = '🗞 Есть новости для Вас:'
         for i_post in i_usr_posts:
+
+            # Если длина сообщения с кратким содержанием постов превышает лимит телеграмм
+            if len(i_post.news_post.short_text) + len(posts_str) >= 2000:
+                send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=f"{posts_str}\n{'➖'*20}",
+                                                  disable_notification=True)
+                if not send_result:
+                    MY_LOGGER.warning(f'Не удалось отправить часть сокращённых вариантов постов юзеру {i_usr!r}')
+                    break
+                posts_str = f'🗞 продолжение...'
+
             original_short_text = i_post.news_post.short_text
             short_text = gpt_text_language_detection_and_translate(prompt=prompt,
                                                                    text=original_short_text,
                                                                    user_language_code=i_usr.language_code,
                                                                    temp=0.3)
-            posts_str = f"{posts_str}\n\n🔹{short_text}\n🔗 Оригинал: {i_post.news_post.post_link}"
+            posts_str = f"{posts_str}\n\n📰 {short_text}\n🔗 Оригинал: {i_post.news_post.post_link}\n{'➖'*20}"
+
         MY_LOGGER.debug(f'Отправляем сокращенный вариант постов юзеру {i_usr!r}')
-
         send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=posts_str)
-
         if not send_result:
             MY_LOGGER.warning(f'Не удалось отправить сокращенный вариант постов юзеру {i_usr!r}')
             continue
@@ -163,30 +172,6 @@ def scheduled_task_for_send_post_to_users():
     )
 
     MY_LOGGER.info(f'Окончание задачи по отправке новостных постов пользователям')
-
-    '''СТАРОЕ НИЖЕ'''
-    # news_posts_qset = NewsPosts.objects.filter(is_sent=False).only('text', 'channel').prefetch_related('channel')
-    # mailing_users_set = set()
-    #
-    # MY_LOGGER.debug(f'Отправляем посты')
-    # for i_post in news_posts_qset:
-    #     # Достаём юзеров, связанных с этим каналов
-    #     bot_users_qset = BotUser.objects.filter(category=i_post.channel.category).only('tlg_id')
-    #     # Отправляем по очереди всем этим юзерам новостной пост
-    #     for i_bot_user in bot_users_qset:
-    #         send_message_by_bot(chat_id=i_bot_user.tlg_id, text=i_post.text, disable_notification=True)
-    #         mailing_users_set.add(i_bot_user.tlg_id)
-    #     # Когда итерация по новостному посту закончена, ставим в БД посту флаг is_sent=True
-    #     i_post.is_sent = True
-    #     i_post.save()
-    #
-    # # Отправляем пользователям уведомление, что для них есть новый контент
-    # MY_LOGGER.debug(f'Отправляем уведомления пользователям')
-    # for _ in range(len(mailing_users_set)):
-    #     send_message_by_bot(chat_id=mailing_users_set.pop(),
-    #                         text='🗞 Для Вас есть свежие новости.', disable_notification=False)
-    #
-    # MY_LOGGER.info(f'Окончание задачи по отправке новостных постов пользователям')
 
 
 @shared_task
