@@ -211,7 +211,7 @@ MY_LOGGER.add(sink=sys.stdout, level='DEBUG')  # Все логи от DEBUG и �
 MY_LOGGER.add(  # системные логи в файл
     sink=f'{BASE_DIR}/logs/sys_log.log',
     level='DEBUG',
-    rotation='10 MB',
+    rotation='2 MB',
     compression="zip",
     enqueue=True,
     backtrace=True,
