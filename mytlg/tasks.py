@@ -143,7 +143,7 @@ def scheduled_task_for_send_post_to_users():
 
             # Если длина сообщения с кратким содержанием постов превышает лимит телеграмм
             if len(i_post.news_post.short_text) + len(posts_str) >= 2000:
-                send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=f"{posts_str}\n{'➖'*20}",
+                send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=f"{posts_str}\n{'➖'*10}",
                                                   disable_notification=True)
                 if not send_result:
                     MY_LOGGER.warning(f'Не удалось отправить часть сокращённых вариантов постов юзеру {i_usr!r}')
@@ -155,7 +155,7 @@ def scheduled_task_for_send_post_to_users():
                                                                    text=original_short_text,
                                                                    user_language_code=i_usr.language_code,
                                                                    temp=0.3)
-            posts_str = f"{posts_str}\n\n📰 {short_text}\n🔗 Оригинал: {i_post.news_post.post_link}\n{'➖'*20}"
+            posts_str = f"{posts_str}\n\n📰 {short_text}\n🔗 Оригинал: {i_post.news_post.post_link}\n{'➖'*10}"
 
         MY_LOGGER.debug(f'Отправляем сокращенный вариант постов юзеру {i_usr!r}')
         send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=posts_str)
