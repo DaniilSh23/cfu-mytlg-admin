@@ -154,8 +154,11 @@ def scheduled_task_for_send_post_to_users():
             short_text = gpt_text_language_detection_and_translate(prompt=prompt,
                                                                    text=original_short_text,
                                                                    user_language_code=i_usr.language_code,
-                                                                   temp=0.3)
-            posts_str = f"{posts_str}\n\n📰 {short_text}\n🔗 Оригинал: {i_post.news_post.post_link}\n{'➖'*10}"
+                                                                   temp=0.1)
+            posts_str = f"{posts_str}\n\n⭐️ {i_post.interest.short_interest()}\n📰 {short_text}\n🔗 Оригинал: {i_post.news_post.post_link}\n{'➖'*10}"
+
+            # Добавляем id интереса в общий список
+            interests_ids.append(i_post.interest.id)
 
         MY_LOGGER.debug(f'Отправляем сокращенный вариант постов юзеру {i_usr!r}')
         send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=posts_str)

@@ -2,10 +2,11 @@ import datetime
 from socket import socket
 from typing import List
 
+import pytz
 import requests
 import socks
 
-from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
 
 
 def send_gpt_interests_proc_rslt_to_tlg(gpt_rslts: List, tlg_id):
@@ -78,7 +79,8 @@ def send_message_by_bot(chat_id, text, disable_notification=False) -> bool | Non
     """
     MY_LOGGER.info(f'Вызвана функция для отправки от лица бота сообщений в телегу юзеру {chat_id!r}')
     url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
-    data = {'chat_id': chat_id, 'text': text, 'disable_notification': disable_notification}
+    data = {'chat_id': chat_id, 'text': text, 'disable_notification': disable_notification,
+            'disable_web_page_preview': True}
     MY_LOGGER.debug(f'Выполняем запрос на отправку сообщения от лица бота, данные запроса: {data}')
     response = requests.post(url=url, data=data)  # Выполняем запрос на отправку сообщения
 
@@ -183,7 +185,7 @@ def calculate_sending_datetime(last_send: datetime, when_send: datetime.time = N
     """
     Рассчитать дату и время отправки.
     """
-    now_dt = datetime.datetime.now()
+    now_dt = datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
     # Если период отправки не установлен или установлен, как now, то возвращаем текущую дату и время
     if not send_period or send_period == 'now':
         return now_dt
