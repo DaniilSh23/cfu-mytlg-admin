@@ -105,7 +105,8 @@ def scheduling_post_for_sending(post: NewsPosts):
         interest = interests[0]
         for i_interest in interests:
             if filtered_rel_pieces[0][0].page_content == i_interest.interest:
-                MY_LOGGER.debug(f'Найден релевантный интерес у юзера {i_user.pk!r}')
+                MY_LOGGER.debug(f'Найден релевантный интерес у юзера {i_user.pk!r} | {i_interest.interest!r} | '
+                                f'Векторное расстояние: {filtered_rel_pieces[0][1]}')
                 # Рассчитываем время предстоящей отправки
                 sending_datetime = calculate_sending_datetime(
                     last_send=i_interest.last_send,

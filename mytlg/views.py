@@ -40,7 +40,6 @@ class WriteUsrView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
 
         MY_LOGGER.debug(f'Записываем/обновляем данные о юзере в БД')
-        print(request.data)
         bot_usr_obj, created = BotUser.objects.update_or_create(
             tlg_id=request.data.get("tlg_id"),
             defaults={
@@ -621,6 +620,7 @@ def test_view(request):
     """
     Тестовая вьюшка. Тестим всякое
     """
+    print(Interests.objects.get(pk=4).short_interest())
     # themes = Themes.objects.all()
     # themes_str = '\n'.join([i_theme.theme_name for i_theme in themes])
     # rslt = ask_the_gpt(
@@ -674,6 +674,6 @@ def test_view(request):
     # else:
     #     MY_LOGGER.warning(f'Не удалось отправить текст ошибки пользователю в телеграм: {send_rslt.text}')
 
-    scheduling_post_for_sending(post=NewsPosts.objects.first())
+    # scheduling_post_for_sending(post=NewsPosts.objects.first())
 
     return HttpResponse(content='okay my friend !', status=200)

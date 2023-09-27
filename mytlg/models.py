@@ -275,6 +275,14 @@ class Interests(models.Model):
         verbose_name = 'интерес'
         verbose_name_plural = 'интересы'
 
+    def short_interest(self):
+        """
+        Метод для сокращения длины формулировки интереса
+        """
+        if len(self.interest) > 35:
+            return f"{self.interest[:35]}..."
+        return self.interest
+
 
 class ScheduledPosts(models.Model):
     """
