@@ -117,12 +117,14 @@ def scheduling_post_for_sending(post: NewsPosts):
                 break
 
         # Создаём запись в таблице спланированных постов
-        ScheduledPosts.objects.create(
+        obj = ScheduledPosts.objects.create(
             bot_user=i_user,
             news_post=post,
             when_send=sending_datetime,
             interest=interest,
         )
+        MY_LOGGER.debug(f'Создана запись в таблице спланированных постов, '
+                        f'спланированная дата и время отправки: {obj.when_send!r}')
 
 
 def black_list_check(news_post: NewsPosts, black_list: BlackLists) -> bool:
