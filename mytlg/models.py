@@ -291,7 +291,7 @@ class ScheduledPosts(models.Model):
     bot_user = models.ForeignKey(verbose_name='юзер бота', to=BotUser, on_delete=models.CASCADE)
     news_post = models.ForeignKey(verbose_name='пост', to=NewsPosts, on_delete=models.CASCADE)
     interest = models.ForeignKey(verbose_name='интерес', to=Interests, on_delete=models.CASCADE, blank=True, null=True)
-    when_send = models.DateTimeField(verbose_name='когда отправить')
+    when_send = models.DateTimeField(verbose_name='когда отправить', auto_now=False, auto_now_add=False)
     is_sent = models.BooleanField(verbose_name='отправлено', default=False)
 
     class Meta:
