@@ -83,7 +83,7 @@ def gpt_text_reduction(prompt, text, temp=0.3):
     return answer  # возвращает ответ
 
 
-def gpt_text_language_detection_and_translate(prompt, text, user_language_code, temp=0.3):
+def gpt_text_language_detection_and_translate(prompt, text, user_language_code, temp):
     """
     Функция для определения языка текста и при необходимости перевода текста на язык пользователя, через модель GPT.
     prompt - промпт для модели
@@ -91,7 +91,7 @@ def gpt_text_language_detection_and_translate(prompt, text, user_language_code, 
     """
     messages = [
         {"role": "system", "content": prompt},
-        {"role": "user", "content": f'user_language_code={user_language_code}. Текст для исследования: {text}'}
+        {"role": "user", "content": f'user_language_code={user_language_code}. {text}'}
     ]
     try:
         completion = openai.ChatCompletion.create(
