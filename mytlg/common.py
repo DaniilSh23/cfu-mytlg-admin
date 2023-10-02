@@ -2,6 +2,7 @@ import csv
 import json
 from io import TextIOWrapper
 
+from django.db.models import QuerySet
 from langchain import FAISS
 from langchain.embeddings import OpenAIEmbeddings
 
@@ -53,13 +54,22 @@ def save_json_channels(file, encoding):  # TODO: переписать
     return channels
 
 
-def scheduling_post_for_sending(post: NewsPosts):
+# TODO: требует рефакторинга. Эта функция вызывается при отборе постов, которые необходимо отправить конкретному юзеру
+#  по функции рекомендации нового и интересного, а также при стандартной проверке кому нужно отправить вновь вышедший
+#  в каналах пост. Я добавил здесь дополнительные параметры bot_usr, interest и логику для них, чтобы более менее
+#  привести функцию к универсальному виду. Вызывается эта функция во views.RelatedNewsView и
+#  в tasks.search_content_by_new_interest . Надо будет, короче, что-то с ней придумать, чтобы все почище было.
+def scheduling_post_for_sending(post: NewsPosts, bot_usr: BotUser = None, interest: Interests = None):
     """
-    Отбор пользователей для поста.
+    Отбор пользователей для поста и планирование поста к отправке.
     """
     MY_LOGGER.debug(f'Планируем пост к отправке.')
 
-    users_qset = BotUser.objects.all().only('id')
+    if not bot_usr:
+        users_qset = BotUser.objects.all().only('id')
+    else:
+        users_qset = (bot_usr,)  # Сделал из одного элемента кортеж, чтобы можно было итерироваться
+
     for i_user in users_qset:
 
         # Проверяем на предмет соответствия черному списку
@@ -74,7 +84,7 @@ def scheduling_post_for_sending(post: NewsPosts):
             Interests.objects.filter(category=post.channel.category, bot_user=i_user, is_active=True,
                                      interest_type='main')
             .only('id', 'interest', 'embedding', 'when_send')
-        )
+        ) if not interest else (interest,)  # TODO: добавленная доп. логика из-за того, что функция не универсальна
         if len(interests) < 1:
             MY_LOGGER.warning(f'У юзера PK=={i_user.pk} не указаны интересы')
             continue

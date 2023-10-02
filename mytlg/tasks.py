@@ -11,6 +11,7 @@ from django.db.models import Count
 from langchain.embeddings import OpenAIEmbeddings
 
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
+from mytlg.common import scheduling_post_for_sending
 from mytlg.gpt_processing import ask_the_gpt, gpt_text_language_detection_and_translate
 from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings, \
     Interests, ScheduledPosts
@@ -53,10 +54,10 @@ def gpt_interests_processing(interests, tlg_id):
 
         # Пилим эмбеддинги для интереса
         MY_LOGGER.debug(f'Пилим эмбеддинги для интереса: {i_interest.get("interest")}')
-        embeddings = OpenAIEmbeddings(max_retries=2)
         # TODO: эту хуйню надо в try-except, но я не вьехал че там экзептиться может, потому что я уже заебался и выпил
+        embeddings = OpenAIEmbeddings(max_retries=2)
 
-        # Пилим эмбеддинги для интереса и соединяем их через пробел (методу join нужна str, а не float)
+        # Cклеиваем эмбеддинги через пробел (методу join нужна str, а не float, поэтому тут map)
         i_interest["embedding"] = ' '.join(
             map(lambda elem: str(elem), embeddings.embed_query(text=i_interest.get("interest")))
         )
@@ -256,3 +257,91 @@ def start_or_stop_accounts(bot_command='start_acc'):
         bot_command_for_start_or_stop_account(instance=i_acc, bot_command=bot_command, bot_admin=bot_admin)
         time.sleep(0.5)  # Небольшая задержка, чтобы бот успел запустить асинк таски
     MY_LOGGER.debug(f'Задача завершена')
+
+
+@shared_task
+def what_was_interesting():
+    """
+    Таск, который раз в неделю спрашивает, что было нового и интересного.
+    """
+    MY_LOGGER.info(f'Запущен таск по опросу, что было интересного у пользователей')
+
+    # Достаём юзеров из БД и отправляем им сообщение
+    users = BotUser.objects.all().only('tlg_id')
+    for i_usr in users:
+        MY_LOGGER.debug(f'Спрашиваем юзера с tlg_id == {i_usr.tlg_id!r}')
+        send_message_by_bot(
+            chat_id=int(i_usr.tlg_id),
+            text='👋 Привет!\nКак прошли Ваши выходные?\n\n⭐️ Возможно встретилось что-то новое и интересное?'
+                 '💡 Можете рассказать об этом и я подберу для Вас подходящий контент\n$$$what_was_interesting'
+        )
+
+    MY_LOGGER.info(f'Закончен таск по опросу, что было интересного у пользователей')
+
+
+@shared_task
+def search_content_by_new_interest(interest, usr_tlg_id):
+    """
+    Задачка селери по поиску контента для функции опроса, что встретилось нового и интересного.
+    """
+    MY_LOGGER.info(f'Запущена задача селери по поиску контента для юзера с tlg_id=={usr_tlg_id!r} '
+                   f'(функция "что встретилось нового и интересного").')
+
+    # Достаём из БД объект юзера
+    bot_user_obj = BotUser.objects.get(tlg_id=usr_tlg_id)
+
+    # Достаём или создаём в БД категорию "тест" (в нее сливаем все неотсортированные интересы)
+    category, created = Categories.objects.get_or_create(
+        category_name='тест',
+        defaults={'category_name': 'тест'}
+    )
+    if created:
+        MY_LOGGER.info('Создана категория "тест".')
+
+    # Пилим эмбеддинги для интереса
+    MY_LOGGER.debug(f'Пилим эмбеддинги для интереса: {interest}')
+    # TODO: эту хуйню надо в try-except, но я не вьехал че там экзептиться может, потому что я уже заебался и выпил
+    embeddings = OpenAIEmbeddings(max_retries=2)
+
+    # Cклеиваем эмбеддинги через пробел (методу join нужна str, а не float, поэтому тут map)
+    embedding_str = ' '.join(
+        map(lambda elem: str(elem), embeddings.embed_query(text=interest))
+    )
+
+    # Записываем интерес в БД
+    new_interest = Interests(
+        interest=interest,
+        embeddings=embedding_str,
+        bot_user=bot_user_obj,
+        category=category,
+        is_active=False,
+        when_send='now',
+        interest_type='whats_new',
+    )
+    MY_LOGGER.success(f'В БД создан новый интерес юзера {bot_user_obj!r} | PK интереса == {new_interest.pk!r}')
+
+    # Ищем релевантный контент для интереса пользователя
+    period = int(BotSettings.objects.get('period_for_what_was_interest_sec').value)
+    period = datetime.datetime.fromtimestamp(float(period))
+    posts = NewsPosts.objects.filter(created_at__gt=period).only('embedding', 'post_link', 'short_text')
+    for i_post in posts:
+
+        # Проверка, что пост ранее не отправлялся юзеру и не спланирован к отправке в будущем
+        scheduled_posts_qset = ScheduledPosts.objects.filter(
+            bot_user=bot_user_obj,
+            news_post=i_post,
+        ).only("when_send", "is_sent")
+        if len(scheduled_posts_qset) > 1:
+            # Изменяем дату и время отправки для неотправленных постов на "сейчас"
+            not_sent_posts = scheduled_posts_qset.filter(is_sent=False)
+            not_sent_posts.update(when_send=datetime.datetime.now())
+            continue
+
+        # Планируем пост к отправке
+        scheduling_post_for_sending(
+            post=i_post,
+            bot_usr=bot_user_obj,
+            interest=new_interest,
+        )
+
+    MY_LOGGER.info(f'Конец задачи селери по поиску контента для юзера с tlg_id=={usr_tlg_id!r}')
