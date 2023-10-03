@@ -210,6 +210,13 @@ class NewsPosts(models.Model):
     created_at = models.DateTimeField(verbose_name='дата и время', auto_now_add=True)
     is_sent = models.BooleanField(verbose_name='отправлен пользователям', default=False)
 
+    def to_dict(self):
+        return {
+            'text': self.text,
+            'short_text': self.short_text,
+            'post_link': self.post_link
+        }
+
     class Meta:
         ordering = ['-id']
         verbose_name = 'новостной пост'

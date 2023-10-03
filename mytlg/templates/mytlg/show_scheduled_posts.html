@@ -1,10 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'mytlg/base.html' %}
 
-</body>
-</html>
+{% block 'title' %}
+  Стартовые настройки
+{% endblock %}
+
+{% block 'body' %}
+
+  <div class="row">
+    <h3 class="fw-bold py-3 mb-1"><span class="text-muted fw-light">Новые посты для вас:</h3>
+    <!-- Default Checkboxes and radios & Default checkboxes and radios -->
+    <div class="col-xl-6 my-form-border">
+      <div class="card mb-1 my-form-area">
+        <h5 class="card-header">Темы и каналы</h5>
+        <!-- Checkboxes and Radios -->
+        <div class="card-body">
+          <div class="row gy-3">
+            <div class="col-md">
+              <div class="demo-inline-spacing mt-1">
+тут будут посты {% posts %}
+                  {% tlg_id %}
+              </div>
+
+              <div id="ajaxResult"></div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--СКРИПТ ДЛЯ ОТПРАВКИ ДАННЫХ О ВЫБРАННЫХ ТЕМАТИКАХ И ОБНОВЛЕНИЕ ФОРМЫ КАНАЛАМИ ДЛЯ ЭТИХ ТЕМАТИК-->
+  <script>
+    $(document).ready(function() {
+      $('#themeForm').submit(function(event) {
+        event.preventDefault(); // предотвращаем стандартное поведение формы
+        var formData = $(this).serialize();
+
+        $.ajax({
+          url: '{% url 'mytlg:save_themes' %}', // путь к обработчику на сервере
+          type: 'POST',
+          data: formData,
+          dataType: 'html', // указываем, что ожидаем ответ в виде HTML
+          success: function(data) {
+            $('#ajaxResult').html(data); // обновляем содержимое элемента с id="ajaxResult"
+            $('#themeForm').hide();   // Скрываем форму с тематиками
+          },
+          error: function() {
+            alert('Произошла ошибка');
+          }
+        });
+      });
+    });
+  </script>
+
+<!--СКРИПТ ДЛЯ ОТПРАВКИ ВЫБРАННЫХ КАНАЛОВ ПО ТЕМАТИКАМ НА БЭКЭНД ЧЕРЕЗ AJAX-->
+<script>
+
+</script>
+
+{% endblock %}

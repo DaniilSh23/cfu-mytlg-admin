@@ -27,6 +27,8 @@ from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPost
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
+from mytlg.servises.scheduled_service import ScheduledPostsService
+
 
 class ShowScheduledPosts(View):
     """
@@ -40,13 +42,12 @@ class ShowScheduledPosts(View):
             MY_LOGGER.warning(f'Неверный токен запроса: {request.data.get("token")} != {BOT_TOKEN}')
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
 
-
-        posts = []
-        tlg_id = ''
-
+        post_hash = request.query_params.get('post_hash')
+        posts, tlg_id = ScheduledPostsService.get_posts_for_show(post_hash=post_hash)
 
         context = {
-            "data": {"posts": posts, "tlg_id": tlg_id}
+            "posts": posts,
+            "tlg_id": tlg_id
         }
         return render(request, template_name='mytlg/show_scheduled_posts.html', context=context)
 
