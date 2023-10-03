@@ -28,6 +28,29 @@ from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, 
     search_content_by_new_interest
 
 
+class ShowScheduledPosts(View):
+    """
+    Вьюшка для показа запланированных постов на странице телеграм веб приложения.
+    """
+
+    def get(self, request):
+        MY_LOGGER.info(f'Получен запрос на вьюшку ShowScheduledPosts {request.data}')
+
+        if not request.data.get("token") or request.data.get("token") != BOT_TOKEN:
+            MY_LOGGER.warning(f'Неверный токен запроса: {request.data.get("token")} != {BOT_TOKEN}')
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
+
+
+        posts = []
+        tlg_id = ''
+
+
+        context = {
+            "data": {"posts": posts, "tlg_id": tlg_id}
+        }
+        return render(request, template_name='mytlg/show_scheduled_posts.html', context=context)
+
+
 class WriteUsrView(APIView):
     """
     Вьюшка для обработки запросов при старте бота, записывает или обновляет данные о пользователе.
