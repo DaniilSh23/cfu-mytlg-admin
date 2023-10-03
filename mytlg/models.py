@@ -164,7 +164,7 @@ def send_bot_command(sender, instance, **kwargs):
     """
     Сигнал для отправки боту команды на старт или стоп аккаунта
     """
-    MY_LOGGER.info(f'Получен сигнал post_save от модели TlgAccounts.')
+    MY_LOGGER.info(f'Получен сигнал pre_save от модели TlgAccounts.')
 
     try:
         old_instance = TlgAccounts.objects.get(pk=instance.pk)
@@ -258,6 +258,7 @@ class Interests(models.Model):
     interest_types_tpl = (
         ('main', 'основной'),
         ('networking', 'нетворкинг'),
+        ('whats_new', 'что нового'),
     )
 
     interest = models.CharField(verbose_name='интерес', max_length=200)
@@ -282,6 +283,22 @@ class Interests(models.Model):
         if len(self.interest) > 35:
             return f"{self.interest[:35]}..."
         return self.interest
+
+
+# TODO: эту штуку надо дописать, чтобы при изменении или создании записи в т. Интересов автоматом
+#  генерировались эмбеддинги
+@receiver(pre_save, sender=Interests)
+def send_bot_command(sender, instance, **kwargs):
+    """
+    Обработка сигнала перед сохранением интереса пользователя
+    """
+    MY_LOGGER.info(f'Получен сигнал pre_save от модели Interests.')
+
+    # Попробуем достать из БД такой интерес и сравнить его текст (поле interest)
+    try:
+        old_instance = Interests.objects.get(pk=instance.pk)
+    except ObjectDoesNotExist:
+        pass
 
 
 class ScheduledPosts(models.Model):

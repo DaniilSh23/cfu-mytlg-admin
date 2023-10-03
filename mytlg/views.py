@@ -18,13 +18,14 @@ from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.common import scheduling_post_for_sending
-from mytlg.forms import BlackListForm
+from mytlg.forms import BlackListForm, WhatWasInterestingForm
 from mytlg.gpt_processing import gpt_text_reduction
 from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, \
     AccountsErrors, Interests, BotSettings, BlackLists
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer
-from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts
+from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
+    search_content_by_new_interest
 
 
 class WriteUsrView(APIView):
@@ -616,64 +617,49 @@ class BlackListView(View):
             return redirect(to=reverse_lazy('mytlg:black_list'))
 
 
+class WhatWasInteresting(View):
+    """
+    Вьюшки для опроса, что пользователю встретилось интересного.
+    """
+    def get(self, request):
+        MY_LOGGER.info('GET запрос на вьюшку WhatWasInteresting')
+        return render(request, template_name='mytlg/what_was_interesting.html')
+
+    def post(self, request):
+        MY_LOGGER.info(f'POST запрос на вьюшку WhatWasInteresting')
+        form = WhatWasInterestingForm(request.POST)
+
+        if form.is_valid():
+
+            # Пробуем достать юзера бота по tlg_id
+            try:
+                BotUser.objects.get(tlg_id=form.cleaned_data.get("tlg_id"))
+            except ObjectDoesNotExist:
+                MY_LOGGER.warning(f'В БД не найден BotUser с tlg_id=={form.cleaned_data.get("tlg_id")}')
+                return HttpResponse(status=404, content='Bot User not found')
+
+            # Запускаем таск селери по обработке интереса и поиска контента
+            search_content_by_new_interest.delay(
+                interest=form.cleaned_data.get('interest'),
+                usr_tlg_id=form.cleaned_data.get("tlg_id"),
+            )
+
+            context = dict(
+                header=f'🔎 Окей, начинаю поиск',
+                description=f'Я пришлю Вам подходящий контент, ожидайте.⏱',
+                btn_text='Хорошо, спасибо!'
+            )
+            return render(request, template_name='mytlg/success.html', context=context)
+
+        else:
+            MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors} | Данные запроса: {request.POST}')
+            for i_err in form.errors:
+                err_msgs.error(request, f'Ошибка: {i_err}')
+            return redirect(to=reverse_lazy('mytlg:black_list'))
+
+
 def test_view(request):
     """
     Тестовая вьюшка. Тестим всякое
     """
-    print(Interests.objects.get(pk=4).short_interest())
-    # themes = Themes.objects.all()
-    # themes_str = '\n'.join([i_theme.theme_name for i_theme in themes])
-    # rslt = ask_the_gpt(
-    #     base_text=themes_str,
-    #     query='Подбери подходящую тематику для следующего интереса пользователя: '
-    #           '"Мне интересна лига чемпионов, составы футбольных команд, хоккей и немного шахмат"',
-    #     system='Ты ответственный помощник и твоя задача - это классификация интересов пользователей по определённым '
-    #            'тематикам. На вход ты будешь получать данные с информацией для ответа пользователю - '
-    #            'это список тематик (каждая тематика с новой строки) и запрос пользователя, который будет содержать '
-    #            'формулировку его интереса. Твоя задача определить только одну тематику из переданного списка, '
-    #            'которая с большей вероятностью подходит под интерес пользователя и написать в ответ только эту '
-    #            'тематику и никакого больше текста в твоём ответе не должно быть. Не придумывай ничего от себя, выбирай'
-    #            ' тематику строго из того списка, который получил'
-    # )
-    # print(rslt)
-
-    # file_data = b'Hello, Telegram!'  # Ваши данные для файла
-    # # Создаем временный файл-буфер в памяти
-    # file_buffer = BytesIO(file_data)
-    #
-    # files = {
-    #     'document': ('myfile.txt', file_data)  # Создаем объект файла с кастомным именем
-    # }
-    #
-    # url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument'
-    # data = {'chat_id': 1978587604, 'caption': 'test файлик'}
-    # MY_LOGGER.debug(f'Выполняем запрос на отправку сообщения от лица бота, данные запроса: {data}')
-    # response = requests.post(url=url, data=data, files=files)  # Выполняем запрос на отправку сообщения
-    #
-    # # Обрабатываем ответ
-    # if response.status_code == 200:
-    #     print('Файл успешно отправлен')
-    # else:
-    #     print('Ошибка отправки файла:', response.text)
-    #
-    # return HttpResponse(content=response.text)
-
-    # scheduled_task_example.delay()
-    # return HttpResponse(content='okay my friend !', status=200)
-
-    # # Получение ботом инфы о каналах
-    # MY_LOGGER.info(f'Получаем инфу о канале ботом')
-    # send_rslt = requests.post(
-    #     url=f'https://api.telegram.org/bot{BOT_TOKEN}/getChat',
-    #     data={
-    #         'chat_id': '@onIy_crypto',
-    #     }
-    # )
-    # if send_rslt.status_code == 200:
-    #     MY_LOGGER.success(f'Успешная получена инфа о чате: {send_rslt.json()}')
-    # else:
-    #     MY_LOGGER.warning(f'Не удалось отправить текст ошибки пользователю в телеграм: {send_rslt.text}')
-
-    # scheduling_post_for_sending(post=NewsPosts.objects.first())
-
     return HttpResponse(content='okay my friend !', status=200)

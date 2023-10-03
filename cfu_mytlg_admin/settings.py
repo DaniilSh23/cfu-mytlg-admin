@@ -16,6 +16,7 @@ import environ
 import asyncio
 
 import loguru
+from celery.schedules import crontab
 
 # Это отсюда https://django-environ.readthedocs.io/en/latest/quickstart.html
 env = environ.Env(
@@ -198,6 +199,10 @@ CELERY_BEAT_SCHEDULE = {  # Настройки шедуля
         # 'schedule': env('SEND_NEWS_TIMEOUT'),
         # 'schedule': 10,
     },
+    'what_was_interesting': {
+        'task': 'mytlg.tasks.what_was_interesting',
+        'schedule': crontab(hour=11, minute=30, day_of_week=1),  # Запуск в понедельник в 11:30
+    }
     # 'test_task': {
     #     'task': 'mytlg.tasks.scheduled_task_example',
     #     'schedule': 10

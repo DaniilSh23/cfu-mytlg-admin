@@ -1,8 +1,9 @@
 from django.urls import path
 
+from cfu_mytlg_admin.settings import DEBUG
 from mytlg.views import StartSettingsView, WriteUsrView, WriteInterestsView, test_view, \
     GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, GetActiveAccounts, \
-    AccountError, SetAccFlags, BlackListView
+    AccountError, SetAccFlags, BlackListView, WhatWasInteresting
 
 app_name = 'mytlg'
 
@@ -20,7 +21,8 @@ urlpatterns = [
     path('get_active_accounts/', GetActiveAccounts.as_view(), name='get_active_accounts'),
     path('account_error/', AccountError.as_view(), name='account_error'),
     path('black_list/', BlackListView.as_view(), name='black_list'),
-
-    path('test/', test_view, name='test'),
+    path('what_was_interesting/', WhatWasInteresting.as_view(), name='what_was_interesting'),
 ]
 
+if DEBUG:
+    urlpatterns.append(path('test/', test_view, name='test'))
