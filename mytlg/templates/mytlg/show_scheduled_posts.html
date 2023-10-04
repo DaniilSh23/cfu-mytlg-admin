@@ -8,37 +8,24 @@
     <div class="row">
         <div class="col-12">
             <div class="card mb-4">
-                <h5 class="card-header">⭐️{{ post.interest }}</h5>
+                <h5 class="card-header">⭐️ {{ post.interest }}</h5>
                 <div class="card-body">
                     <p class="card-text">
                         {{ post.short_text }}
                     </p>
                     <p class="demo-inline-spacing">
-                        <!--                        <a-->
-                        <!--                                id="{{ post.id }}"-->
-                        <!--                                class="btn btn-primary me-1"-->
-                        <!--                                data-bs-toggle="collapse"-->
-                        <!--                                href="#collapseExample"-->
-                        <!--                                role="button"-->
-                        <!--                                aria-expanded="false"-->
-                        <!--                                aria-controls="collapseExample"-->
-
-                        <!--                        >-->
-                        <!--                            Читать полностью-->
-                        <!--                        </a>-->
                         <button
-                                id="{{ post.id }}"
                                 class="btn btn-primary me-1"
                                 type="button"
                                 data-bs-toggle="collapse"
-                                data-bs-target="#collapseExample"
+                                data-bs-target="#post-{{ post.id }}"
                                 aria-expanded="false"
-                                aria-controls="collapseExample"
+                                aria-controls="post-{{ post.id }}"
                         >
                             Читать полностью
                         </button>
                     </p>
-                    <div class="collapse" id="collapseExample">
+                    <div class="collapse" id="post-{{ post.id }}">
                         <div class="d-grid d-sm-flex p-3 border post-text">
                             <p>
                                 {{ post.text }}
