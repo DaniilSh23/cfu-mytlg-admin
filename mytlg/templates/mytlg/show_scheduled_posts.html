@@ -3,11 +3,11 @@
 {% block 'body' %}
 
 <div class="row">
-    <h3 class="fw-bold py-3 mb-1"><span class="text-muted fw-light">Новые посты для вас:</span></h3>
-    {% for post in posts%}
+    <h3 class="fw-bold py-3 mb-1 my-form-border"><span class="text-muted fw-light">Новые посты для вас:</span></h3>
+    {% for post in posts %}
     <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
+        <div class="col-12 my-form-border">
+            <div class="card mb-4 my-form-area">
                 <h5 class="card-header">⭐️ {{ post.interest }}</h5>
                 <div class="card-body">
                     <p class="card-text">
@@ -15,7 +15,7 @@
                     </p>
                     <p class="demo-inline-spacing">
                         <button
-                                class="btn btn-primary me-1"
+                                class="btn btn-primary me-1 my-btn-clr"
                                 type="button"
                                 data-bs-toggle="collapse"
                                 data-bs-target="#post-{{ post.id }}"

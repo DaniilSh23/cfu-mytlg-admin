@@ -24,10 +24,45 @@ from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, 
     AccountsErrors, Interests, BotSettings, BlackLists
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
+from mytlg.servises.reactions_service import ReactionsService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
-from mytlg.servises.scheduled_service import ScheduledPostsService
+from mytlg.servises.scheduled_post_service import ScheduledPostsService
+
+
+# @method_decorator(decorator=csrf_exempt, name='dispatch')
+class SentReactionHandler(APIView):
+    """
+    Вьюшка для обработки AJAX запрос с реакцией пользователя на пост
+    """
+    @extend_schema(request=ReactionsSerializer, responses=dict, methods=['post'])
+    def post(self, request):
+        """
+        Летит такой вот JSON:
+        {
+            'bot_usr': int,
+            'post_id': int,
+            'reaction': int (1 или 2)
+        }
+        """
+        MY_LOGGER.info(f'AJAX POST запрос на вьюшку SentReactionHandler | {request.data}')
+        ser = ReactionsSerializer(data=request.data)
+        if ser.is_valid():
+
+            # Вызываем сервис для выполнения бизнес логики
+            service_rslt = ReactionsService.update_or_create_reactions(
+                post_id=ser.validated_data.get('post_id'),
+                tlg_id=ser.validated_data.get('bot_usr'),
+                reaction=ser.validated_data.get('reaction'),
+            )
+            MY_LOGGER.debug(f'Даём ответ на AJAX POST запрос во вьюшке SentReactionHandler | '
+                            f'Успешно обработан: {service_rslt[0]!r} | Описание: {service_rslt[1]!r}')
+            return Response(service_rslt[1], status=200 if service_rslt[0] else 400)
+
+        else:
+            MY_LOGGER.info(f'Неудачный AJAX POST запрос на вьюшку SentReactionHandler | {request.data} | {ser.errors}')
+            return Response(data={'result': f'not valid data | {ser.errors!r}'}, status=400)
 
 
 class ShowScheduledPosts(View):
@@ -50,15 +85,6 @@ class ShowScheduledPosts(View):
             "tlg_id": tlg_id
         }
         return render(request, template_name='mytlg/show_scheduled_posts.html', context=context)
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class SentReactionHandler(APIView):
-    """ Тестовая вьюха для проверки ajax запросов с реакцией"""
-    def post(self, request):
-        print(request.POST)
-        return Response(data='success',
-                        status=status.HTTP_200_OK)
 
 
 class WriteUsrView(APIView):
@@ -689,18 +715,6 @@ class WhatWasInteresting(View):
             for i_err in form.errors:
                 err_msgs.error(request, f'Ошибка: {i_err}')
             return redirect(to=reverse_lazy('mytlg:black_list'))
-
-
-# @method_decorator(decorator=csrf_exempt, name='dispatch')
-class SentReactionHandler(APIView):
-    """
-    Вьюшка для обработки AJAX запрос с реакцией пользователя на пост
-    """
-    @extend_schema(request=ReactionsSerializer, responses=dict, methods=['post'])
-    def post(self, request):
-        MY_LOGGER.info(f'AJAX запрос на вьюшку SentReactionHandler | {request.data}')
-        # TODO: дописать эту херню. Тут обработка запроса, бизнес-логику вынести в services.py
-        return JsonResponse(request.data)
 
 
 def test_view(request):

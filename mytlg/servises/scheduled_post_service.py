@@ -2,6 +2,9 @@ from mytlg.models import ScheduledPosts
 
 
 class ScheduledPostsService:
+    """
+    Сервис для бизнес-логики, связанный с запланированными к отправке постами.
+    """
 
     @staticmethod
     def get_posts_for_show(post_hash: str) -> tuple:
@@ -10,8 +13,8 @@ class ScheduledPostsService:
         :param post_hash:
         :return: Кортеж содержащий список словарей с запланированными постами и tlg_id пользователя
         """
-        #scheduled_posts = ScheduledPosts.objects.filter(post_hash=post_hash)
-        scheduled_posts = ScheduledPosts.objects.filter(bot_user__tlg_id=461767338)
+        scheduled_posts = ScheduledPosts.objects.filter(selection_hash=post_hash)
+        # scheduled_posts = ScheduledPosts.objects.filter(bot_user__tlg_id=461767338)
         tlg_id = scheduled_posts[0].bot_user.tlg_id
         posts = []
         for post in scheduled_posts:

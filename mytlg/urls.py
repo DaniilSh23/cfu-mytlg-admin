@@ -3,11 +3,7 @@ from django.urls import path
 from cfu_mytlg_admin.settings import DEBUG
 from mytlg.views import StartSettingsView, WriteUsrView, WriteInterestsView, test_view, \
     GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, GetActiveAccounts, \
-<<<<<<< mytlg/urls.py
     AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler
-=======
-    AccountError, SetAccFlags, BlackListView, WhatWasInteresting, SentReactionHandler
->>>>>>> mytlg/urls.py
 
 app_name = 'mytlg'
 

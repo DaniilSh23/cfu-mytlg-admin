@@ -343,14 +343,9 @@ class Reactions(models.Model):
     """
     Модель для реакций пользователя.
     """
-    reactions_tpl = (
-        ('like', 'лайк'),
-        ('dislike', 'дизлайк'),
-    )
-
     bot_user = models.ForeignKey(verbose_name='юзер', to=BotUser, on_delete=models.CASCADE)
     news_post = models.ForeignKey(verbose_name='пост', to=NewsPosts, on_delete=models.CASCADE)
-    reaction = models.CharField(verbose_name='реакция', choices=reactions_tpl, max_length=20, blank=True, null=True)
+    reaction = models.IntegerField(verbose_name='реакция', default=0)
     created_at = models.DateTimeField(verbose_name='создана', auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name='изменена', blank=True, null=True, auto_now_add=False, auto_now=True)
 

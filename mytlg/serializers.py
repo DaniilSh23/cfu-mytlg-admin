@@ -95,6 +95,6 @@ class ReactionsSerializer(serializers.Serializer):
     """
     Сериалайзер для POST запроса с реакцией юзера.
     """
-    tlg_id = serializers.IntegerField()
-    reaction = serializers.CharField()
+    bot_usr = serializers.IntegerField()
+    reaction = serializers.IntegerField()
     post_id = serializers.IntegerField()
