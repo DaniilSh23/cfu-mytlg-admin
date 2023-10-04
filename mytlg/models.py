@@ -210,6 +210,14 @@ class NewsPosts(models.Model):
     created_at = models.DateTimeField(verbose_name='дата и время', auto_now_add=True)
     is_sent = models.BooleanField(verbose_name='отправлен пользователям', default=False)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'text': self.text,
+            'short_text': self.short_text,
+            'post_link': self.post_link
+        }
+
     class Meta:
         ordering = ['-id']
         verbose_name = 'новостной пост'
@@ -310,6 +318,7 @@ class ScheduledPosts(models.Model):
     interest = models.ForeignKey(verbose_name='интерес', to=Interests, on_delete=models.CASCADE, blank=True, null=True)
     when_send = models.DateTimeField(verbose_name='когда отправить', auto_now=False, auto_now_add=False)
     is_sent = models.BooleanField(verbose_name='отправлено', default=False)
+    selection_hash = models.CharField(verbose_name='хэш подборки', max_length=200, blank=True, null=True)
 
     class Meta:
         ordering = ['-id']
@@ -328,3 +337,19 @@ class BlackLists(models.Model):
         ordering = ['-id']
         verbose_name = 'черный список'
         verbose_name_plural = 'черные списки'
+
+
+class Reactions(models.Model):
+    """
+    Модель для реакций пользователя.
+    """
+    bot_user = models.ForeignKey(verbose_name='юзер', to=BotUser, on_delete=models.CASCADE)
+    news_post = models.ForeignKey(verbose_name='пост', to=NewsPosts, on_delete=models.CASCADE)
+    reaction = models.IntegerField(verbose_name='реакция', default=0)
+    created_at = models.DateTimeField(verbose_name='создана', auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name='изменена', blank=True, null=True, auto_now_add=False, auto_now=True)
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'реакция'
+        verbose_name_plural = 'реакции'

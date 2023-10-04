@@ -1,0 +1,104 @@
+{% extends 'mytlg/base.html' %}
+
+{% block 'body' %}
+
+<div class="row">
+    <h3 class="fw-bold py-3 mb-1 my-form-border"><span class="text-muted fw-light">Новые посты для вас:</span></h3>
+    {% for post in posts %}
+    <div class="row">
+        <div class="col-12 my-form-border">
+            <div class="card mb-4 my-form-area">
+                <h5 class="card-header">⭐️ {{ post.interest }}</h5>
+                <div class="card-body">
+                    <p class="card-text">
+                        {{ post.short_text }}
+                    </p>
+                    <p class="demo-inline-spacing">
+                        <button
+                                class="btn btn-primary me-1 my-btn-clr"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#post-{{ post.id }}"
+                                aria-expanded="false"
+                                aria-controls="post-{{ post.id }}"
+                        >
+                            Читать полностью
+                        </button>
+                    </p>
+                    <div class="collapse" id="post-{{ post.id }}">
+                        <div class="d-grid d-sm-flex p-3 border post-text">
+                            <p>
+                                {{ post.text }}
+                            </p>
+                            <div class="reactions-buttons">
+                                <button class="reaction btn btn-primary me-1" data-reaction="1"
+                                        data-post-id="{{ post.id }}" data-tlg-id="{{ tlg_id }}">
+                                    Нравится 🎯
+                                </button>
+                                <button class="reaction btn btn-primary me-1" data-reaction="2"
+                                        data-post-id="{{ post.id }}" data-tlg-id="{{ tlg_id }}">
+                                    Какое-то 💩
+                                </button>
+                            </div>
+                            <span>Источник <a href="{{post.post_link}}">{{post.post_link}}</a></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<div id="tlg-data" data-tlg_id="{{ tlg_id }}"></div>
+
+<style>
+    .post-text {
+        flex-direction: column;
+    }
+
+    .reactions-buttons{
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .reactions-buttons button {
+        background-color: #FFAC33;
+        border-color: #FFAC33;
+        color: #242121;
+    }
+</style>
+<script>
+    $(document).ready(function() {
+        function sentReaction() {
+            var button = $(this)
+            var tlg_id = button.attr('data-tlg-id')
+            var reaction = button.attr('data-reaction')
+            var post_id = button.attr('data-post-id');
+
+            var reactionData = {
+                'bot_usr': tlg_id,
+                'post_id': post_id,
+                'reaction': reaction
+            };
+            console.log(reactionData);
+            $.ajax({
+                type: 'POST',
+                url: '/mytlg/sent_reaction/',  // Replace with your server endpoint
+                data: reactionData,
+                dataType: 'html',
+                success: function(response) {
+                    console.log('запрос отправлен');
+                    button.text('Реакция учтена');
+                },
+                error: function(xhr, status, error) {
+                    alert('Запрос не отправлен');
+                }
+            });
+        };
+
+        $('.reaction').each(function(){$(this).on('click', sentReaction)});
+
+    });
+</script>
+{% endblock %}

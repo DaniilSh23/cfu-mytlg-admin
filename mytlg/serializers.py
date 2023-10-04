@@ -89,3 +89,12 @@ class AccountErrorSerializer(serializers.Serializer):
     error_type = serializers.CharField(max_length=40)
     error_description = serializers.CharField()
     account = serializers.IntegerField()
+
+
+class ReactionsSerializer(serializers.Serializer):
+    """
+    Сериалайзер для POST запроса с реакцией юзера.
+    """
+    bot_usr = serializers.IntegerField()
+    reaction = serializers.IntegerField()
+    post_id = serializers.IntegerField()

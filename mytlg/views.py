@@ -4,7 +4,7 @@ import json
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse, HttpRequest
+from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
@@ -23,9 +23,68 @@ from mytlg.gpt_processing import gpt_text_reduction
 from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, \
     AccountsErrors, Interests, BotSettings, BlackLists
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
-    UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer
+    UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
+from mytlg.servises.reactions_service import ReactionsService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
+
+from mytlg.servises.scheduled_post_service import ScheduledPostsService
+
+
+# @method_decorator(decorator=csrf_exempt, name='dispatch')
+class SentReactionHandler(APIView):
+    """
+    Вьюшка для обработки AJAX запрос с реакцией пользователя на пост
+    """
+    @extend_schema(request=ReactionsSerializer, responses=dict, methods=['post'])
+    def post(self, request):
+        """
+        Летит такой вот JSON:
+        {
+            'bot_usr': int,
+            'post_id': int,
+            'reaction': int (1 или 2)
+        }
+        """
+        MY_LOGGER.info(f'AJAX POST запрос на вьюшку SentReactionHandler | {request.data}')
+        ser = ReactionsSerializer(data=request.data)
+        if ser.is_valid():
+
+            # Вызываем сервис для выполнения бизнес логики
+            service_rslt = ReactionsService.update_or_create_reactions(
+                post_id=ser.validated_data.get('post_id'),
+                tlg_id=ser.validated_data.get('bot_usr'),
+                reaction=ser.validated_data.get('reaction'),
+            )
+            MY_LOGGER.debug(f'Даём ответ на AJAX POST запрос во вьюшке SentReactionHandler | '
+                            f'Успешно обработан: {service_rslt[0]!r} | Описание: {service_rslt[1]!r}')
+            return Response(service_rslt[1], status=200 if service_rslt[0] else 400)
+
+        else:
+            MY_LOGGER.info(f'Неудачный AJAX POST запрос на вьюшку SentReactionHandler | {request.data} | {ser.errors}')
+            return Response(data={'result': f'not valid data | {ser.errors!r}'}, status=400)
+
+
+class ShowScheduledPosts(View):
+    """
+    Вьюшка для показа запланированных постов на странице телеграм веб приложения.
+    """
+
+    def get(self, request):
+        MY_LOGGER.info(f'Получен запрос на вьюшку ShowScheduledPosts {request.GET}')
+
+        if not request.GET.get("token") or request.GET.get("token") != BOT_TOKEN:
+            MY_LOGGER.warning(f'Неверный токен запроса: {request.GET.get("token")} != {BOT_TOKEN}')
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
+
+        post_hash = request.GET.get('post_hash')
+        posts, tlg_id = ScheduledPostsService.get_posts_for_show(post_hash=post_hash)
+
+        context = {
+            "posts": posts,
+            "tlg_id": tlg_id
+        }
+        return render(request, template_name='mytlg/show_scheduled_posts.html', context=context)
 
 
 class WriteUsrView(APIView):
