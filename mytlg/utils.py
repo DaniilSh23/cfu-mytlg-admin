@@ -80,7 +80,7 @@ def send_message_by_bot(chat_id, text, disable_notification=False) -> bool | Non
     MY_LOGGER.info(f'Вызвана функция для отправки от лица бота сообщений в телегу юзеру {chat_id!r}')
     url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
     data = {'chat_id': chat_id, 'text': text, 'disable_notification': disable_notification,
-            'disable_web_page_preview': True}
+            'disable_web_page_preview': True, 'parse_mode': 'HTML'}
     MY_LOGGER.debug(f'Выполняем запрос на отправку сообщения от лица бота, данные запроса: {data}')
     response = requests.post(url=url, data=data)  # Выполняем запрос на отправку сообщения
 

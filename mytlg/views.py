@@ -4,7 +4,7 @@ import json
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse, HttpRequest
+from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
@@ -23,7 +23,7 @@ from mytlg.gpt_processing import gpt_text_reduction
 from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, \
     AccountsErrors, Interests, BotSettings, BlackLists
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
-    UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer
+    UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
@@ -656,6 +656,18 @@ class WhatWasInteresting(View):
             for i_err in form.errors:
                 err_msgs.error(request, f'Ошибка: {i_err}')
             return redirect(to=reverse_lazy('mytlg:black_list'))
+
+
+# @method_decorator(decorator=csrf_exempt, name='dispatch')
+class SentReactionHandler(APIView):
+    """
+    Вьюшка для обработки AJAX запрос с реакцией пользователя на пост
+    """
+    @extend_schema(request=ReactionsSerializer, responses=dict, methods=['post'])
+    def post(self, request):
+        MY_LOGGER.info(f'AJAX запрос на вьюшку SentReactionHandler | {request.data}')
+        # TODO: дописать эту херню. Тут обработка запроса, бизнес-логику вынести в services.py
+        return JsonResponse(request.data)
 
 
 def test_view(request):
