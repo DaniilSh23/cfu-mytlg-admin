@@ -36,13 +36,13 @@ class ShowScheduledPosts(View):
     """
 
     def get(self, request):
-        MY_LOGGER.info(f'Получен запрос на вьюшку ShowScheduledPosts {request.data}')
+        MY_LOGGER.info(f'Получен запрос на вьюшку ShowScheduledPosts {request.GET}')
 
-        if not request.data.get("token") or request.data.get("token") != BOT_TOKEN:
-            MY_LOGGER.warning(f'Неверный токен запроса: {request.data.get("token")} != {BOT_TOKEN}')
+        if not request.GET.get("token") or request.GET.get("token") != BOT_TOKEN:
+            MY_LOGGER.warning(f'Неверный токен запроса: {request.GET.get("token")} != {BOT_TOKEN}')
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
 
-        post_hash = request.query_params.get('post_hash')
+        post_hash = request.GET.get('post_hash')
         posts, tlg_id = ScheduledPostsService.get_posts_for_show(post_hash=post_hash)
 
         context = {
@@ -50,6 +50,15 @@ class ShowScheduledPosts(View):
             "tlg_id": tlg_id
         }
         return render(request, template_name='mytlg/show_scheduled_posts.html', context=context)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SentReactionHandler(APIView):
+    """ Тестовая вьюха для проверки ajax запросов с реакцией"""
+    def post(self, request):
+        print(request.POST)
+        return Response(data='success',
+                        status=status.HTTP_200_OK)
 
 
 class WriteUsrView(APIView):

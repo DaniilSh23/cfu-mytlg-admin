@@ -212,6 +212,7 @@ class NewsPosts(models.Model):
 
     def to_dict(self):
         return {
+            'id': self.id,
             'text': self.text,
             'short_text': self.short_text,
             'post_link': self.post_link
