@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import json
 import time
 from io import BytesIO
@@ -273,7 +274,8 @@ def what_was_interesting():
         send_message_by_bot(
             chat_id=int(i_usr.tlg_id),
             text='👋 Привет!\nКак прошли Ваши выходные?\n\n⭐️ Возможно встретилось что-то новое и интересное?'
-                 '💡 Можете рассказать об этом и я подберу для Вас подходящий контент\n$$$what_was_interesting'
+                 '\n💡 Можете рассказать об этом и я подберу для Вас подходящий контент'
+                 '\n<tg-spoiler>$$$what_was_interesting</tg-spoiler>'
         )
 
     MY_LOGGER.info(f'Закончен таск по опросу, что было интересного у пользователей')
@@ -309,22 +311,24 @@ def search_content_by_new_interest(interest, usr_tlg_id):
     )
 
     # Записываем интерес в БД
-    new_interest = Interests(
+    new_interest = Interests.objects.create(
         interest=interest,
-        embeddings=embedding_str,
+        embedding=embedding_str,
         bot_user=bot_user_obj,
         category=category,
         is_active=False,
-        when_send='now',
+        send_period='now',
         interest_type='whats_new',
     )
     MY_LOGGER.success(f'В БД создан новый интерес юзера {bot_user_obj!r} | PK интереса == {new_interest.pk!r}')
 
     # Ищем релевантный контент для интереса пользователя
-    period = int(BotSettings.objects.get('period_for_what_was_interest_sec').value)
+    period = int(BotSettings.objects.get(key='period_for_what_was_interest_sec').value)
     period = datetime.datetime.fromtimestamp(float(period))
     posts = NewsPosts.objects.filter(created_at__gt=period).only('embedding', 'post_link', 'short_text')
     for i_post in posts:
+
+        # TODO: забыл написать вычисление сходства поста и интереса по векторным расстояниям
 
         # Проверка, что пост ранее не отправлялся юзеру и не спланирован к отправке в будущем
         scheduled_posts_qset = ScheduledPosts.objects.filter(
@@ -345,3 +349,54 @@ def search_content_by_new_interest(interest, usr_tlg_id):
         )
 
     MY_LOGGER.info(f'Конец задачи селери по поиску контента для юзера с tlg_id=={usr_tlg_id!r}')
+
+
+@shared_task
+def sending_post_selections():
+    """
+    Отправка пользователям уведомлений о том, что для них есть подборки постов.
+    """
+    MY_LOGGER.info('Старт задачи по формированию подборки постов для пользователей и отправки уведомления в ТГ')
+
+    # Заготовки
+    time_now = datetime.datetime.now(tz=pytz.timezone(TIME_ZONE)).strftime('%H:%M:%S')  # DT для создания хэша
+    interests_ids = list()  # Список для хранения айди интересов
+
+    # Достаём посты, которые должны быть отправлены
+    posts = ScheduledPosts.objects.filter(
+        is_sent=False,
+        when_send__lte=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
+    ).prefetch_related("bot_user").prefetch_related("news_post")
+
+    # Получаем пользователей
+    bot_user_ids = set(posts.values_list('bot_user', flat=True))
+    bot_users = BotUser.objects.filter(id__in=bot_user_ids).only('id', 'tlg_id')
+
+    # Поочереди достаём посты для конкретного юзера и отправляем их сокращенный вариант
+    for i_usr in bot_users:
+        selection_hash = hashlib.md5(f'{time_now}{i_usr.tlg_id}'.encode('utf-8')).hexdigest()
+        i_usr_posts = posts.filter(bot_user=i_usr)
+        i_usr_posts.update(selection_hash=selection_hash)
+        posts_str = (f'🗞 <b>Есть новости для Вас</b>\n<i>(по состоянию на {time_now})</i>\n\n\n\n'
+                     f'<tg-spoiler>$$$news_collection {selection_hash}</tg-spoiler>')
+
+        # Добавляем id интереса в общий список
+        for i_post in i_usr_posts:
+            if i_post.interest:     # Бывает, что у поста не указан интерес. Редко, но может быть
+                interests_ids.append(i_post.interest.id)
+
+        MY_LOGGER.debug(f'Отправляем уведомление о выходе подборки постов юзеру: {i_usr!r}')
+        send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=posts_str)
+        if not send_result:
+            MY_LOGGER.warning(f'Не удалось уведомление о выходе подборки постов юзеру: {i_usr!r}')
+            continue
+
+        # Обновляем флаг is_sent у запланированных к отправке постов
+        i_usr_posts.update(is_sent=True)
+
+    # Обновляем дату и время крайней отправки у интересов
+    Interests.objects.filter(id__in=set(interests_ids)).update(
+        last_send=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
+    )
+
+    MY_LOGGER.info('Конец задачи по формированию подборки постов для пользователей и отправки уведомления в ТГ')

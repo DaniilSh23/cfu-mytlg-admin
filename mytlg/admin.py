@@ -8,7 +8,7 @@ from mytlg.admin_mixins import ExportAsJSONMixin
 from mytlg.common import save_json_channels
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
-    AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists
+    AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists, Reactions
 from mytlg.tasks import subscription_to_new_channels
 
 
@@ -334,6 +334,7 @@ class ScheduledPostsAdmin(admin.ModelAdmin):
         'news_post',
         'when_send',
         'is_sent',
+        'selection_hash',
     )
     list_display_links = (
         'pk',
@@ -341,6 +342,7 @@ class ScheduledPostsAdmin(admin.ModelAdmin):
         'news_post',
         'when_send',
         'is_sent',
+        'selection_hash',
     )
 
 
@@ -364,3 +366,23 @@ class BlackListsAdmin(admin.ModelAdmin):
         if len(obj.keywords) < 48:
             return obj.keywords
         return obj.keywords[:48]
+
+
+@admin.register(Reactions)
+class ReactionsAdmin(admin.ModelAdmin):
+    list_display = (
+        'pk',
+        'bot_user',
+        'news_post',
+        'reaction',
+        'created_at',
+        'updated_at',
+    )
+    list_display_links = (
+        'pk',
+        'bot_user',
+        'news_post',
+        'reaction',
+        'created_at',
+        'updated_at',
+    )
