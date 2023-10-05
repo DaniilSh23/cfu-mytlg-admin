@@ -37,7 +37,7 @@
                                 </button>
                                 <button class="reaction btn btn-primary me-1" data-reaction="2"
                                         data-post-id="{{ post.id }}" data-tlg-id="{{ tlg_id }}">
-                                    Какое-то 💩
+                                    Не нравится 💩
                                 </button>
                             </div>
                             <span>Источник <a href="{{post.post_link}}">{{post.post_link}}</a></span>
@@ -54,6 +54,8 @@
 <style>
     .post-text {
         flex-direction: column;
+        border: none!important;
+        padding: 0px!important;
     }
 
     .reactions-buttons{
