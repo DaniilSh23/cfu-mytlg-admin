@@ -575,7 +575,7 @@ class GetActiveAccounts(APIView):
 
         token = request.query_params.get("token")
         if not token or token != BOT_TOKEN:
-            MY_LOGGER.warning(f'Токен неверный или отсутствует. Значение параметра token={token}')
+            MY_LOGGER.warning(f'Токен неверный или отсутствует. Значение параметра token={token!r} | значение BOT_TOKEN={BOT_TOKEN!r}')
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
 
         # Запускаем функцию отправки боту команд для старта аккаунтов
