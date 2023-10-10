@@ -12,7 +12,7 @@ class BotUsersService:
             return
 
     @staticmethod
-    def update_or_create_bot_user(tlg_id: str, defaults: dict) -> tuple:
-        bot_usr_obj, created = BotUser.objects.update_or_create(tlg_id, defaults)
+    def update_or_create_bot_user(tlg_id: str, defaults_dict: dict) -> tuple:
+        bot_usr_obj, created = BotUser.objects.update_or_create(tlg_id=tlg_id, defaults=defaults_dict)
         return bot_usr_obj, created
 

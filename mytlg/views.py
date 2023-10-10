@@ -25,10 +25,11 @@ from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, 
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
 from mytlg.servises.reactions_service import ReactionsService
+from mytlg.servises.scheduled_post_service import ScheduledPostsService
+from mytlg.servises.bot_users_service import BotUsersService
+from mytlg.servises.categories_service import CategoriesService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
-
-from mytlg.servises.scheduled_post_service import ScheduledPostsService
 
 
 # @method_decorator(decorator=csrf_exempt, name='dispatch')
@@ -100,12 +101,13 @@ class WriteUsrView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
 
         MY_LOGGER.debug(f'Записываем/обновляем данные о юзере в БД')
-        bot_usr_obj, created = BotUser.objects.update_or_create(
+
+        bot_usr_obj, created = BotUsersService.update_or_create_bot_user(
             tlg_id=request.data.get("tlg_id"),
-            defaults={
+            defaults_dict={
                 "tlg_id": request.data.get("tlg_id"),
                 "tlg_username": request.data.get("tlg_username"),
-                "language_code": request.data.get("language_code"),
+                "language_code": request.data.get("language_code", 'ru'),
             }
         )
         MY_LOGGER.success(f'Данные о юзере успешно {"созданы" if created else "обновлены"} даём ответ на запрос.')
