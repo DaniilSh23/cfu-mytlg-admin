@@ -3,7 +3,7 @@ import json
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.db.models import Q
+
 from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
@@ -286,33 +286,21 @@ class GetChannelsListView(APIView):
             MY_LOGGER.warning(f'acc_pk невалидный или отсутствует. Значение параметра acc_pk={acc_pk}')
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            # Достаём из БД каналы, с которыми связан аккаунт
-            channels_qset = TlgAccounts.objects.get(pk=int(acc_pk)).channels.all()
-        except ObjectDoesNotExist:
-            MY_LOGGER.warning(f'Запрошены каналы для несуществующего аккаунта (PK аккаунта == {acc_pk!r}')
+        # try:
+        #     # Достаём из БД каналы, с которыми связан аккаунт
+        #     channels_qset = TlgAccounts.objects.get(pk=int(acc_pk)).channels.all()
+        tlg_account = TlgAccountsService.get_tlg_account_by_pk(acc_pk)
+        if not tlg_account:
             return Response(status=status.HTTP_400_BAD_REQUEST, data='Object does not exists')
 
-        channels_lst = []
-        for i_channel in channels_qset:
-            # Достаём из БД список других аккаунтов, с которым связан каждый канал
-            acc_lst = i_channel.tlg_accounts.all().exclude(Q(pk=int(acc_pk)))
-            discard_channel = False  # Флаг "отбросить канал"
-            for i_acc in acc_lst:
-                if i_acc.is_run:  # Если другой аккаунт уже запущен и слушает данный канал
-                    discard_channel = True  # Поднимаем флаг
-                    break
-            if not discard_channel:  # Если флаг опущен
-                # Записываем данные о канале в список
-                channels_lst.append(
-                    {
-                        "pk": i_channel.pk,
-                        "channel_id": i_channel.channel_id,
-                        "channel_name": i_channel.channel_name,
-                        "channel_link": i_channel.channel_link,
-                    }
-                )
+        channels_qset = ChannelsService.get_tlg_account_channels_list(tlg_account)
+        if not channels_qset:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data='Channels not found')
+        # except ObjectDoesNotExist:
+            # MY_LOGGER.warning(f'Запрошены каналы для несуществующего аккаунта (PK аккаунта == {acc_pk!r}')
+            # return Response(status=status.HTTP_400_BAD_REQUEST, data='Object does not exists')
 
+        channels_lst = ChannelsService.create_and_process_channels_lst(acc_pk, channels_qset)
         serializer = ChannelsSerializer(channels_lst, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
