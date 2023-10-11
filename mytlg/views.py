@@ -29,6 +29,7 @@ from mytlg.servises.scheduled_post_service import ScheduledPostsService
 from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.categories_service import CategoriesService
 from mytlg.servises.channels_service import ChannelsService
+from mytlg.servises.interests_service import InterestsService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
@@ -140,10 +141,8 @@ class StartSettingsView(View):
             return HttpResponse(content='Request params is not valid', status=400)
 
         MY_LOGGER.debug('Связываем в БД юзера с выбранными каналами')
-        # try:
-        #     bot_usr_obj = BotUser.objects.get(tlg_id=int(tlg_id))
-        # except ObjectDoesNotExist:
         bot_usr_obj = BotUsersService.get_bot_user_by_tg_id(tlg_id=int(tlg_id))
+
         if not bot_usr_obj:
             MY_LOGGER.warning(f'Объект юзера с tlg_id=={tlg_id} не найден в БД.')
             return HttpResponse('User not found', status=404)
@@ -206,10 +205,12 @@ class WriteInterestsView(View):
             return redirect(to=reverse_lazy('mytlg:write_interests'))
 
         # Обработка валидного запроса
-        bot_user = BotUser.objects.get(tlg_id=tlg_id)
-        active_interests = (Interests.objects.filter(bot_user=bot_user, is_active=True, interest_type='main')
-                            .only('pk', 'is_active'))
-        active_interests.update(is_active=False)
+        bot_user = BotUsersService.get_bot_user_by_tg_id(tlg_id=tlg_id)
+        # active_interests = (Interests.objects.filter(bot_user=bot_user, is_active=True, interest_type='main')
+        #                     .only('pk', 'is_active'))
+
+        active_interests = (InterestsService.get_active_interests(bot_user))
+        InterestsService.set_is_active_false_in_active_interests(active_interests)
 
         new_interests_objs = [
             dict(
