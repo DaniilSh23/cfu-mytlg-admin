@@ -18,7 +18,7 @@ class ChannelsService:
         try:
             return Channels.objects.get(pk)
         except ObjectDoesNotExist:
-            return
+            return None
 
     @staticmethod
     def filter_channel_by_category(category):

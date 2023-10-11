@@ -9,7 +9,7 @@ class BotUsersService:
         try:
             return BotUser.objects.get(tlg_id=tlg_id)
         except ObjectDoesNotExist:
-            return
+            return None
 
     @staticmethod
     def update_or_create_bot_user(tlg_id: str, defaults_dict: dict) -> tuple:

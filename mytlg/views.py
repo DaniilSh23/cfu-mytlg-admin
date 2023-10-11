@@ -28,11 +28,11 @@ from mytlg.servises.reactions_service import ReactionsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
 from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.categories_service import CategoriesService
+from mytlg.servises.channels_service import ChannelsService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
 
-# @method_decorator(decorator=csrf_exempt, name='dispatch')
 class SentReactionHandler(APIView):
     """
     Вьюшка для обработки AJAX запрос с реакцией пользователя на пост
@@ -100,7 +100,7 @@ class WriteUsrView(APIView):
             MY_LOGGER.warning(f'Неверный токен запроса: {request.data.get("token")} != {BOT_TOKEN}')
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
 
-        MY_LOGGER.debug(f'Записываем/обновляем данные о юзере в БД')
+        MY_LOGGER.debug('Записываем/обновляем данные о юзере в БД')
 
         bot_usr_obj, created = BotUsersService.update_or_create_bot_user(
             tlg_id=request.data.get("tlg_id"),
@@ -123,7 +123,7 @@ class StartSettingsView(View):
 
     def get(self, request):
         context = {
-            "themes": Categories.objects.all()
+            "themes": CategoriesService.get_all_categories()
         }
         return render(request, template_name='mytlg/start_settings.html', context=context)
 
@@ -131,23 +131,25 @@ class StartSettingsView(View):
     def post(self, request):
         MY_LOGGER.info(f'Получен POST запрос для записи каналов. {request.POST}')
 
-        MY_LOGGER.debug(f'Проверка параметров запроса')
+        MY_LOGGER.debug('Проверка параметров запроса')
         tlg_id = request.POST.get("tlg_id")
         selected_channels_lst = request.POST.getlist("selected_channel")
         check_selected_channels = list(map(lambda i_ch: i_ch.isdigit(), selected_channels_lst))
         if not tlg_id or not tlg_id.isdigit() or not all(check_selected_channels):
-            MY_LOGGER.warning(f'Данные запроса не прошли валидацию')
+            MY_LOGGER.warning('Данные запроса не прошли валидацию')
             return HttpResponse(content='Request params is not valid', status=400)
 
-        MY_LOGGER.debug(f'Связываем в БД юзера с выбранными каналами')
-        try:
-            bot_usr_obj = BotUser.objects.get(tlg_id=int(tlg_id))
-        except ObjectDoesNotExist:
+        MY_LOGGER.debug('Связываем в БД юзера с выбранными каналами')
+        # try:
+        #     bot_usr_obj = BotUser.objects.get(tlg_id=int(tlg_id))
+        # except ObjectDoesNotExist:
+        bot_usr_obj = BotUsersService.get_bot_user_by_tg_id(tlg_id=int(tlg_id))
+        if not bot_usr_obj:
             MY_LOGGER.warning(f'Объект юзера с tlg_id=={tlg_id} не найден в БД.')
-            return HttpResponse(f'User not found', status=404)
+            return HttpResponse('User not found', status=404)
 
         selected_channels_lst = list(map(lambda i_ch: int(i_ch), selected_channels_lst))
-        channels_qset = Channels.objects.filter(pk__in=selected_channels_lst)
+        channels_qset = ChannelsService.get_channels_qset_by_list_of_ids(selected_channels_lst)
         MY_LOGGER.debug(f'Получены объекты каналов для привязки к юзеру с tlg_id=={tlg_id} на основании списка '
                         f'PK={selected_channels_lst}\n{channels_qset}')
         bot_usr_obj.channels.set(channels_qset)
@@ -171,7 +173,7 @@ class WriteInterestsView(View):
         """
         Показываем страничку с формой для заполнения 5 интересов.
         """
-        MY_LOGGER.info(f'Получен GET запрос на вьюшку для записи интересов.')
+        MY_LOGGER.info('Получен GET запрос на вьюшку для записи интересов.')
         send_periods = Interests.periods
         context = {
             'interest_examples': self.interests_examples,
@@ -188,9 +190,9 @@ class WriteInterestsView(View):
         # Проверка валидности tlg_id
         tlg_id = request.POST.get("tlg_id")
         if not tlg_id or not tlg_id.isdigit():
-            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. '
-                              f'В запросе отсутствует tlg_id')
-            err_msgs.error(request, f'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            MY_LOGGER.warning('Не обработан POST запрос на запись интересов. '
+                              'В запросе отсутствует tlg_id')
+            err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:write_interests'))
 
         # Проверка, что заполнен хотя бы один интерес
@@ -199,8 +201,8 @@ class WriteInterestsView(View):
             if request.POST.get(f"interest{i + 1}") != '':
                 interests_indxs.append(i)
         if not interests_indxs:
-            MY_LOGGER.warning(f'Не обработан POST запрос на запись интересов. В запросе отсутствует хотя бы 1 интерес')
-            err_msgs.error(request, f'Заполните хотя бы 1 интерес')
+            MY_LOGGER.warning('Не обработан POST запрос на запись интересов. В запросе отсутствует хотя бы 1 интерес')
+            err_msgs.error(request, 'Заполните хотя бы 1 интерес')
             return redirect(to=reverse_lazy('mytlg:write_interests'))
 
         # Обработка валидного запроса
@@ -216,17 +218,16 @@ class WriteInterestsView(View):
                 when_send=datetime.datetime.strptime(request.POST.get(f"when_send{indx + 1}")[:5], '%H:%M').time()
                 if request.POST.get(f"when_send{indx + 1}") else None,
                 last_send=datetime.datetime.now(),
-                # bot_user=bot_user,
             )
             for indx in interests_indxs
         ]
 
-        MY_LOGGER.debug(f'Обрабатываем через модели GPT интересы пользователя')
+        MY_LOGGER.debug('Обрабатываем через модели GPT интересы пользователя')
         gpt_interests_processing.delay(interests=new_interests_objs, tlg_id=tlg_id)
         context = dict(
             header='⚙️ Настройка завершена!',
-            description=f'👌 Окей. Сейчас бот занят обработкой интересов через нейро-модели. '
-                        f'Нужно немного подождать, прежде чем он начнёт присылать Вам релевантные новости 🗞',
+            description='👌 Окей. Сейчас бот занят обработкой интересов через нейро-модели. '
+                        'Нужно немного подождать, прежде чем он начнёт присылать Вам релевантные новости 🗞',
             btn_text='Хорошо, спасибо!'
         )
         return render(request, template_name='mytlg/success.html', context=context)
@@ -239,14 +240,14 @@ class SetAccFlags(APIView):
 
     @extend_schema(request=SetAccDataSerializer, responses=str, methods=['post'])
     def post(self, request):
-        MY_LOGGER.info(f'Получен POST запрос на вьюшку установки флагов аккаунта')
+        MY_LOGGER.info('Получен POST запрос на вьюшку установки флагов аккаунта')
         ser = SetAccDataSerializer(data=request.data)
 
         if ser.is_valid():
-            MY_LOGGER.debug(f'Данные валидны, проверяем токен')
+            MY_LOGGER.debug('Данные валидны, проверяем токен')
 
             if ser.validated_data.get("token") == BOT_TOKEN:
-                MY_LOGGER.debug(f'Токен успешно проверен')
+                MY_LOGGER.debug('Токен успешно проверен')
 
                 dct = dict()
                 for i_param in ('is_run', 'waiting', 'banned'):
@@ -264,7 +265,7 @@ class SetAccFlags(APIView):
                         status=status.HTTP_404_NOT_FOUND
                     )
 
-                return Response(data={'result': f'flags successfully changed'}, status=status.HTTP_200_OK)
+                return Response(data={'result': 'flags successfully changed'}, status=status.HTTP_200_OK)
 
             else:
                 MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. '
@@ -372,13 +373,13 @@ class RelatedNewsView(APIView):
         """
         Запись в БД нового новостного поста.
         """
-        MY_LOGGER.info(f'Пришёл POST запрос на вьюшку для записи нового новостного поста')
+        MY_LOGGER.info('Пришёл POST запрос на вьюшку для записи нового новостного поста')
         ser = WriteNewPostSerializer(data=request.data)
         if ser.is_valid():
-            MY_LOGGER.debug(f'Данные валидны, проверяем токен')
+            MY_LOGGER.debug('Данные валидны, проверяем токен')
 
             if ser.data.get("token") == BOT_TOKEN:
-                MY_LOGGER.debug(f'Токен успешно проверен')
+                MY_LOGGER.debug('Токен успешно проверен')
 
                 try:
                     ch_obj = Channels.objects.get(pk=ser.data.get("ch_pk"))
@@ -420,10 +421,10 @@ class UploadNewChannels(View):
         """
         Рендерим страничку с формой для загрузки JSON файлов с результатом парсинга.
         """
-        MY_LOGGER.info(f'Получен GET запрос на вьюшку загрузки новыйх каналов из JSON файла')
+        MY_LOGGER.info('Получен GET запрос на вьюшку загрузки новыйх каналов из JSON файла')
 
         if not request.user.is_staff:
-            MY_LOGGER.warning(f'Юзер, выполнивший запрос, не имеет статус staff. Редиректим для авторизации')
+            MY_LOGGER.warning('Юзер, выполнивший запрос, не имеет статус staff. Редиректим для авторизации')
             return redirect(to=f'/admin/login/?next={reverse_lazy("mytlg:upload_new_channels")}')
 
         context = {}
@@ -433,10 +434,10 @@ class UploadNewChannels(View):
         """
         Обработка POST запроса, получаем файлы JSON с новыми каналами телеграм.
         """
-        MY_LOGGER.info(f'Получен POST запрос на вьюшку загрузки новыйх каналов из JSON файла')
+        MY_LOGGER.info('Получен POST запрос на вьюшку загрузки новыйх каналов из JSON файла')
 
         if not request.user.is_staff:
-            MY_LOGGER.warning(f'Юзер, выполнивший запрос, не имеет статус staff. Редиректим для авторизации')
+            MY_LOGGER.warning('Юзер, выполнивший запрос, не имеет статус staff. Редиректим для авторизации')
             return redirect(to=f'/admin/login/?next={reverse_lazy("mytlg:upload_new_channels")}')
 
         for i_json_file in request.FILES.getlist("json_files"):
@@ -461,7 +462,7 @@ class UploadNewChannels(View):
                 MY_LOGGER.debug(f'Канал {ch_obj} был {"создан" if ch_created else "обновлён"}!')
 
         subscription_to_new_channels.delay()
-        return HttpResponse(content=f'Получил файлы, спасибо.')
+        return HttpResponse(content='Получил файлы, спасибо.')
 
 
 class WriteSubsResults(APIView):
@@ -470,14 +471,14 @@ class WriteSubsResults(APIView):
     """
 
     def post(self, request):
-        MY_LOGGER.info(f'Получен POST запрос на вьюшку записи результатов подписки аккаунта')
+        MY_LOGGER.info('Получен POST запрос на вьюшку записи результатов подписки аккаунта')
 
         ser = WriteSubsResultSerializer(data=request.data)
         if ser.is_valid():
-            MY_LOGGER.debug(f'Данные валидны, проверяем токен')
+            MY_LOGGER.debug('Данные валидны, проверяем токен')
 
             if ser.data.get("token") == BOT_TOKEN:
-                MY_LOGGER.debug(f'Токен успешно проверен')
+                MY_LOGGER.debug('Токен успешно проверен')
 
                 try:
                     task_obj = AccountsSubscriptionTasks.objects.get(pk=int(ser.validated_data.get("task_pk")))
@@ -516,10 +517,10 @@ class UpdateChannelsView(APIView):
 
         ser = UpdateChannelsSerializer(data=request.data)
         if ser.is_valid():
-            MY_LOGGER.debug(f'Данные валидны, проверяем токен')
+            MY_LOGGER.debug('Данные валидны, проверяем токен')
 
             if ser.data.get("token") != BOT_TOKEN:
-                MY_LOGGER.warning(f'Токен неверный!')
+                MY_LOGGER.warning('Токен неверный!')
                 return Response(data='invalid token', status=status.HTTP_400_BAD_REQUEST)
 
             # Достаём объект Tlg аккаунта
@@ -552,11 +553,11 @@ class UpdateChannelsView(APIView):
                 i_ch.subscribers_numb = new_ch_data.get('subscribers_numb')
                 i_ch.is_ready = True
 
-            MY_LOGGER.debug(f'Выполняем в транзакции 2 запроса: обновление каналов, привязка к ним акка tlg')
+            MY_LOGGER.debug('Выполняем в транзакции 2 запроса: обновление каналов, привязка к ним акка tlg')
             with transaction.atomic():
                 Channels.objects.bulk_update(ch_qset, ["channel_id", "channel_name", "subscribers_numb", "is_ready"])
                 tlg_acc_obj.channels.add(*ch_ids_lst)
-            MY_LOGGER.success(f'Запрос обработан, даём успешный ответ.')
+            MY_LOGGER.success('Запрос обработан, даём успешный ответ.')
             return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
 
         else:
@@ -573,7 +574,7 @@ class GetActiveAccounts(APIView):
         """
         Обрабатываем GET запрос и отправляем боту команды на старт нужных аккаунтов.
         """
-        MY_LOGGER.info(f'Получен GET запрос на вьюшку для получения активных аккаунтов')
+        MY_LOGGER.info('Получен GET запрос на вьюшку для получения активных аккаунтов')
 
         token = request.query_params.get("token")
         if not token or token != BOT_TOKEN:
@@ -595,7 +596,7 @@ class AccountError(APIView):
         """
         Обрабатываем POST запрос, записываем в БД данные об ошибке аккаунта
         """
-        MY_LOGGER.info(f'POST запрос на вьюшку ошибок аккаунта.')
+        MY_LOGGER.info('POST запрос на вьюшку ошибок аккаунта.')
 
         ser = AccountErrorSerializer(data=request.data)
         if ser.is_valid():
@@ -627,10 +628,10 @@ class BlackListView(View):
     """
 
     def get(self, request: HttpRequest):
-        MY_LOGGER.info(f'Поступил GET запрос на вьюшку BlackListView')
+        MY_LOGGER.info('Поступил GET запрос на вьюшку BlackListView')
 
         if request.GET.get("tlg_id") and not request.GET.get("tlg_id").isdigit:
-            MY_LOGGER.warning(f'Параметр запроса tlg_id не является числом! Даём ответ 400')
+            MY_LOGGER.warning('Параметр запроса tlg_id не является числом! Даём ответ 400')
             return HttpResponse(status=400, content='invalid query params')
 
         context = dict()
@@ -647,7 +648,7 @@ class BlackListView(View):
         return render(request, 'mytlg/black_list.html', context=context)
 
     def post(self, request):
-        MY_LOGGER.info(f'Поступил POST запрос на вьюшку черного списка')
+        MY_LOGGER.info('Поступил POST запрос на вьюшку черного списка')
 
         form = BlackListForm(request.POST)
         if form.is_valid():
@@ -667,14 +668,14 @@ class BlackListView(View):
             MY_LOGGER.success(f'В БД {"создан" if created else "обновлён"} черный список для юзера {bot_user_obj}')
             context = dict(
                 header=f'✔️ Черный список {"создан" if created else "обновлён"}',
-                description=f'Теперь я буду фильтровать контент для Вас, если в нём будут присутствовать данные '
-                            f'ключевые слова',
+                description='Теперь я буду фильтровать контент для Вас, если в нём будут присутствовать данные '
+                            'ключевые слова',
                 btn_text='Хорошо, спасибо!'
             )
             return render(request, template_name='mytlg/success.html', context=context)
         else:
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
-            err_msgs.error(request, f'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:black_list'))
 
 
@@ -687,7 +688,7 @@ class WhatWasInteresting(View):
         return render(request, template_name='mytlg/what_was_interesting.html')
 
     def post(self, request):
-        MY_LOGGER.info(f'POST запрос на вьюшку WhatWasInteresting')
+        MY_LOGGER.info('POST запрос на вьюшку WhatWasInteresting')
         form = WhatWasInterestingForm(request.POST)
 
         if form.is_valid():
@@ -706,8 +707,8 @@ class WhatWasInteresting(View):
             )
 
             context = dict(
-                header=f'🔎 Окей, начинаю поиск',
-                description=f'Я пришлю Вам подходящий контент, ожидайте.⏱',
+                header='🔎 Окей, начинаю поиск',
+                description='Я пришлю Вам подходящий контент, ожидайте.⏱',
                 btn_text='Хорошо, спасибо!'
             )
             return render(request, template_name='mytlg/success.html', context=context)
