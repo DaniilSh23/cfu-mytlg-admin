@@ -38,6 +38,7 @@ class SentReactionHandler(APIView):
     """
     Вьюшка для обработки AJAX запрос с реакцией пользователя на пост
     """
+
     @extend_schema(request=ReactionsSerializer, responses=dict, methods=['post'])
     def post(self, request):
         """
@@ -195,10 +196,8 @@ class WriteInterestsView(View):
             return redirect(to=reverse_lazy('mytlg:write_interests'))
 
         # Проверка, что заполнен хотя бы один интерес
-        interests_indxs = []
-        for i in range(len(self.interests_examples)):
-            if request.POST.get(f"interest{i + 1}") != '':
-                interests_indxs.append(i)
+        interests_indxs = InterestsService.check_for_having_interests(interests_examples=self.interests_examples,
+                                                                      request=request)
         if not interests_indxs:
             MY_LOGGER.warning('Не обработан POST запрос на запись интересов. В запросе отсутствует хотя бы 1 интерес')
             err_msgs.error(request, 'Заполните хотя бы 1 интерес')
@@ -206,22 +205,9 @@ class WriteInterestsView(View):
 
         # Обработка валидного запроса
         bot_user = BotUsersService.get_bot_user_by_tg_id(tlg_id=tlg_id)
-        # active_interests = (Interests.objects.filter(bot_user=bot_user, is_active=True, interest_type='main')
-        #                     .only('pk', 'is_active'))
-
         active_interests = (InterestsService.get_active_interests(bot_user))
         InterestsService.set_is_active_false_in_active_interests(active_interests)
-
-        new_interests_objs = [
-            dict(
-                interest=request.POST.get(f"interest{indx + 1}"),
-                send_period=request.POST.get(f"send_period{indx + 1}"),
-                when_send=datetime.datetime.strptime(request.POST.get(f"when_send{indx + 1}")[:5], '%H:%M').time()
-                if request.POST.get(f"when_send{indx + 1}") else None,
-                last_send=datetime.datetime.now(),
-            )
-            for indx in interests_indxs
-        ]
+        new_interests_objs = InterestsService.create_list_of_new_interests_obj(interests_indxs, request)
 
         MY_LOGGER.debug('Обрабатываем через модели GPT интересы пользователя')
         gpt_interests_processing.delay(interests=new_interests_objs, tlg_id=tlg_id)
@@ -579,7 +565,8 @@ class GetActiveAccounts(APIView):
 
         token = request.query_params.get("token")
         if not token or token != BOT_TOKEN:
-            MY_LOGGER.warning(f'Токен неверный или отсутствует. Значение параметра token={token!r} | значение BOT_TOKEN={BOT_TOKEN!r}')
+            MY_LOGGER.warning(
+                f'Токен неверный или отсутствует. Значение параметра token={token!r} | значение BOT_TOKEN={BOT_TOKEN!r}')
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
 
         # Запускаем функцию отправки боту команд для старта аккаунтов
@@ -684,6 +671,7 @@ class WhatWasInteresting(View):
     """
     Вьюшки для опроса, что пользователю встретилось интересного.
     """
+
     def get(self, request):
         MY_LOGGER.info('GET запрос на вьюшку WhatWasInteresting')
         return render(request, template_name='mytlg/what_was_interesting.html')
