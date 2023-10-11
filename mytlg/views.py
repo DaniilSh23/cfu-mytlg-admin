@@ -30,6 +30,7 @@ from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.categories_service import CategoriesService
 from mytlg.servises.channels_service import ChannelsService
 from mytlg.servises.interests_service import InterestsService
+from mytlg.servises.tlg_accounts_service import TlgAccountsService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
@@ -241,14 +242,14 @@ class SetAccFlags(APIView):
                     if ser.validated_data.get(i_param) is not None:
                         dct[i_param] = ser.validated_data.get(i_param)
 
+                acc_pk = ser.validated_data.get("acc_pk")
                 try:
-                    MY_LOGGER.debug(f'Акк {ser.validated_data.get("acc_pk")} | Устанавливаем следующие флаги {dct!r}')
-                    TlgAccounts.objects.filter(pk=int(ser.validated_data.get("acc_pk"))).update(**dct)
-
+                    MY_LOGGER.debug(f'Акк {acc_pk} | Устанавливаем следующие флаги {dct!r}')
+                    TlgAccountsService.filter_and_update_tlg_account(int(acc_pk), dct)
                 except ObjectDoesNotExist:
-                    MY_LOGGER.warning(f'Не найден в БД объект TlgAccounts с PK={ser.validated_data.get("acc_pk")}')
+                    MY_LOGGER.warning(f'Не найден в БД объект TlgAccounts с PK={acc_pk}')
                     return Response(
-                        data={'result': f'Not found object with primary key == {ser.validated_data.get("acc_pk")}'},
+                        data={'result': f'Not found object with primary key == {acc_pk}'},
                         status=status.HTTP_404_NOT_FOUND
                     )
 
