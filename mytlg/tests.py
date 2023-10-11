@@ -2,8 +2,6 @@ from django.test import TestCase
 from django.urls import reverse_lazy
 from bs4 import BeautifulSoup
 
-from mytlg.models import Themes
-
 
 class StartSettingsViewTestCase(TestCase):
     """
@@ -15,15 +13,15 @@ class StartSettingsViewTestCase(TestCase):
         """
         Устанавливаем значения для всех тестов
         """
-        cls.themes = [Themes.objects.create(theme_name=theme_name)
-                      for theme_name in ('тематика для теста 1', 'тематика для теста 2')]
+        # cls.themes = [Themes.objects.create(theme_name=theme_name)
+        #               for theme_name in ('тематика для теста 1', 'тематика для теста 2')]
 
     @classmethod
     def tearDownClass(cls):
         """
         Удаляем значения, установленные только для тестов
         """
-        [theme.delete() for theme in cls.themes]
+        # [theme.delete() for theme in cls.themes]
 
     def test_inputs_checkbox_in_page(self):
         """

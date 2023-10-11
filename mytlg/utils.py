@@ -123,7 +123,7 @@ def bot_command_for_start_or_stop_account(instance, bot_admin, bot_command: str 
     command_msg = f'/{bot_command} {instance.pk} {file_name}'
     if bot_command == 'start_acc':
         proxy_str = (f"{instance.proxy.protocol}:{instance.proxy.host}:{instance.proxy.port}:{instance.proxy.username}"
-                     f":{instance.proxy.password}")
+                     f":{instance.proxy.password}:{instance.proxy.protocol_type}")
         command_msg = f"{command_msg} {proxy_str}"
 
     send_command_to_bot(
