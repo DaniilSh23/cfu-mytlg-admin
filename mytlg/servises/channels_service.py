@@ -27,7 +27,7 @@ class ChannelsService:
     @staticmethod
     def get_channel_by_pk(pk: int) -> Channels | None:
         try:
-            return Channels.objects.get(pk)
+            return Channels.objects.get(pk=pk)
         except ObjectDoesNotExist:
             return None
 
@@ -57,3 +57,13 @@ class ChannelsService:
                     }
                 )
         return channels_lst
+
+    @staticmethod
+    def get_channels_qset_only_ids(theme_obj):
+        try:
+            return Channels.objects.filter(category=theme_obj).only("id")
+        except Exception as e:
+            MY_LOGGER.warning(f'Запрошены каналы не найдены для категории (Категории == {theme_obj!r} \n '
+                              f'Ошибка: {e}')
+            return None
+

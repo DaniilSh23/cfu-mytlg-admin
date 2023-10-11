@@ -31,6 +31,8 @@ from mytlg.servises.categories_service import CategoriesService
 from mytlg.servises.channels_service import ChannelsService
 from mytlg.servises.interests_service import InterestsService
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
+from mytlg.servises.news_posts_service import NewsPostsService
+from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
@@ -326,20 +328,25 @@ class RelatedNewsView(APIView):
             MY_LOGGER.warning(f'ch_pk невалидный или отсутствует. Значение параметра ch_pk={ch_pk}')
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid channel pk')
 
-        try:
-            ch_obj = Channels.objects.get(pk=int(ch_pk))  # TODO: оптимизировать запрос к БД
-        except ObjectDoesNotExist:
+        # try:
+        #     ch_obj = Channels.objects.get(pk=int(ch_pk))  # TODO: оптимизировать запрос к БД
+        # except ObjectDoesNotExist:
+        ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
+        if not ch_obj:
             MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
             return Response(status=status.HTTP_404_NOT_FOUND, data='channel not found')
 
         # Достаём все id каналов по теме
         theme_obj = ch_obj.category
-        ch_qset = Channels.objects.filter(category=theme_obj).only("id")
+        #  ch_qset = Channels.objects.filter(category=theme_obj).only("id")
+        ch_qset = ChannelsService.get_channels_qset_only_ids(theme_obj)
 
         # Складываем айдишники каналов и вытаскиваем из БД одним запросов все посты
         ch_ids_lst = [i_ch.pk for i_ch in ch_qset]
         all_posts_lst = []
-        i_ch_posts = NewsPosts.objects.filter(channel__id__in=ch_ids_lst).only("text", "embedding")
+        # i_ch_posts = NewsPosts.objects.filter(channel__id__in=ch_ids_lst).only("text", "embedding")
+        i_ch_posts = NewsPostsService.get_posts_only_text_and_embeddings_by_channels_ids_list(ch_ids_lst)
+
         for i_post in i_ch_posts:
             all_posts_lst.append({"text": i_post.text, "embedding": i_post.embedding})
         ser = NewsPostsSerializer(all_posts_lst, many=True)
@@ -357,21 +364,20 @@ class RelatedNewsView(APIView):
             if ser.data.get("token") == BOT_TOKEN:
                 MY_LOGGER.debug('Токен успешно проверен')
 
-                try:
-                    ch_obj = Channels.objects.get(pk=ser.data.get("ch_pk"))
-                except ObjectDoesNotExist:
-                    return Response(data={'result': 'channel object does not exist'})
+                # try:
+                #     ch_obj = Channels.objects.get(pk=ser.data.get("ch_pk"))
+                # except ObjectDoesNotExist:
+                #     return Response(data={'result': 'channel object does not exist'})
+                ch_pk = ser.data.get("ch_pk")
+                ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
+                if not ch_obj:
+                    MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
+                    return Response(data={'result': f'channel object does not exist{ch_pk}'})
 
-                prompt = BotSettings.objects.get(key='prompt_for_text_reducing').value
+                #prompt = BotSettings.objects.get(key='prompt_for_text_reducing').value
+                prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
                 short_post = gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
-
-                obj = NewsPosts.objects.create(
-                    channel=ch_obj,
-                    text=ser.validated_data.get("text"),
-                    post_link=ser.validated_data.get("post_link"),
-                    embedding=ser.validated_data.get("embedding"),
-                    short_text=short_post,
-                )
+                obj = NewsPostsService.create_news_post(ch_obj, ser, short_post)
                 MY_LOGGER.success(f'Новый пост успешно создан, его PK == {obj.pk!r}')
 
                 # Планируем пост к отправке для конкретных юзеров
