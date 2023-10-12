@@ -15,7 +15,6 @@ from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.common import scheduling_post_for_sending
 from mytlg.forms import BlackListForm, WhatWasInterestingForm
 from mytlg.gpt_processing import gpt_text_reduction
-from mytlg.models import Interests
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
 from mytlg.servises.reactions_service import ReactionsService
@@ -33,6 +32,13 @@ from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
+
+INVALID_TOKEN_TEXT = 'invalid token'
+SUCCESS_TEMPLATE_PATH = 'mytlg/success.html'
+NOT_VALID_DATA = 'Not valid data'
+VALID_DATA_CHECK_TOKEN = 'Данные валидны, проверяем токен'
+OK_THANKS = 'Хорошо, спасибо!'
+TOKEN_CHECK_OK = 'Токен успешно проверен'
 
 
 class SentReactionHandler(APIView):
@@ -149,7 +155,7 @@ class StartSettingsView(View):
         MY_LOGGER.debug(f'Получены объекты каналов для привязки к юзеру с tlg_id=={tlg_id} на основании списка '
                         f'PK={selected_channels_lst}\n{channels_qset}')
         bot_usr_obj.channels.set(channels_qset)
-        return render(request, template_name='mytlg/success.html')
+        return render(request, template_name=SUCCESS_TEMPLATE_PATH)
 
 
 @method_decorator(decorator=csrf_exempt, name='dispatch')
@@ -170,7 +176,7 @@ class WriteInterestsView(View):
         Показываем страничку с формой для заполнения 5 интересов.
         """
         MY_LOGGER.info('Получен GET запрос на вьюшку для записи интересов.')
-        send_periods = Interests.periods
+        send_periods = InterestsService.get_send_periods()
         context = {
             'interest_examples': self.interests_examples,
             'send_periods': send_periods,
@@ -211,9 +217,9 @@ class WriteInterestsView(View):
             header='⚙️ Настройка завершена!',
             description='👌 Окей. Сейчас бот занят обработкой интересов через нейро-модели. '
                         'Нужно немного подождать, прежде чем он начнёт присылать Вам релевантные новости 🗞',
-            btn_text='Хорошо, спасибо!'
+            btn_text=OK_THANKS
         )
-        return render(request, template_name='mytlg/success.html', context=context)
+        return render(request, template_name=SUCCESS_TEMPLATE_PATH, context=context)
 
 
 class SetAccFlags(APIView):
@@ -227,10 +233,10 @@ class SetAccFlags(APIView):
         ser = SetAccDataSerializer(data=request.data)
 
         if ser.is_valid():
-            MY_LOGGER.debug('Данные валидны, проверяем токен')
+            MY_LOGGER.debug(VALID_DATA_CHECK_TOKEN)
 
             if ser.validated_data.get("token") == BOT_TOKEN:
-                MY_LOGGER.debug('Токен успешно проверен')
+                MY_LOGGER.debug(TOKEN_CHECK_OK)
 
                 dct = dict()
                 for i_param in ('is_run', 'waiting', 'banned'):
@@ -253,11 +259,11 @@ class SetAccFlags(APIView):
             else:
                 MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. '
                                   f'Полученный токен: {ser.validated_data.get("token")}')
-                return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'result': INVALID_TOKEN_TEXT}, status=status.HTTP_400_BAD_REQUEST)
 
         else:
             MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.data!r} | Ошибки: {ser.errors!r}')
-            return Response({'result': 'Not valid data'}, status.HTTP_400_BAD_REQUEST)
+            return Response({'result': SUCCESS_TEMPLATE_PATH}, status.HTTP_400_BAD_REQUEST)
 
 
 class GetChannelsListView(APIView):
@@ -336,10 +342,10 @@ class RelatedNewsView(APIView):
         MY_LOGGER.info('Пришёл POST запрос на вьюшку для записи нового новостного поста')
         ser = WriteNewPostSerializer(data=request.data)
         if ser.is_valid():
-            MY_LOGGER.debug('Данные валидны, проверяем токен')
+            MY_LOGGER.debug(VALID_DATA_CHECK_TOKEN)
 
             if ser.data.get("token") == BOT_TOKEN:
-                MY_LOGGER.debug('Токен успешно проверен')
+                MY_LOGGER.debug(TOKEN_CHECK_OK)
 
                 ch_pk = ser.data.get("ch_pk")
                 ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
@@ -359,11 +365,11 @@ class RelatedNewsView(APIView):
 
             else:
                 MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. Полученный токен: {ser.data.get("token")}')
-                return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'result': INVALID_TOKEN_TEXT}, status=status.HTTP_400_BAD_REQUEST)
 
         else:
             MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.POST}')
-            return Response({'result': 'Not valid data'}, status.HTTP_400_BAD_REQUEST)
+            return Response({'result': SUCCESS_TEMPLATE_PATH}, status.HTTP_400_BAD_REQUEST)
 
 
 class UploadNewChannels(View):
@@ -409,10 +415,10 @@ class WriteSubsResults(APIView):
 
         ser = WriteSubsResultSerializer(data=request.data)
         if ser.is_valid():
-            MY_LOGGER.debug('Данные валидны, проверяем токен')
+            MY_LOGGER.debug(VALID_DATA_CHECK_TOKEN)
 
             if ser.data.get("token") == BOT_TOKEN:
-                MY_LOGGER.debug('Токен успешно проверен')
+                MY_LOGGER.debug(TOKEN_CHECK_OK)
                 task_obj = AccountsSubscriptionTasksService.get_account_subscription_tasks_by_pk(
                     int(ser.validated_data.get("task_pk")))
                 if not task_obj:
@@ -426,11 +432,11 @@ class WriteSubsResults(APIView):
 
             else:
                 MY_LOGGER.warning(f'Токен в запросе не прошёл проверку. Полученный токен: {ser.data.get("token")}')
-                return Response({'result': 'invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'result': INVALID_TOKEN_TEXT}, status=status.HTTP_400_BAD_REQUEST)
 
         else:
             MY_LOGGER.warning(f'Данные запроса не прошли валидацию. Запрос: {request.data} | Ошибки: {ser.errors}')
-            return Response(data={'result': 'Not valid data'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={'result': SUCCESS_TEMPLATE_PATH}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UpdateChannelsView(APIView):
@@ -444,11 +450,11 @@ class UpdateChannelsView(APIView):
 
         ser = UpdateChannelsSerializer(data=request.data)
         if ser.is_valid():
-            MY_LOGGER.debug('Данные валидны, проверяем токен')
+            MY_LOGGER.debug(VALID_DATA_CHECK_TOKEN)
 
             if ser.data.get("token") != BOT_TOKEN:
                 MY_LOGGER.warning('Токен неверный!')
-                return Response(data='invalid token', status=status.HTTP_400_BAD_REQUEST)
+                return Response(data=INVALID_TOKEN_TEXT, status=status.HTTP_400_BAD_REQUEST)
 
             tlg_acc_obj = TlgAccountsService.get_tlg_account_by_pk(int(ser.data.get("acc_pk")))
             if not tlg_acc_obj:
@@ -565,9 +571,9 @@ class BlackListView(View):
             header=f'✔️ Черный список {"создан" if created else "обновлён"}',
             description='Теперь я буду фильтровать контент для Вас, если в нём будут присутствовать данные '
                         'ключевые слова',
-            btn_text='Хорошо, спасибо!'
+            btn_text=OK_THANKS
         )
-        return render(request, template_name='mytlg/success.html', context=context)
+        return render(request, template_name=SUCCESS_TEMPLATE_PATH, context=context)
 
 
 class WhatWasInteresting(View):
@@ -604,9 +610,9 @@ class WhatWasInteresting(View):
         context = dict(
             header='🔎 Окей, начинаю поиск',
             description='Я пришлю Вам подходящий контент, ожидайте.⏱',
-            btn_text='Хорошо, спасибо!'
+            btn_text=OK_THANKS
         )
-        return render(request, template_name='mytlg/success.html', context=context)
+        return render(request, template_name=SUCCESS_TEMPLATE_PATH, context=context)
 
 
 def test_view(request):

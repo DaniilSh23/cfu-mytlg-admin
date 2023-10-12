@@ -35,3 +35,7 @@ class InterestsService:
             if request.POST.get(f"interest{i + 1}") != '':
                 interests_indxs.append(i)
         return interests_indxs
+
+    @staticmethod
+    def get_send_periods():
+        return Interests.periods
