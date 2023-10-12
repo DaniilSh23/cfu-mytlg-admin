@@ -35,6 +35,7 @@ from mytlg.servises.news_posts_service import NewsPostsService
 from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.servises.bot_token_service import BotTokenService
 from mytlg.servises.account_errors_service import TlgAccountErrorService
+from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
@@ -564,32 +565,31 @@ class BlackListView(View):
         MY_LOGGER.info('Поступил POST запрос на вьюшку черного списка')
 
         form = BlackListForm(request.POST)
-        if form.is_valid():
-            try:
-                bot_user_obj = BotUser.objects.get(tlg_id=form.cleaned_data.get("tlg_id"))
-            except ObjectDoesNotExist:
-                MY_LOGGER.warning(f'В БД не найден BotUser с tlg_id=={form.cleaned_data.get("tlg_id")}')
-                return HttpResponse(status=404, content='Bot User not found')
-
-            obj, created = BlackLists.objects.update_or_create(
-                bot_user__tlg_id=form.cleaned_data.get("tlg_id"),
-                defaults={
-                    "bot_user": bot_user_obj,
-                    "keywords": form.cleaned_data.get("keywords"),
-                }
-            )
-            MY_LOGGER.success(f'В БД {"создан" if created else "обновлён"} черный список для юзера {bot_user_obj}')
-            context = dict(
-                header=f'✔️ Черный список {"создан" if created else "обновлён"}',
-                description='Теперь я буду фильтровать контент для Вас, если в нём будут присутствовать данные '
-                            'ключевые слова',
-                btn_text='Хорошо, спасибо!'
-            )
-            return render(request, template_name='mytlg/success.html', context=context)
-        else:
+        if not form.is_valid():
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
             err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:black_list'))
+        tlg_id = form.cleaned_data.get("tlg_id")
+        bot_user_obj = BotUsersService.get_bot_user_by_tg_id(tlg_id)
+        if not bot_user_obj:
+            MY_LOGGER.warning(f'В БД не найден BotUser с tlg_id=={tlg_id}')
+            return HttpResponse(status=404, content='Bot User not found')
+
+        obj, created = BlackListsService.update_or_create(
+            tlg_id=form.cleaned_data.get("tlg_id"),
+            defaults={
+                "bot_user": bot_user_obj,
+                "keywords": form.cleaned_data.get("keywords"),
+            }
+        )
+        MY_LOGGER.success(f'В БД {"создан" if created else "обновлён"} черный список для юзера {bot_user_obj}')
+        context = dict(
+            header=f'✔️ Черный список {"создан" if created else "обновлён"}',
+            description='Теперь я буду фильтровать контент для Вас, если в нём будут присутствовать данные '
+                        'ключевые слова',
+            btn_text='Хорошо, спасибо!'
+        )
+        return render(request, template_name='mytlg/success.html', context=context)
 
 
 class WhatWasInteresting(View):
@@ -605,32 +605,30 @@ class WhatWasInteresting(View):
         MY_LOGGER.info('POST запрос на вьюшку WhatWasInteresting')
         form = WhatWasInterestingForm(request.POST)
 
-        if form.is_valid():
-            # Пробуем достать юзера бота по tlg_id
-            try:
-                BotUser.objects.get(tlg_id=form.cleaned_data.get("tlg_id"))
-            except ObjectDoesNotExist:
-                MY_LOGGER.warning(f'В БД не найден BotUser с tlg_id=={form.cleaned_data.get("tlg_id")}')
-                return HttpResponse(status=404, content='Bot User not found')
-
-            # Запускаем таск селери по обработке интереса и поиска контента
-            search_content_by_new_interest.delay(
-                interest=form.cleaned_data.get('interest'),
-                usr_tlg_id=form.cleaned_data.get("tlg_id"),
-            )
-
-            context = dict(
-                header='🔎 Окей, начинаю поиск',
-                description='Я пришлю Вам подходящий контент, ожидайте.⏱',
-                btn_text='Хорошо, спасибо!'
-            )
-            return render(request, template_name='mytlg/success.html', context=context)
-
-        else:
+        if not form.is_valid():
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors} | Данные запроса: {request.POST}')
             for i_err in form.errors:
                 err_msgs.error(request, f'Ошибка: {i_err}')
             return redirect(to=reverse_lazy('mytlg:black_list'))
+        # Пробуем достать юзера бота по tlg_id
+        tlg_id = form.cleaned_data.get("tlg_id")
+        bot_user_obj = BotUsersService.get_bot_user_by_tg_id(tlg_id)
+        if not bot_user_obj:
+            MY_LOGGER.warning(f'В БД не найден BotUser с tlg_id=={tlg_id}')
+            return HttpResponse(status=404, content='Bot User not found')
+
+        # Запускаем таск селери по обработке интереса и поиска контента
+        search_content_by_new_interest.delay(
+            interest=form.cleaned_data.get('interest'),
+            usr_tlg_id=form.cleaned_data.get("tlg_id"),
+        )
+
+        context = dict(
+            header='🔎 Окей, начинаю поиск',
+            description='Я пришлю Вам подходящий контент, ожидайте.⏱',
+            btn_text='Хорошо, спасибо!'
+        )
+        return render(request, template_name='mytlg/success.html', context=context)
 
 
 def test_view(request):
