@@ -33,6 +33,7 @@ from mytlg.servises.interests_service import InterestsService
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
 from mytlg.servises.news_posts_service import NewsPostsService
 from mytlg.servises.bot_settings_service import BotSettingsService
+from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
@@ -299,8 +300,8 @@ class GetChannelsListView(APIView):
         if not channels_qset:
             return Response(status=status.HTTP_400_BAD_REQUEST, data='Channels not found')
         # except ObjectDoesNotExist:
-            # MY_LOGGER.warning(f'Запрошены каналы для несуществующего аккаунта (PK аккаунта == {acc_pk!r}')
-            # return Response(status=status.HTTP_400_BAD_REQUEST, data='Object does not exists')
+        # MY_LOGGER.warning(f'Запрошены каналы для несуществующего аккаунта (PK аккаунта == {acc_pk!r}')
+        # return Response(status=status.HTTP_400_BAD_REQUEST, data='Object does not exists')
 
         channels_lst = ChannelsService.create_and_process_channels_lst(acc_pk, channels_qset)
         serializer = ChannelsSerializer(channels_lst, many=True)
@@ -374,7 +375,7 @@ class RelatedNewsView(APIView):
                     MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
                     return Response(data={'result': f'channel object does not exist{ch_pk}'})
 
-                #prompt = BotSettings.objects.get(key='prompt_for_text_reducing').value
+                # prompt = BotSettings.objects.get(key='prompt_for_text_reducing').value
                 prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
                 short_post = gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
                 obj = NewsPostsService.create_news_post(ch_obj, ser, short_post)
@@ -441,21 +442,17 @@ class WriteSubsResults(APIView):
 
             if ser.data.get("token") == BOT_TOKEN:
                 MY_LOGGER.debug('Токен успешно проверен')
-
-                try:
-                    task_obj = AccountsSubscriptionTasks.objects.get(pk=int(ser.validated_data.get("task_pk")))
-                except ObjectDoesNotExist:
+                # try:
+                #     task_obj = AccountsSubscriptionTasks.objects.get(pk=int(ser.validated_data.get("task_pk")))
+                # except ObjectDoesNotExist:
+                task_obj = AccountsSubscriptionTasksService.get_account_subscription_tasks_by_pk(
+                    int(ser.validated_data.get("task_pk")))
+                if not task_obj:
                     return Response(data={'result': 'account task object does not exist'},
                                     status=status.HTTP_404_NOT_FOUND)
 
                 MY_LOGGER.debug(f'Обновляем данные в БД по задаче аккаунта c PK=={task_obj.pk}')
-                task_obj.successful_subs = task_obj.successful_subs + ser.validated_data.get("success_subs")
-                task_obj.failed_subs = task_obj.failed_subs + ser.validated_data.get("fail_subs")
-                task_obj.action_story = f'{ser.validated_data.get("actions_story")}\n{task_obj.action_story}'
-                task_obj.status = ser.validated_data.get("status")
-                if ser.validated_data.get("end_flag"):
-                    task_obj.ends_at = datetime.datetime.now()
-                task_obj.save()
+                AccountsSubscriptionTasksService.update_task_obj_data(ser, task_obj)
 
                 return Response(data={'result': 'task status changed successful'}, status=status.HTTP_200_OK)
 
