@@ -1,5 +1,6 @@
 from mytlg.models import Channels
 from django.db.models import QuerySet
+from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from cfu_mytlg_admin.settings import MY_LOGGER
@@ -86,3 +87,30 @@ class ChannelsService:
                 }
             )
             MY_LOGGER.debug(f'Канал {ch_obj} был {"создан" if ch_created else "обновлён"}!')
+
+    @staticmethod
+    def process_tlg_channels(ser):
+        ch_ids_lst = [int(i_ch.get("ch_pk")) for i_ch in ser.data.get('channels')]
+        ch_qset = Channels.objects.filter(id__in=ch_ids_lst)
+        for i_ch in ch_qset:
+            for j_ch in ser.data.get('channels'):
+                if int(j_ch.get("ch_pk")) == i_ch.pk:
+                    new_ch_data = j_ch
+                    break
+            else:
+                MY_LOGGER.warning(f'В запросе не приходила инфа по каналу с PK=={i_ch.pk!r}')
+                ch_ids_lst.remove(i_ch.pk)
+                continue
+            i_ch.channel_id = new_ch_data.get('ch_id')
+            i_ch.channel_name = new_ch_data.get('ch_name')
+            i_ch.subscribers_numb = new_ch_data.get('subscribers_numb')
+            i_ch.is_ready = True
+        MY_LOGGER.debug('Выполняем в транзакции 2 запроса: обновление каналов, привязка к ним акка tlg')
+        return ch_ids_lst, ch_qset
+
+    @staticmethod
+    def bulk_update_channels(ch_ids_lst, ch_qset, tlg_acc_obj):
+        with transaction.atomic():
+            Channels.objects.bulk_update(ch_qset=ch_qset,
+                                         fields=["channel_id", "channel_name", "subscribers_numb", "is_ready"])
+            tlg_acc_obj.channels.add(ch_ids_lst=ch_ids_lst)

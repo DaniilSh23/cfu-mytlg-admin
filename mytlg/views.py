@@ -442,9 +442,6 @@ class WriteSubsResults(APIView):
 
             if ser.data.get("token") == BOT_TOKEN:
                 MY_LOGGER.debug('Токен успешно проверен')
-                # try:
-                #     task_obj = AccountsSubscriptionTasks.objects.get(pk=int(ser.validated_data.get("task_pk")))
-                # except ObjectDoesNotExist:
                 task_obj = AccountsSubscriptionTasksService.get_account_subscription_tasks_by_pk(
                     int(ser.validated_data.get("task_pk")))
                 if not task_obj:
@@ -482,40 +479,15 @@ class UpdateChannelsView(APIView):
                 MY_LOGGER.warning('Токен неверный!')
                 return Response(data='invalid token', status=status.HTTP_400_BAD_REQUEST)
 
-            # Достаём объект Tlg аккаунта
-            try:
-                tlg_acc_obj = TlgAccounts.objects.get(pk=int(ser.data.get("acc_pk")))
-            except ObjectDoesNotExist:
+            tlg_acc_obj = TlgAccountsService.get_tlg_account_by_pk(int(ser.data.get("acc_pk")))
+            if not tlg_acc_obj:
                 MY_LOGGER.warning(f'Не найден TLG ACC с PK=={ser.data.get("acc_pk")!r}')
                 return Response(data=f'Not found tlg acc with PK == {ser.data.get("acc_pk")}',
                                 status=status.HTTP_404_NOT_FOUND)
 
             # Обрабатываем каналы
-            ch_ids_lst = [int(i_ch.get("ch_pk")) for i_ch in ser.data.get('channels')]
-
-            # TODO: кажись две строки ниже нафиг не нужны, надо пересмотреть на свежую голову
-            acc_channels = tlg_acc_obj.channels.all()  # Достаём все связи с каналами для аккаунта
-            [ch_ids_lst.append(i_ch.pk) for i_ch in acc_channels]
-
-            ch_qset = Channels.objects.filter(id__in=ch_ids_lst)
-            for i_ch in ch_qset:
-                for j_ch in ser.data.get('channels'):
-                    if int(j_ch.get("ch_pk")) == i_ch.pk:
-                        new_ch_data = j_ch
-                        break
-                else:
-                    MY_LOGGER.warning(f'В запросе не приходила инфа по каналу с PK=={i_ch.pk!r}')
-                    ch_ids_lst.remove(i_ch.pk)
-                    continue
-                i_ch.channel_id = new_ch_data.get('ch_id')
-                i_ch.channel_name = new_ch_data.get('ch_name')
-                i_ch.subscribers_numb = new_ch_data.get('subscribers_numb')
-                i_ch.is_ready = True
-
-            MY_LOGGER.debug('Выполняем в транзакции 2 запроса: обновление каналов, привязка к ним акка tlg')
-            with transaction.atomic():
-                Channels.objects.bulk_update(ch_qset, ["channel_id", "channel_name", "subscribers_numb", "is_ready"])
-                tlg_acc_obj.channels.add(*ch_ids_lst)
+            ch_ids_lst, ch_qset = ChannelsService.process_tlg_channels(ser)
+            ChannelsService.bulk_update_channels(ch_ids_lst, ch_qset, tlg_acc_obj)
             MY_LOGGER.success('Запрос обработан, даём успешный ответ.')
             return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
 
