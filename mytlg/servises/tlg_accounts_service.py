@@ -16,3 +16,11 @@ class TlgAccountsService:
         except ObjectDoesNotExist:
             MY_LOGGER.warning(f'Запрошены для несуществующий аккаунт (PK аккаунта == {acc_pk!r}')
             return None
+
+    @staticmethod
+    def get_tlg_account_only_id_by_pk(pk):
+        try:
+            return TlgAccounts.objects.only("id").get(pk=pk)
+        except ObjectDoesNotExist:
+            MY_LOGGER.warning(f'Аккаунт с PK == {pk!r} не найден в БД.')
+            return None

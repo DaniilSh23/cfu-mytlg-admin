@@ -34,6 +34,7 @@ from mytlg.servises.tlg_accounts_service import TlgAccountsService
 from mytlg.servises.news_posts_service import NewsPostsService
 from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.servises.bot_token_service import BotTokenService
+from mytlg.servises.account_errors_service import TlgAccountErrorService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
@@ -515,29 +516,23 @@ class AccountError(APIView):
         Обрабатываем POST запрос, записываем в БД данные об ошибке аккаунта
         """
         MY_LOGGER.info('POST запрос на вьюшку ошибок аккаунта.')
-
         ser = AccountErrorSerializer(data=request.data)
-        if ser.is_valid():
-            token = ser.validated_data.get("token")
-            if not token or token != BOT_TOKEN:
-                MY_LOGGER.warning(f'В запросе невалидный токен: {token}')
-                return Response(data='invalid token', status=status.HTTP_400_BAD_REQUEST)
 
-            try:
-                tlg_acc = TlgAccounts.objects.only("id").get(pk=ser.validated_data.get("account"))
-            except ObjectDoesNotExist:
-                MY_LOGGER.warning(f'Аккаунт с PK == {ser.validated_data.get("account")!r} не найден в БД.')
-                return Response(data=f'account with PK == {ser.validated_data.get("account")!r} does not exist',
-                                status=status.HTTP_404_NOT_FOUND)
-            AccountsErrors.objects.create(
-                error_type=ser.validated_data.get("error_type"),
-                error_description=ser.validated_data.get("error_description"),
-                account=tlg_acc,
-            )
-            return Response(data='success', status=status.HTTP_200_OK)
-        else:
+        if not ser.is_valid():
             MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
             return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
+
+        token = ser.validated_data.get("token")
+        BotTokenService.check_bot_token(token)
+        pk = ser.validated_data.get("account")
+        tlg_acc = TlgAccountsService.get_tlg_account_only_id_by_pk(pk)
+
+        if not tlg_acc:
+            return Response(data=f'account with PK == {pk!r} does not exist',
+                            status=status.HTTP_404_NOT_FOUND)
+
+        TlgAccountErrorService.create_tlg_account_error(ser, tlg_acc)
+        return Response(data='success', status=status.HTTP_200_OK)
 
 
 class BlackListView(View):
