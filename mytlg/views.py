@@ -33,6 +33,7 @@ from mytlg.servises.interests_service import InterestsService
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
 from mytlg.servises.news_posts_service import NewsPostsService
 from mytlg.servises.bot_settings_service import BotSettingsService
+from mytlg.servises.bot_token_service import BotTokenService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
@@ -79,11 +80,8 @@ class ShowScheduledPosts(View):
 
     def get(self, request):
         MY_LOGGER.info(f'Получен запрос на вьюшку ShowScheduledPosts {request.GET}')
-
-        if not request.GET.get("token") or request.GET.get("token") != BOT_TOKEN:
-            MY_LOGGER.warning(f'Неверный токен запроса: {request.GET.get("token")} != {BOT_TOKEN}')
-            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
-
+        token = request.GET.get("token")
+        BotTokenService.check_bot_token(token)
         post_hash = request.GET.get('post_hash')
         posts, tlg_id = ScheduledPostsService.get_posts_for_show(post_hash=post_hash)
 
@@ -101,10 +99,8 @@ class WriteUsrView(APIView):
 
     def post(self, request):
         MY_LOGGER.info(f'Получен запрос на вьюшку WriteUsrView: {request.data}')
-
-        if not request.data.get("token") or request.data.get("token") != BOT_TOKEN:
-            MY_LOGGER.warning(f'Неверный токен запроса: {request.data.get("token")} != {BOT_TOKEN}')
-            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
+        token = request.data.get("token")
+        BotTokenService.check_bot_token(token)
 
         MY_LOGGER.debug('Записываем/обновляем данные о юзере в БД')
 
@@ -280,9 +276,7 @@ class GetChannelsListView(APIView):
         MY_LOGGER.info(f'Поступил GET запрос на вьюшку получения списка запущенных аккаунтов: {request.GET}')
 
         token = request.query_params.get("token")
-        if not token or token != BOT_TOKEN:
-            MY_LOGGER.warning(f'Токен неверный или отсутствует. Значение параметра token={token}')
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+        BotTokenService.check_bot_token(token)
 
         acc_pk = request.query_params.get("acc_pk")
         if not acc_pk or not acc_pk.isdigit():
@@ -320,10 +314,7 @@ class RelatedNewsView(APIView):
         MY_LOGGER.info(f'Получен GET запрос для получения новостей по определённой тематике: {request.GET}')
 
         token = request.query_params.get("token")
-        if not token or token != BOT_TOKEN:
-            MY_LOGGER.warning(f'Токен неверный или отсутствует. Значение параметра token={token}')
-            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
-
+        BotTokenService.check_bot_token(token)
         ch_pk = request.query_params.get("ch_pk")
         if not ch_pk or not ch_pk.isdigit():
             MY_LOGGER.warning(f'ch_pk невалидный или отсутствует. Значение параметра ch_pk={ch_pk}')
@@ -506,13 +497,8 @@ class GetActiveAccounts(APIView):
         Обрабатываем GET запрос и отправляем боту команды на старт нужных аккаунтов.
         """
         MY_LOGGER.info('Получен GET запрос на вьюшку для получения активных аккаунтов')
-
         token = request.query_params.get("token")
-        if not token or token != BOT_TOKEN:
-            MY_LOGGER.warning(
-                f'Токен неверный или отсутствует. Значение параметра token={token!r} | значение BOT_TOKEN={BOT_TOKEN!r}')
-            return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid token')
-
+        BotTokenService.check_bot_token(token)
         # Запускаем функцию отправки боту команд для старта аккаунтов
         start_or_stop_accounts.delay()
         return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
@@ -625,7 +611,6 @@ class WhatWasInteresting(View):
         form = WhatWasInterestingForm(request.POST)
 
         if form.is_valid():
-
             # Пробуем достать юзера бота по tlg_id
             try:
                 BotUser.objects.get(tlg_id=form.cleaned_data.get("tlg_id"))
