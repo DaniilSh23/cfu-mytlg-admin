@@ -11,8 +11,8 @@ class BlackListsService:
         return obj, created
 
     @staticmethod
-    def get_channel_by_pk(pk: int) -> BlackLists | None:
+    def get_blacklist_by_bot_user_tlg_id(tlg_id: int):
         try:
-            return BlackLists.objects.get(pk=pk)
+            return BlackLists.objects.get(bot_user__tlg_id=tlg_id)
         except ObjectDoesNotExist:
-            return None
+            raise ObjectDoesNotExist

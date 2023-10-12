@@ -1,10 +1,5 @@
-import datetime
-import json
-
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction
-
-from django.http import HttpResponse, HttpRequest, JsonResponse
+from django.http import HttpResponse, HttpRequest
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
@@ -20,8 +15,7 @@ from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.common import scheduling_post_for_sending
 from mytlg.forms import BlackListForm, WhatWasInterestingForm
 from mytlg.gpt_processing import gpt_text_reduction
-from mytlg.models import Categories, BotUser, Channels, TlgAccounts, NewsPosts, AccountsSubscriptionTasks, \
-    AccountsErrors, Interests, BotSettings, BlackLists
+from mytlg.models import Interests
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
 from mytlg.servises.reactions_service import ReactionsService
@@ -285,9 +279,6 @@ class GetChannelsListView(APIView):
             MY_LOGGER.warning(f'acc_pk невалидный или отсутствует. Значение параметра acc_pk={acc_pk}')
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        # try:
-        #     # Достаём из БД каналы, с которыми связан аккаунт
-        #     channels_qset = TlgAccounts.objects.get(pk=int(acc_pk)).channels.all()
         tlg_account = TlgAccountsService.get_tlg_account_by_pk(acc_pk)
         if not tlg_account:
             return Response(status=status.HTTP_400_BAD_REQUEST, data='Object does not exists')
@@ -295,9 +286,6 @@ class GetChannelsListView(APIView):
         channels_qset = ChannelsService.get_tlg_account_channels_list(tlg_account)
         if not channels_qset:
             return Response(status=status.HTTP_400_BAD_REQUEST, data='Channels not found')
-        # except ObjectDoesNotExist:
-        # MY_LOGGER.warning(f'Запрошены каналы для несуществующего аккаунта (PK аккаунта == {acc_pk!r}')
-        # return Response(status=status.HTTP_400_BAD_REQUEST, data='Object does not exists')
 
         channels_lst = ChannelsService.create_and_process_channels_lst(acc_pk, channels_qset)
         serializer = ChannelsSerializer(channels_lst, many=True)
@@ -322,9 +310,6 @@ class RelatedNewsView(APIView):
             MY_LOGGER.warning(f'ch_pk невалидный или отсутствует. Значение параметра ch_pk={ch_pk}')
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid channel pk')
 
-        # try:
-        #     ch_obj = Channels.objects.get(pk=int(ch_pk))  # TODO: оптимизировать запрос к БД
-        # except ObjectDoesNotExist:
         ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
         if not ch_obj:
             MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
@@ -332,13 +317,11 @@ class RelatedNewsView(APIView):
 
         # Достаём все id каналов по теме
         theme_obj = ch_obj.category
-        #  ch_qset = Channels.objects.filter(category=theme_obj).only("id")
         ch_qset = ChannelsService.get_channels_qset_only_ids(theme_obj)
 
         # Складываем айдишники каналов и вытаскиваем из БД одним запросов все посты
         ch_ids_lst = [i_ch.pk for i_ch in ch_qset]
         all_posts_lst = []
-        # i_ch_posts = NewsPosts.objects.filter(channel__id__in=ch_ids_lst).only("text", "embedding")
         i_ch_posts = NewsPostsService.get_posts_only_text_and_embeddings_by_channels_ids_list(ch_ids_lst)
 
         for i_post in i_ch_posts:
@@ -358,17 +341,12 @@ class RelatedNewsView(APIView):
             if ser.data.get("token") == BOT_TOKEN:
                 MY_LOGGER.debug('Токен успешно проверен')
 
-                # try:
-                #     ch_obj = Channels.objects.get(pk=ser.data.get("ch_pk"))
-                # except ObjectDoesNotExist:
-                #     return Response(data={'result': 'channel object does not exist'})
                 ch_pk = ser.data.get("ch_pk")
                 ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
                 if not ch_obj:
                     MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
                     return Response(data={'result': f'channel object does not exist{ch_pk}'})
 
-                # prompt = BotSettings.objects.get(key='prompt_for_text_reducing').value
                 prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
                 short_post = gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
                 obj = NewsPostsService.create_news_post(ch_obj, ser, short_post)
@@ -551,7 +529,7 @@ class BlackListView(View):
         context = dict()
         if request.GET.get("tlg_id"):
             try:
-                black_list = BlackLists.objects.get(bot_user__tlg_id=request.GET.get("tlg_id"))
+                black_list = BlackListsService.get_blacklist_by_bot_user_tlg_id(tlg_id=request.GET.get("tlg_id"))
                 context["keywords"] = black_list.keywords
             except ObjectDoesNotExist:
                 context["keywords_placeholder"] = ('ключевые слова (фраза) 1\nключевые слова (фраза) 2\n'
