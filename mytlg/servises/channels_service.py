@@ -67,3 +67,22 @@ class ChannelsService:
                               f'Ошибка: {e}')
             return None
 
+    @staticmethod
+    def update_or_create(channel_link, defaults):
+        ch_obj, ch_created = Channels.objects.update_or_create(channel_link=channel_link, defaults=defaults)
+        return ch_obj, ch_created
+
+    @staticmethod
+    def update_or_create_channels_from_data_file(i_data, theme_obj):
+        for i_key, i_val in i_data.items():
+            # ch_obj, ch_created = Channels.objects.update_or_create(
+            ch_obj, ch_created = ChannelsService.update_or_create(
+                channel_link=i_val[1],
+                defaults={
+                    "channel_name": i_key,
+                    "channel_link": i_val[1],
+                    "subscribers_numb": int(i_val[0]),
+                    "theme": theme_obj,
+                }
+            )
+            MY_LOGGER.debug(f'Канал {ch_obj} был {"создан" if ch_created else "обновлён"}!')

@@ -422,27 +422,7 @@ class UploadNewChannels(View):
             MY_LOGGER.warning('Юзер, выполнивший запрос, не имеет статус staff. Редиректим для авторизации')
             return redirect(to=f'/admin/login/?next={reverse_lazy("mytlg:upload_new_channels")}')
 
-        for i_json_file in request.FILES.getlist("json_files"):
-            i_file_dct = json.loads(i_json_file.read().decode('utf-8'))
-            theme_obj, theme_created = Categories.objects.get_or_create(
-                category_name=i_file_dct.get("category").lower(),
-                defaults={"category_name": i_file_dct.get("category").lower()},
-            )
-            MY_LOGGER.debug(f'{"Создали" if theme_created else "Достали из БД"} тему {theme_obj}!')
-
-            i_data = i_file_dct.get("data")
-            for i_key, i_val in i_data.items():
-                ch_obj, ch_created = Channels.objects.update_or_create(
-                    channel_link=i_val[1],
-                    defaults={
-                        "channel_name": i_key,
-                        "channel_link": i_val[1],
-                        "subscribers_numb": int(i_val[0]),
-                        "theme": theme_obj,
-                    }
-                )
-                MY_LOGGER.debug(f'Канал {ch_obj} был {"создан" if ch_created else "обновлён"}!')
-
+        CategoriesService.get_or_create_categories_from_json_file(request)
         subscription_to_new_channels.delay()
         return HttpResponse(content='Получил файлы, спасибо.')
 
