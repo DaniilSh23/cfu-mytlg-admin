@@ -290,9 +290,6 @@ class GetChannelsListView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST, data='Object does not exists')
 
         channels_qset = ChannelsService.get_tlg_account_channels_list(tlg_account)
-        if not channels_qset:
-            return Response(status=status.HTTP_400_BAD_REQUEST, data='Channels not found')
-
         channels_lst = ChannelsService.create_and_process_channels_lst(acc_pk, channels_qset)
         serializer = ChannelsSerializer(channels_lst, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)

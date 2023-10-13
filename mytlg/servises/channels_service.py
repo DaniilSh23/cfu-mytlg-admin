@@ -17,13 +17,13 @@ class ChannelsService:
         return Channels.objects.filter(pk__in=selected_channels_lst)
 
     @staticmethod
-    def get_tlg_account_channels_list(tlg_account) -> QuerySet | None:
+    def get_tlg_account_channels_list(tlg_account) -> QuerySet | list:
         try:
             return tlg_account.channels.all()
         except Exception as e:
             MY_LOGGER.warning(f'Запрошены каналы не найдены для аккаунта (PK аккаунта == {tlg_account!r} \n '
                               f'Ошибка: {e}')
-            return None
+            return []
 
     @staticmethod
     def get_channel_by_pk(pk: int) -> Channels | None:
@@ -111,6 +111,6 @@ class ChannelsService:
     @staticmethod
     def bulk_update_channels(ch_ids_lst, ch_qset, tlg_acc_obj):
         with transaction.atomic():
-            Channels.objects.bulk_update(ch_qset=ch_qset,
+            Channels.objects.bulk_update(ch_qset,
                                          fields=["channel_id", "channel_name", "subscribers_numb", "is_ready"])
-            tlg_acc_obj.channels.add(ch_ids_lst=ch_ids_lst)
+            tlg_acc_obj.channels.add(*ch_ids_lst)
