@@ -12,7 +12,9 @@ class InterestsService:
 
     @staticmethod
     def set_is_active_false_in_active_interests(active_interests):
-        active_interests.update(is_active=False)
+        for interest in active_interests:
+            interest.is_active = False
+            interest.save()
 
     @staticmethod
     def create_list_of_new_interests_obj(interests_indxs, request):
