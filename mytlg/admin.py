@@ -56,11 +56,20 @@ class CategoriesAdmin(admin.ModelAdmin):
     )
 
 
+@admin.action(description='Отметить как не готов')
+def mark_channel_is_ready_param(modeladmin, request, queryset):
+    """
+    Отметить канал как неготовый (is_ready=False)
+    """
+    queryset.update(is_ready=False)
+
+
 @admin.register(Channels)
 class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
     change_list_template = 'admin/channels_change_list.html'  # Шаблон для страницы со списком сущностей
     actions = [  # Список доп. действий в админке для записей данной модели
         'export_json',  # export_csv - имя метода в миксине ExportAsCSVMixin
+        mark_channel_is_ready_param,  # отметить канал, как ноготовый
     ]
     list_display = (
         "pk",
