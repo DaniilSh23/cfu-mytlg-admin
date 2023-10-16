@@ -14,7 +14,6 @@ class ScheduledPostsService:
         :return: Кортеж содержащий список словарей с запланированными постами и tlg_id пользователя
         """
         scheduled_posts = ScheduledPosts.objects.filter(selection_hash=post_hash)
-        # scheduled_posts = ScheduledPosts.objects.filter(bot_user__tlg_id=461767338)
         tlg_id = scheduled_posts[0].bot_user.tlg_id
         posts = []
         for post in scheduled_posts:
