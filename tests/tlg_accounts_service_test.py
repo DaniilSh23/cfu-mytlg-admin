@@ -1,7 +1,5 @@
 from django.test import TestCase
-from django.core.exceptions import ObjectDoesNotExist
 from mytlg.models import TlgAccounts, Proxys
-from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
 
 
