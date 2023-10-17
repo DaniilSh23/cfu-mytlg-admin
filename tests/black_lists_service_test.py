@@ -17,7 +17,10 @@ class BlackListsServiceTest(TestCase):
 
     def test_update_or_create(self):
         # Call the update_or_create method with test data
-        defaults = {"blocked": True}
+        defaults = {
+            "keywords": 'True',
+            "bot_user": self.bot_user,
+        }
         obj, created = BlackListsService.update_or_create(self.bot_user.tlg_id, defaults)
 
         # Check if the BlackLists object is created or updated correctly
@@ -25,19 +28,22 @@ class BlackListsServiceTest(TestCase):
 
         # Check if the BlackLists object is associated with the correct BotUser
         self.assertEqual(obj.bot_user, self.bot_user)
-        self.assertTrue(obj.blocked)
+        self.assertEqual(obj.keywords, defaults["keywords"])
 
         # Call the update_or_create method again to update the object
-        defaults = {"blocked": False}
+        defaults = {
+            "keywords": 'True2222',
+            "bot_user": self.bot_user,
+        }
         obj, created = BlackListsService.update_or_create(self.bot_user.tlg_id, defaults)
 
         # Check if the BlackLists object is updated correctly
         self.assertFalse(created)  # Expecting it to be updated
-        self.assertFalse(obj.blocked)
+        self.assertEqual(obj.keywords, defaults["keywords"])
 
     def test_get_blacklist_by_bot_user_tlg_id(self):
         # Create a BlackLists object associated with the test BotUser
-        BlackLists.objects.create(bot_user=self.bot_user, blocked=True)
+        BlackLists.objects.create(bot_user=self.bot_user, keywords='True')
 
         # Call the get_blacklist_by_bot_user_tlg_id method
         blacklist = BlackListsService.get_blacklist_by_bot_user_tlg_id(self.bot_user.tlg_id)
