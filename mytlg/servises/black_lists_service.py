@@ -1,6 +1,5 @@
 from mytlg.models import BlackLists
 from django.core.exceptions import ObjectDoesNotExist
-from cfu_mytlg_admin.settings import MY_LOGGER
 
 
 class BlackListsService:
@@ -14,5 +13,5 @@ class BlackListsService:
     def get_blacklist_by_bot_user_tlg_id(tlg_id: int):
         try:
             return BlackLists.objects.get(bot_user__tlg_id=tlg_id)
-        except ObjectDoesNotExist:
-            raise ObjectDoesNotExist
+        except ObjectDoesNotExist as e:
+            raise ObjectDoesNotExist from e
