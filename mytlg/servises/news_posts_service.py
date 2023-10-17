@@ -1,7 +1,4 @@
 from mytlg.models import NewsPosts
-from django.db.models import QuerySet
-from django.core.exceptions import ObjectDoesNotExist
-from cfu_mytlg_admin.settings import MY_LOGGER
 
 
 class NewsPostsService:
