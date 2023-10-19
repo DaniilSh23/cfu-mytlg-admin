@@ -20,7 +20,6 @@ class CategoriesService:
     def get_or_create_categories_from_json_file(request):
         for i_json_file in request.FILES.getlist("json_files"):
             i_file_dct = json.loads(i_json_file.read().decode('utf-8'))
-            # theme_obj, theme_created = Categories.objects.get_or_create(
             theme_obj, theme_created = CategoriesService.get_or_create(
                 category_name=i_file_dct.get("category").lower(),
                 defaults={"category_name": i_file_dct.get("category").lower()},
@@ -30,4 +29,14 @@ class CategoriesService:
             i_data = i_file_dct.get("data")
             ChannelsService.update_or_create_channels_from_data_file(i_data, theme_obj)
 
-
+    @staticmethod
+    def create_category_from_json_data(json_data):
+        category = json_data.get("category")
+        category, created = Categories.objects.get_or_create(
+            category_name=category.lower(),
+            defaults={
+                "category_name": category.lower(),
+            }
+        )
+        MY_LOGGER.debug(f'Категория каналов {category.category_name!r} была {"создана" if created else "получена"}.')
+        return category

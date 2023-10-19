@@ -12,7 +12,6 @@ from django.db.models import Count
 from langchain.embeddings import OpenAIEmbeddings
 
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
-from mytlg.common import scheduling_post_for_sending
 from mytlg.gpt_processing import ask_the_gpt, gpt_text_language_detection_and_translate
 from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings, \
     Interests, ScheduledPosts

@@ -8,12 +8,16 @@ class TextProcessService:
     def __init__(self):
         self.similarity_index_for_interests = float(
             BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
+        self.embeddings = OpenAIEmbeddings()
 
-    @staticmethod
-    def make_index_db_from_embeddings(interest_lst):
-        embeddings = OpenAIEmbeddings()
-        index_db = FAISS.from_embeddings(text_embeddings=interest_lst, embedding=embeddings)
+    def make_index_db_from_embeddings(self, interest_lst):
+        index_db = FAISS.from_embeddings(text_embeddings=interest_lst, embedding=self.embeddings)
         return index_db
+
+    def filter_relevant_pieces_by_vector_distance(self, relevant_pieces):
+        filtered_rel_pieces = list(
+            filter(lambda piece: piece[1] < self.similarity_index_for_interests, relevant_pieces))
+        return filtered_rel_pieces
 
     @staticmethod
     def get_relevant_pieces_by_embeddings(index_db, post):
@@ -22,8 +26,3 @@ class TextProcessService:
             k=1,
         )
         return relevant_pieces
-
-    def filter_relevant_pieces_by_vector_distance(self, relevant_pieces):
-        filtered_rel_pieces = list(
-            filter(lambda piece: piece[1] < self.similarity_index_for_interests, relevant_pieces))
-        return filtered_rel_pieces

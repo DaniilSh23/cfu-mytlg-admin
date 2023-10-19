@@ -5,6 +5,8 @@ from typing import List
 import pytz
 import requests
 import socks
+import json
+from io import TextIOWrapper
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
 
@@ -213,3 +215,12 @@ def calculate_sending_datetime(last_send: datetime, when_send: datetime.time = N
         if sending_dt.day < now_dt.day or sending_dt.month < now_dt.month or sending_dt.year < now_dt.year:
             sending_dt.replace(day=now_dt.day, month=now_dt.month, year=now_dt.year)
         return sending_dt
+
+
+def process_json_file(encoding, file):
+    json_file = TextIOWrapper(
+        file,
+        encoding=encoding,
+    )
+    json_data = json.loads(json_file.read())
+    return json_data

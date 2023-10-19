@@ -5,11 +5,11 @@ from django.urls import path
 
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.admin_mixins import ExportAsJSONMixin
-from mytlg.common import save_json_channels
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
     AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists, Reactions
 from mytlg.tasks import subscription_to_new_channels
+from mytlg.servises.channels_service import ChannelsService
 
 
 @admin.register(BotUser)
@@ -115,7 +115,7 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
             return render(request, template_name='admin/json_form.html', context=context, status=400)
 
         # Обрабатываем загруженный json файл
-        save_json_channels(
+        ChannelsService.create_new_channels_in_admin_dashboard_from_json_file(
             file=form.files.get("json_file").file,
             encoding=request.encoding,
         )

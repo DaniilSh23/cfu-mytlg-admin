@@ -12,7 +12,6 @@ from rest_framework import status
 from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
-from mytlg.common import scheduling_post_for_sending
 from mytlg.forms import BlackListForm, WhatWasInterestingForm
 from mytlg.gpt_processing import gpt_text_reduction
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
@@ -356,7 +355,7 @@ class RelatedNewsView(APIView):
                 MY_LOGGER.success(f'Новый пост успешно создан, его PK == {obj.pk!r}')
 
                 # Планируем пост к отправке для конкретных юзеров
-                scheduling_post_for_sending(post=obj)
+                ScheduledPostsService.scheduling_post_for_sending(post=obj)
 
                 return Response(data={'result': 'new post write successfull'}, status=status.HTTP_200_OK)
 
