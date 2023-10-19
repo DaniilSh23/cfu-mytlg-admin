@@ -12,13 +12,17 @@ from django.db.models import Count
 from langchain.embeddings import OpenAIEmbeddings
 
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
-from mytlg.gpt_processing import ask_the_gpt, gpt_text_language_detection_and_translate
+from mytlg.servises.text_process_service import TextProcessService
+#from mytlg.gpt_processing import ask_the_gpt, gpt_text_language_detection_and_translate
 from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings, \
     Interests, ScheduledPosts
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
     send_file_by_bot, bot_command_for_start_or_stop_account
 from mytlg.servises.interests_service import InterestsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
+
+
+text_processor = TextProcessService()
 
 
 @shared_task
@@ -65,14 +69,14 @@ def gpt_interests_processing(interests, tlg_id):
         )
 
         MY_LOGGER.debug(f'Шлём запрос к gpt для определения категории интереса: {i_interest.get("interest")!r}')
-        gpt_rslt = ask_the_gpt(
+        gpt_rslt = text_processor.ask_the_gpt(
             base_text=categories_str,
             query=f'Подбери подходящую тематику для следующего интереса пользователя: {i_interest.get("interest")}',
             system=prompt,
             temp=0.3,
         )
         if not gpt_rslt:
-            MY_LOGGER.error(f'Неудачный запрос к API OpenAI')
+            MY_LOGGER.error('Неудачный запрос к API OpenAI')
             send_err_msg_for_user_to_telegram(err_msg='😔 Серверы ИИ перегружены, не удалось подобрать подходящие для '
                                                       'Вас темы. Пожалуйста, попробуйте позже 🔄', tlg_id=tlg_id)
             return
@@ -87,7 +91,7 @@ def gpt_interests_processing(interests, tlg_id):
                 defaults={"category_name": "тест"}
             )
         else:
-            MY_LOGGER.debug(f'Привязываем пользователя к категории и каналам')
+            MY_LOGGER.debug('Привязываем пользователя к категории и каналам')
             try:
                 category = Categories.objects.get(category_name=gpt_rslt.lower())
             except ObjectDoesNotExist:
@@ -104,17 +108,17 @@ def gpt_interests_processing(interests, tlg_id):
         time.sleep(1)  # Задержечка, чтобы модель OpenAI не охуела от частоты запросов
         # TODO: надо дописать использование другой модели и чередование их между интересами
 
-    MY_LOGGER.debug(f'Создаём за раз несколько записей в БД для модели Interests')
+    MY_LOGGER.debug('Создаём за раз несколько записей в БД для модели Interests')
     interests_objs = []
     for interest in interests:
         interest['bot_user'] = bot_usr
         interests_objs.append(Interests(**interest))
     Interests.objects.bulk_create(interests_objs)
 
-    MY_LOGGER.debug(f'Отправка в телеграм подобранных тем.')
+    MY_LOGGER.debug('Отправка в телеграм подобранных тем.')
     send_gpt_interests_proc_rslt_to_tlg(gpt_rslts=themes_rslt, tlg_id=tlg_id)
 
-    MY_LOGGER.info(f'Окончание работы задачи celery по обработке интересов пользователя.')
+    MY_LOGGER.info('Окончание работы задачи celery по обработке интересов пользователя.')
 
 
 @shared_task
@@ -122,7 +126,7 @@ def scheduled_task_for_send_post_to_users():
     """
     Задача по расписанию для отправки новостных постов пользователям.
     """
-    MY_LOGGER.info(f'Вызвана задача по отправке новостных постов пользователям')
+    MY_LOGGER.info('Вызвана задача по отправке новостных постов пользователям')
 
     # Достаём посты, которые должны быть отправлены
     posts = ScheduledPosts.objects.filter(
@@ -154,7 +158,7 @@ def scheduled_task_for_send_post_to_users():
                 posts_str = f'🗞 продолжение...'
 
             original_short_text = i_post.news_post.short_text
-            short_text = gpt_text_language_detection_and_translate(prompt=prompt,
+            short_text = text_processor.gpt_text_language_detection_and_translate(prompt=prompt,
                                                                    text=original_short_text,
                                                                    user_language_code=i_usr.language_code,
                                                                    temp=float(BotSettings.objects.get(
@@ -178,7 +182,7 @@ def scheduled_task_for_send_post_to_users():
         last_send=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
     )
 
-    MY_LOGGER.info(f'Окончание задачи по отправке новостных постов пользователям')
+    MY_LOGGER.info('Окончание задачи по отправке новостных постов пользователям')
 
 
 @shared_task
@@ -186,7 +190,7 @@ def subscription_to_new_channels():
     """
     Таск селери для подписки аккаунтов на новые каналы.
     """
-    MY_LOGGER.info(f'Запущен таск селери по подписке аккаунтов на новые каналы.')
+    MY_LOGGER.info('Запущен таск селери по подписке аккаунтов на новые каналы.')
 
     max_ch_per_acc = int(BotSettings.objects.get(key='max_channels_per_acc').value)
 
@@ -214,7 +218,7 @@ def subscription_to_new_channels():
         ch_available_numb = max_ch_per_acc - i_acc.channels.count()  # На сколько каналов может подписаться акк
         i_acc_channels_lst = ch_lst[:ch_available_numb]  # Срезаем нужные каналы для аккаунта в отдельный список
 
-        MY_LOGGER.debug(f'Создаём в БД запись о задаче аккаунту')
+        MY_LOGGER.debug('Создаём в БД запись о задаче аккаунту')
         # Команда для бота (её данные)
         command_data = {
             "cmd": "subscribe_to_channels",
@@ -227,11 +231,11 @@ def subscription_to_new_channels():
         )
         acc_task.channels.add(*i_acc_channels_lst)
 
-        MY_LOGGER.debug(f'Отправляем через бота задачу аккаунту')
+        MY_LOGGER.debug('Отправляем через бота задачу аккаунту')
         command_data['task_pk'] = acc_task.pk
         task_is_set = send_file_by_bot(
             chat_id=i_acc.acc_tlg_id,
-            caption=f"/subscribe_to_channels",
+            caption="/subscribe_to_channels",
             file=BytesIO(json.dumps(command_data).encode(encoding='utf-8')),
             file_name='command_data.txt',
         )
@@ -244,7 +248,7 @@ def subscription_to_new_channels():
         if len(ch_lst) <= 0:
             MY_LOGGER.debug('Список каталов закончился, останавливаем цикл итерации по аккаунтам')
             break
-    MY_LOGGER.info(f'Таск по отправке аккаунтам задач подписаться на каналы завершена.')
+    MY_LOGGER.info('Таск по отправке аккаунтам задач подписаться на каналы завершена.')
 
 
 @shared_task
@@ -258,7 +262,7 @@ def start_or_stop_accounts(bot_command='start_acc'):
     for i_acc in tlg_accounts:
         bot_command_for_start_or_stop_account(instance=i_acc, bot_command=bot_command, bot_admin=bot_admin)
         time.sleep(0.5)  # Небольшая задержка, чтобы бот успел запустить асинк таски
-    MY_LOGGER.debug(f'Задача завершена')
+    MY_LOGGER.debug('Задача завершена')
 
 
 @shared_task
@@ -266,7 +270,7 @@ def what_was_interesting():
     """
     Таск, который раз в неделю спрашивает, что было нового и интересного.
     """
-    MY_LOGGER.info(f'Запущен таск по опросу, что было интересного у пользователей')
+    MY_LOGGER.info('Запущен таск по опросу, что было интересного у пользователей')
 
     # Достаём юзеров из БД и отправляем им сообщение
     users = BotUser.objects.all().only('tlg_id')
@@ -279,7 +283,7 @@ def what_was_interesting():
                  '\n<tg-spoiler>$$$what_was_interesting</tg-spoiler>'
         )
 
-    MY_LOGGER.info(f'Закончен таск по опросу, что было интересного у пользователей')
+    MY_LOGGER.info('Закончен таск по опросу, что было интересного у пользователей')
 
 
 @shared_task
