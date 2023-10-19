@@ -18,6 +18,8 @@ from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, 
     Interests, ScheduledPosts
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
     send_file_by_bot, bot_command_for_start_or_stop_account
+from mytlg.servises.interests_service import InterestsService
+from mytlg.servises.scheduled_post_service import ScheduledPostsService
 
 
 @shared_task
@@ -342,7 +344,7 @@ def search_content_by_new_interest(interest, usr_tlg_id):
             continue
 
         # Планируем пост к отправке
-        scheduling_post_for_sending(
+        ScheduledPostsService.scheduling_post_for_sending(
             post=i_post,
             bot_usr=bot_user_obj,
             interest=new_interest,
@@ -374,25 +376,25 @@ def sending_post_selections():
 
     # Поочереди достаём посты для конкретного юзера и отправляем их сокращенный вариант
     for i_usr in bot_users:
-        selection_hash = hashlib.md5(f'{time_now}{i_usr.tlg_id}'.encode('utf-8')).hexdigest()
-        i_usr_posts = posts.filter(bot_user=i_usr)
-        i_usr_posts.update(selection_hash=selection_hash)
-        posts_str = (f'🗞 <b>Есть новости для Вас</b>\n<i>(по состоянию на {time_now})</i>\n\n\n\n'
-                     f'<tg-spoiler>$$$news_collection {selection_hash}</tg-spoiler>')
+        if InterestsService.check_if_bot_user_have_interest(i_usr.id):
+            selection_hash = hashlib.md5(f'{time_now}{i_usr.tlg_id}'.encode('utf-8')).hexdigest()
+            i_usr_posts = posts.filter(bot_user=i_usr)
+            i_usr_posts.update(selection_hash=selection_hash)
+            posts_str = (f'🗞 <b>Есть новости для Вас</b>\n<i>(по состоянию на {time_now})</i>\n\n\n\n'
+                         f'<tg-spoiler>$$$news_collection {selection_hash}</tg-spoiler>')
 
-        # Добавляем id интереса в общий список
-        for i_post in i_usr_posts:
-            if i_post.interest:     # Бывает, что у поста не указан интерес. Редко, но может быть
-                interests_ids.append(i_post.interest.id)
+            # Добавляем id интереса в общий список
+            interests_ids.extend(
+                i_post.interest.id for i_post in i_usr_posts if i_post.interest
+            )
+            MY_LOGGER.debug(f'Отправляем уведомление о выходе подборки постов юзеру: {i_usr!r}')
+            send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=posts_str)
+            if not send_result:
+                MY_LOGGER.warning(f'Не удалось уведомление о выходе подборки постов юзеру: {i_usr!r}')
+                continue
 
-        MY_LOGGER.debug(f'Отправляем уведомление о выходе подборки постов юзеру: {i_usr!r}')
-        send_result = send_message_by_bot(chat_id=i_usr.tlg_id, text=posts_str)
-        if not send_result:
-            MY_LOGGER.warning(f'Не удалось уведомление о выходе подборки постов юзеру: {i_usr!r}')
-            continue
-
-        # Обновляем флаг is_sent у запланированных к отправке постов
-        i_usr_posts.update(is_sent=True)
+            # Обновляем флаг is_sent у запланированных к отправке постов
+            i_usr_posts.update(is_sent=True)
 
     # Обновляем дату и время крайней отправки у интересов
     Interests.objects.filter(id__in=set(interests_ids)).update(

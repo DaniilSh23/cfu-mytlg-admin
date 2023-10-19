@@ -16,3 +16,14 @@ class BotUsersService:
         bot_usr_obj, created = BotUser.objects.update_or_create(tlg_id=tlg_id, defaults=defaults_dict)
         return bot_usr_obj, created
 
+    @staticmethod
+    def get_all_bot_users_ids():
+        return BotUser.objects.all().only('id')
+
+    @staticmethod
+    def get_users_queryset_for_scheduling_post(bot_usr):
+        if not bot_usr:
+            users_qset = BotUsersService.get_all_bot_users_ids()
+        else:
+            users_qset = (bot_usr,)  # Сделал из одного элемента кортеж, чтобы можно было итерироваться
+        return users_qset
