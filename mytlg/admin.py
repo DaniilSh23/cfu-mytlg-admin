@@ -10,6 +10,7 @@ from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts
     AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists, Reactions
 from mytlg.tasks import subscription_to_new_channels
 from mytlg.servises.channels_service import ChannelsService
+from mytlg.common import save_json_channels
 
 
 @admin.register(BotUser)
@@ -115,7 +116,7 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
             return render(request, template_name='admin/json_form.html', context=context, status=400)
 
         # Обрабатываем загруженный json файл
-        ChannelsService.create_new_channels_in_admin_dashboard_from_json_file(
+        save_json_channels(
             file=form.files.get("json_file").file,
             encoding=request.encoding,
         )

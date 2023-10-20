@@ -80,3 +80,11 @@ class InterestsService:
             for i_interest in interests
         ]
         return interest_lst
+
+    @staticmethod
+    def bulk_create_interests(bot_usr, interests):
+        interests_objs = []
+        for interest in interests:
+            interest['bot_user'] = bot_usr
+            interests_objs.append(Interests(**interest))
+        Interests.objects.bulk_create(interests_objs)

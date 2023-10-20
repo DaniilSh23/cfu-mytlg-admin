@@ -13,7 +13,6 @@ from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.forms import BlackListForm, WhatWasInterestingForm
-from mytlg.gpt_processing import gpt_text_reduction
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
 from mytlg.servises.reactions_service import ReactionsService
@@ -29,6 +28,7 @@ from mytlg.servises.bot_token_service import BotTokenService
 from mytlg.servises.account_errors_service import TlgAccountErrorService
 from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
+from mytlg.servises.text_process_service import TextProcessService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
@@ -38,6 +38,8 @@ NOT_VALID_DATA = 'Not valid data'
 VALID_DATA_CHECK_TOKEN = 'Данные валидны, проверяем токен'
 OK_THANKS = 'Хорошо, спасибо!'
 TOKEN_CHECK_OK = 'Токен успешно проверен'
+
+text_processor = TextProcessService()
 
 
 class SentReactionHandler(APIView):
@@ -350,7 +352,7 @@ class RelatedNewsView(APIView):
                     return Response(data={'result': f'channel object does not exist{ch_pk}'})
 
                 prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
-                short_post = gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
+                short_post = text_processor.gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
                 obj = NewsPostsService.create_news_post(ch_obj, ser, short_post)
                 MY_LOGGER.success(f'Новый пост успешно создан, его PK == {obj.pk!r}')
 
@@ -396,7 +398,7 @@ class UploadNewChannels(View):
             MY_LOGGER.warning('Юзер, выполнивший запрос, не имеет статус staff. Редиректим для авторизации')
             return redirect(to=f'/admin/login/?next={reverse_lazy("mytlg:upload_new_channels")}')
 
-        CategoriesService.get_or_create_categories_from_json_file(request)
+        CategoriesService.get_or_create_channels_from_json_file(request)
         subscription_to_new_channels.delay()
         return HttpResponse(content='Получил файлы, спасибо.')
 

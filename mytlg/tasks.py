@@ -3,7 +3,6 @@ import hashlib
 import json
 import time
 from io import BytesIO
-from typing import List, Dict
 
 import pytz
 from celery import shared_task
@@ -13,13 +12,19 @@ from langchain.embeddings import OpenAIEmbeddings
 
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
 from mytlg.servises.text_process_service import TextProcessService
-#from mytlg.gpt_processing import ask_the_gpt, gpt_text_language_detection_and_translate
+from mytlg.servises.categories_service import CategoriesService
+from mytlg.servises.channels_service import ChannelsService
+from mytlg.servises.bot_users_service import BotUsersService
+from mytlg.servises.news_posts_service import NewsPostsService
+from mytlg.servises.tlg_accounts_service import TlgAccountsService
+from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
+from mytlg.servises.bot_settings_service import BotSettingsService
+from mytlg.servises.interests_service import InterestsService
+from mytlg.servises.scheduled_post_service import ScheduledPostsService
 from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings, \
     Interests, ScheduledPosts
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
     send_file_by_bot, bot_command_for_start_or_stop_account
-from mytlg.servises.interests_service import InterestsService
-from mytlg.servises.scheduled_post_service import ScheduledPostsService
 
 
 text_processor = TextProcessService()
@@ -43,21 +48,15 @@ def gpt_interests_processing(interests, tlg_id):
     tlg_id - Telegram ID пользователя
     """
     MY_LOGGER.info('Запускаем задачу celery по обработке интересов пользователя')
+    MY_LOGGER.debug('Складываем общий список из категорий в строку')
+    categories_str = CategoriesService.convert_category_list_to_string()
 
-    MY_LOGGER.debug(f'Складываем общий список из категорий в строку')
-    categories_qset = Categories.objects.all()
-    all_categories_lst = [category.category_name for category in categories_qset]
-    categories_str = '\n'.join([category for category in all_categories_lst])
-
-    MY_LOGGER.debug(f'Получаем объект BotUser и очищаем связи Many2Many для каналов и тем')
-    bot_usr = BotUser.objects.get(tlg_id=tlg_id)
-    bot_usr.category.clear()
-    bot_usr.channels.clear()
+    MY_LOGGER.debug('Получаем объект BotUser и очищаем связи Many2Many для каналов и тем')
+    bot_usr = BotUsersService.clear_bot_users_category_and_channels(tlg_id)
 
     themes_rslt = list()
-    prompt = BotSettings.objects.get(key='prompt_for_interests_category').value
+    prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_interests_category')
     for i_interest in interests:
-
         # Пилим эмбеддинги для интереса
         MY_LOGGER.debug(f'Пилим эмбеддинги для интереса: {i_interest.get("interest")}')
         # TODO: эту хуйню надо в try-except, но я не вьехал че там экзептиться может, потому что я уже заебался и выпил
@@ -82,26 +81,7 @@ def gpt_interests_processing(interests, tlg_id):
             return
 
         MY_LOGGER.debug(f'Получили ответ от GPT {gpt_rslt!r} по интересу пользователя {i_interest.get("interest")!r}')
-        if gpt_rslt == 'no_themes':
-            MY_LOGGER.info(f'GPT не определил тем для интереса пользователя: {i_interest.get("interest")!r} '
-                           f'и прислал {gpt_rslt!r}. Привязываем юзера к категории тест')
-            gpt_rslt = 'общее 🆕'
-            category, created = Categories.objects.get_or_create(
-                category_name='тест',
-                defaults={"category_name": "тест"}
-            )
-        else:
-            MY_LOGGER.debug('Привязываем пользователя к категории и каналам')
-            try:
-                category = Categories.objects.get(category_name=gpt_rslt.lower())
-            except ObjectDoesNotExist:
-                MY_LOGGER.warning(f'В БД не найдена категория: {gpt_rslt!r}. '
-                                  f'Привязывем по стандарту к категории "тест".')
-                category, created = Categories.objects.get_or_create(
-                    category_name='тест',
-                    defaults={"category_name": "тест"}
-                )
-
+        category, gpt_rslt = CategoriesService.create_category_from_gpt_result(gpt_rslt, i_interest)
         bot_usr.category.add(category)
         i_interest["category"] = category
         themes_rslt.append(gpt_rslt.lower())
@@ -109,11 +89,7 @@ def gpt_interests_processing(interests, tlg_id):
         # TODO: надо дописать использование другой модели и чередование их между интересами
 
     MY_LOGGER.debug('Создаём за раз несколько записей в БД для модели Interests')
-    interests_objs = []
-    for interest in interests:
-        interest['bot_user'] = bot_usr
-        interests_objs.append(Interests(**interest))
-    Interests.objects.bulk_create(interests_objs)
+    InterestsService.bulk_create_interests(bot_usr, interests)
 
     MY_LOGGER.debug('Отправка в телеграм подобранных тем.')
     send_gpt_interests_proc_rslt_to_tlg(gpt_rslts=themes_rslt, tlg_id=tlg_id)

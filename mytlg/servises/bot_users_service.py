@@ -27,3 +27,10 @@ class BotUsersService:
         else:
             users_qset = (bot_usr,)  # Сделал из одного элемента кортеж, чтобы можно было итерироваться
         return users_qset
+
+    @staticmethod
+    def clear_bot_users_category_and_channels(tlg_id):
+        bot_usr = BotUser.objects.get(tlg_id=tlg_id)
+        bot_usr.category.clear()
+        bot_usr.channels.clear()
+        return bot_usr
