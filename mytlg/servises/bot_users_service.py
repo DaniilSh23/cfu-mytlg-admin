@@ -21,6 +21,11 @@ class BotUsersService:
         return BotUser.objects.all().only('id')
 
     @staticmethod
+    def get_bot_users_only_tlg_id():
+        users = BotUser.objects.all().only('tlg_id')
+        return users
+
+    @staticmethod
     def get_users_queryset_for_scheduling_post(bot_usr):
         if not bot_usr:
             users_qset = BotUsersService.get_all_bot_users_ids()
@@ -34,3 +39,12 @@ class BotUsersService:
         bot_usr.category.clear()
         bot_usr.channels.clear()
         return bot_usr
+
+    @staticmethod
+    def filter_bot_users_by_ids(bot_user_ids):
+        return BotUser.objects.filter(id__in=bot_user_ids)
+
+    @staticmethod
+    def get_bot_users_id_and_tlg_id_by_ids(bot_user_ids):
+        bot_users = BotUser.objects.filter(id__in=bot_user_ids).only('id', 'tlg_id')
+        return bot_users

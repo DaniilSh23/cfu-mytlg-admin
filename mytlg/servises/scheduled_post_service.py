@@ -1,10 +1,12 @@
+import datetime
+import pytz
 from mytlg.models import ScheduledPosts, BotUser, Interests, NewsPosts, BlackLists
 from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.servises.interests_service import InterestsService
 from mytlg.servises.text_process_service import TextProcessService
-from cfu_mytlg_admin.settings import MY_LOGGER
+from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
 
 
 text_processor = TextProcessService()
@@ -85,3 +87,24 @@ class ScheduledPostsService:
                                                                                               i_user, interest,
                                                                                               interests)
             ScheduledPostsService.create_scheduled_post(i_user, interest, post, sending_datetime)
+
+    @staticmethod
+    def get_posts_that_need_to_send():
+        posts = ScheduledPosts.objects.filter(
+            is_sent=False,
+            when_send__lte=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
+        ).prefetch_related("bot_user").prefetch_related("news_post")
+        return posts
+
+    @staticmethod
+    def get_scheduled_posts_by_bot_user_and_news_post_for_task(bot_user_obj, i_post):
+        scheduled_posts_qset = ScheduledPosts.objects.filter(
+            bot_user=bot_user_obj,
+            news_post=i_post,
+        ).only("when_send", "is_sent")
+        return scheduled_posts_qset
+
+    @staticmethod
+    def update_when_send_for_not_sended_posts(scheduled_posts_qset):
+        not_sent_posts = scheduled_posts_qset.filter(is_sent=False)
+        not_sent_posts.update(when_send=datetime.datetime.now())

@@ -1,10 +1,25 @@
 from mytlg.models import Interests
 import datetime
-from cfu_mytlg_admin.settings import MY_LOGGER
+import pytz
+from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
 from mytlg.utils import calculate_sending_datetime
 
 
 class InterestsService:
+
+    @staticmethod
+    def create(bot_user_obj, category, embedding_str, interest):
+        new_interest = Interests.objects.create(
+            interest=interest,
+            embedding=embedding_str,
+            bot_user=bot_user_obj,
+            category=category,
+            is_active=False,
+            send_period='now',
+            interest_type='whats_new',
+        )
+        MY_LOGGER.success(f'В БД создан новый интерес юзера {bot_user_obj!r} | PK интереса == {new_interest.pk!r}')
+        return new_interest
 
     @staticmethod
     def get_active_interests(bot_user):
@@ -88,3 +103,9 @@ class InterestsService:
             interest['bot_user'] = bot_usr
             interests_objs.append(Interests(**interest))
         Interests.objects.bulk_create(interests_objs)
+
+    @staticmethod
+    def update_date_and_time_interests_last_sending_time(interests_ids):
+        Interests.objects.filter(id__in=set(interests_ids)).update(
+            last_send=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE))
+        )
