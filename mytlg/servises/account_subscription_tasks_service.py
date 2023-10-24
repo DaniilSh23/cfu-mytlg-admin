@@ -23,3 +23,9 @@ class AccountsSubscriptionTasksService:
         if ser.validated_data.get("end_flag"):
             task_obj.ends_at = datetime.datetime.now()
         task_obj.save()
+
+    @staticmethod
+    def get_subscription_tasks_in_works():
+        subs_tasks_qset = (AccountsSubscriptionTasks.objects.filter(status='at_work', channels__isnull=False)
+                           .only('channels', 'tlg_acc'))
+        return subs_tasks_qset

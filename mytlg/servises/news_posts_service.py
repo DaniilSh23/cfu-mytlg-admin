@@ -1,4 +1,9 @@
 from mytlg.models import NewsPosts
+from mytlg.servises.bot_settings_service import BotSettingsService
+import datetime
+from django.db.models import QuerySet
+from django.core.exceptions import ObjectDoesNotExist
+from cfu_mytlg_admin.settings import MY_LOGGER
 
 
 class NewsPostsService:
@@ -17,3 +22,10 @@ class NewsPostsService:
             short_text=short_post,
         )
         return news_post
+
+    @staticmethod
+    def get_posts_by_sending_period():
+        period = int(BotSettingsService.get_bot_settings_by_key(key='period_for_what_was_interest_sec'))
+        period = datetime.datetime.fromtimestamp(float(period))
+        posts = NewsPosts.objects.filter(created_at__gt=period).only('embedding', 'post_link', 'short_text')
+        return posts

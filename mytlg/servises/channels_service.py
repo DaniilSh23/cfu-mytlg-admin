@@ -3,6 +3,10 @@ from django.db.models import QuerySet
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+# import json
+#
+# from mytlg.servises.categories_service import CategoriesService
+# from mytlg.utils import process_json_file
 from cfu_mytlg_admin.settings import MY_LOGGER
 
 
@@ -114,3 +118,39 @@ class ChannelsService:
             Channels.objects.bulk_update(ch_qset,
                                          fields=["channel_id", "channel_name", "subscribers_numb", "is_ready"])
             tlg_acc_obj.channels.add(*ch_ids_lst)
+
+    # @staticmethod
+    # def create_new_channels_in_admin_dashboard_from_json_file(file, encoding):  # TODO: переписать
+    #     """
+    #     Функция, которая отвечает за создание каналов в админке из JSON файла
+    #     :return:
+    #     """
+    #     json_data = process_json_file(encoding, file)
+    #     category = json_data.get("category")
+    #     ChannelsService.get_or_create_channels_from_json_file(json_data)
+    #     channels_data = json_data.get("data")
+    #     channels_links = []
+    #     for i_ch_name, i_ch_data in channels_data.items():
+    #         channels_links.append(i_ch_data[1])
+    #     channels_in_db_qset = Channels.objects.filter(channel_link__in=channels_links).only('channel_link')
+    #     channels_in_db_links = [i_ch_in_db.channel_link for i_ch_in_db in channels_in_db_qset]
+    #     channels = ChannelsService.create_new_channels_objects_list(category, channels_data, channels_in_db_links)
+    #     Channels.objects.bulk_create(channels)
+    #     MY_LOGGER.debug('Каналы загружены в БД.')
+    #
+    #     return channels
+    #
+    # @staticmethod
+    # def create_new_channels_objects_list(category, channels_data, channels_in_db_links):
+    #     channels = []
+    #     for i_ch_name, i_ch_data in channels_data.items():
+    #         if i_ch_data[1] not in channels_in_db_links:
+    #             channels.append(Channels(
+    #                 channel_name=i_ch_name,
+    #                 channel_link=i_ch_data[1],
+    #                 category=category,
+    #                 subscribers_numb=i_ch_data[0],
+    #             ))
+    #     return channels
+
+
