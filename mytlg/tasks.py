@@ -9,7 +9,8 @@ from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
 from langchain.embeddings import OpenAIEmbeddings
 
-from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
+from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE, BOT_TOKEN
+from mytlg.api_requests import post_req_to_accounts_service_for_start_subscription
 from mytlg.servises.text_process_service import TextProcessService
 from mytlg.servises.categories_service import CategoriesService
 from mytlg.servises.channels_service import ChannelsService
@@ -174,41 +175,71 @@ def subscription_to_new_channels():
     excluded_ids = TlgAccountsService.exclude_allready_subscripted_channels(excluded_ids)
     # Достаём каналы и распределяем их по аккаунтам
     ch_lst = Channels.objects.filter(is_ready=False).exclude(id__in=excluded_ids).only("id", "channel_link")
+
+    ##########
+    # INFO: Ниже изменения:
+    #
+    # старый код отправляет от лица бота сообщение аккаунту с json файлом, в котором лежит
+    # информация на какие каналы должен подписаться аккаунт.
+    #
+    # Новый код отправляет немного другой json одним http
+    # запросом на адрес API веб-приложения, которое управляет аккаунтами.
+    #
+    # Для всего этого я просто закомментирую сам запрос к API Telegram для отправки сообщения аккаунту от лица бота и
+    # в цикле соберу данные для подписок всех аккаунтов в один словарь и затем кину одним запросом к веб-приложухе,
+    # которая управляет аккаунтами. Ранее же, через бота, каждому аккаунту данные отправлялись разными запросами к
+    # API Telegram (на каждой итерации цикла, теперь же после всех итераций будет лететь запрос к API веб-приложухи).
+    #
+    # Вроде как понятно расписал, но хз я чутка заебался уже.
+    ##########
+
+    # Это новый словарик, в который мы соберем данные для веб-приложения
+    start_subscription_general_data = dict(
+        token=BOT_TOKEN,
+        subs_data=[],
+    )
+
     for i_acc in acc_qset:
         ch_available_numb = max_ch_per_acc - i_acc.channels.count()  # На сколько каналов может подписаться акк
         i_acc_channels_lst = ch_lst[:ch_available_numb]  # Срезаем нужные каналы для аккаунта в отдельный список
 
-        MY_LOGGER.debug('Создаём в БД запись о задаче аккаунту')
-        # Команда для бота (её данные)
-        command_data = {
-            "cmd": "subscribe_to_channels",
-            "data": [(i_ch.pk, i_ch.channel_link) for i_ch in i_acc_channels_lst],
+        # Данные для подписки итерируемому аккаунту
+        acc_task_data = {
+            'acc_pk': i_acc.pk,
+            'channels': [
+                {"channel_pk": i_ch.pk, "channel_link": i_ch.channel_link}
+                for i_ch in i_acc_channels_lst
+            ]
         }
+
+        # Создаём таск на подписку
+        MY_LOGGER.debug('Создаём в БД запись о задаче аккаунту')
         acc_task = AccountsSubscriptionTasks.objects.create(
             total_channels=len(i_acc_channels_lst),
             tlg_acc=i_acc,
-            initial_data=json.dumps(command_data),
+            initial_data=json.dumps(acc_task_data),
         )
         acc_task.channels.add(*i_acc_channels_lst)
 
-        MY_LOGGER.debug('Отправляем через бота задачу аккаунту')
-        command_data['task_pk'] = acc_task.pk
-        task_is_set = send_file_by_bot(
-            chat_id=i_acc.acc_tlg_id,
-            caption="/subscribe_to_channels",
-            file=BytesIO(json.dumps(command_data).encode(encoding='utf-8')),
-            file_name='command_data.txt',
-        )
-        if not task_is_set:
-            MY_LOGGER.warning(f'Не удалось поставить аккаунту задачу! {i_acc!r}')
-            acc_task.delete()  # Удаляем из БД задачу аккаунта
-            continue
+        # Устанавливаем PK таска на подписку и пополняем общий словарь
+        acc_task_data["subs_task_pk"] = acc_task.pk
+        start_subscription_general_data['subs_data'].append(acc_task_data)
 
-        ch_lst = ch_lst[ch_available_numb:]  # Отрезаем из общего списка каналы, которые забрал аккаунт
+        # Отрезаем из общего списка каналы, которые забрал аккаунт и проверяем закончился ли список с каналами
+        ch_lst = ch_lst[ch_available_numb:]
         if len(ch_lst) <= 0:
-            MY_LOGGER.debug('Список каталов закончился, останавливаем цикл итерации по аккаунтам')
-            break
-    MY_LOGGER.info('Таск по отправке аккаунтам задач подписаться на каналы завершена.')
+            MY_LOGGER.debug('Список каналов закончился, кидаем запрос в сервис аккаунтов для старта подписки и '
+                            'останавливаем цикл итерации по аккаунтам')
+            req_rslt, resp_info = post_req_to_accounts_service_for_start_subscription(
+                req_data=start_subscription_general_data
+            )
+            if not req_rslt:
+                msg = f'Не удалось отправить запрос для старта подписки на каналы | RESPONSE: {resp_info}'
+                MY_LOGGER.error(msg)
+            else:
+                msg = f'Таск по отправке аккаунтам задач подписаться на каналы завершен. | RESPONSE: {resp_info}'
+                MY_LOGGER.success(msg)
+            return msg
 
 
 @shared_task

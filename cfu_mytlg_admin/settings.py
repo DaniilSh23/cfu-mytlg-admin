@@ -38,6 +38,7 @@ env = environ.Env(
     SEND_NEWS_TIMEOUT=int,
     SHOW_SQL_LOG=bool,
     SENTRY_DSN=str,
+    ACCOUNT_SERVICE_HOST=str,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -58,6 +59,7 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = ['*']
 DOMAIN_NAME = env('DOMAIN_NAME')
+ACCOUNT_SERVICE_HOST = env('ACCOUNT_SERVICE_HOST')
 
 # Application definition
 
