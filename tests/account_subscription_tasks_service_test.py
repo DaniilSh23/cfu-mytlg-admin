@@ -1,5 +1,5 @@
 from django.test import TestCase
-from mytlg.models import AccountsSubscriptionTasks, TlgAccounts, Proxys
+from mytlg.models import AccountsSubscriptionTasks, TlgAccounts, Proxys, Channels, Categories, BotSettings
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
 from mytlg.serializers import WriteSubsResultSerializer
 import datetime
@@ -28,6 +28,16 @@ class AccountsSubscriptionTasksServiceTest(TestCase):
             proxy=proxy,
         )
 
+        cls.category = Categories.objects.create(
+            category_name="Test Theme",
+        )
+        cls.test_channel = Channels.objects.create(
+            channel_id=54321,
+            channel_name="Test Channel",
+            channel_link="https://test.com/channel",
+            category=cls.category,
+        )
+
     def test_get_account_subscription_tasks_by_pk(self):
         # Create a test AccountsSubscriptionTasks object
         test_task = AccountsSubscriptionTasks.objects.create(
@@ -47,7 +57,7 @@ class AccountsSubscriptionTasksServiceTest(TestCase):
 
     def test_get_account_subscription_tasks_by_pk_not_found(self):
         # Call the get_account_subscription_tasks_by_pk method with an unknown pk
-        task = AccountsSubscriptionTasksService.get_account_subscription_tasks_by_pk(99999)   # Non-existing PK
+        task = AccountsSubscriptionTasksService.get_account_subscription_tasks_by_pk(99999)  # Non-existing PK
         self.assertIsNone(task)
 
     def test_update_task_obj_data(self):
@@ -85,3 +95,27 @@ class AccountsSubscriptionTasksServiceTest(TestCase):
         self.assertEqual(updated_task.action_story, "Updated action story\nTest action story")
         self.assertEqual(updated_task.status, "Completed")
         self.assertIsNotNone(updated_task.ends_at)
+
+    def test_get_subscription_tasks_in_works(self):
+        # Create a test TlgAccount and Channels with status 'at_work'
+
+        BotSettings.objects.create(key='similarity_index_for_interests', value='0.8')
+
+        # Create a test AccountsSubscriptionTasks with status 'at_work' and associated TlgAccount and Channels
+        task = AccountsSubscriptionTasks.objects.create(
+            successful_subs=10,
+            failed_subs=5,
+            action_story="Test action story",
+            status="at_work",
+            total_channels=10,
+            started_at=datetime.datetime.now(),
+            ends_at=datetime.datetime.now(),
+            tlg_acc=self.test_account,
+            initial_data='исходные данные',
+        )
+        task.channels.set([self.test_channel])
+
+        # Call the method you want to test
+        result = AccountsSubscriptionTasksService.get_subscription_tasks_in_works()
+        # Assert that the expected task is in the result queryset
+        self.assertIn(task, result)

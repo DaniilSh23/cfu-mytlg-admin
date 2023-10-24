@@ -8,9 +8,11 @@ from cfu_mytlg_admin.settings import MY_LOGGER
 
 
 class TextProcessService:
+
+    similarity_index_for_interests = float(
+        BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
+
     def __init__(self):
-        self.similarity_index_for_interests = float(
-            BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
         self.embeddings = OpenAIEmbeddings()
 
     def make_index_db_from_embeddings(self, interest_lst):
