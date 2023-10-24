@@ -70,6 +70,6 @@ class CategoriesService:
                 defaults={"category_name": i_file_dct.get("category").lower()},
             )
             MY_LOGGER.debug(f'{"Создали" if theme_created else "Достали из БД"} тему {theme_obj}!')
-
+            # TODO вынести то что ниже из этой функции
             i_data = i_file_dct.get("data")
             ChannelsService.update_or_create_channels_from_data_file(i_data, theme_obj)
