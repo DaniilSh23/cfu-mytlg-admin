@@ -20,24 +20,24 @@ class InterestsServiceTest(TestCase):
         )
 
         cls.category = Categories.objects.create(category_name="test")
+        cls.interest1 = Interests.objects.create(bot_user=cls.bot_user, is_active=True, interest_type='main',
+                                                 category_id=cls.category.id)
+        cls.interest2 = Interests.objects.create(bot_user=cls.bot_user, is_active=True, interest_type='main',
+                                                 category_id=cls.category.id)
 
     def test_get_active_interests(self):
-
-        # Create some Interests objects related to the bot_user (modify as needed)
-        interest1 = Interests.objects.create(bot_user=self.bot_user, is_active=True, interest_type='main', category_id=self.category.id)
-        interest2 = Interests.objects.create(bot_user=self.bot_user, is_active=False, interest_type='main', category_id=self.category.id)
-
+        InterestsService.set_is_active_false_in_active_interests([self.interest2])
         # Call the method being tested
         active_interests = InterestsService.get_active_interests(self.bot_user)
-
         # Check if the method returns the active interests
-        self.assertEqual(list(active_interests), [interest1])
+        self.assertEqual(list(active_interests), [self.interest1])
 
     def test_set_is_active_false_in_active_interests(self):
-
         # Create some Interests objects related to the bot_user (modify as needed)
-        interest1 = Interests.objects.create(bot_user=self.bot_user, is_active=True, interest_type='main', category_id=self.category.id)
-        interest2 = Interests.objects.create(bot_user=self.bot_user, is_active=True, interest_type='main', category_id=self.category.id)
+        interest1 = Interests.objects.create(bot_user=self.bot_user, is_active=True, interest_type='main',
+                                             category_id=self.category.id)
+        interest2 = Interests.objects.create(bot_user=self.bot_user, is_active=True, interest_type='main',
+                                             category_id=self.category.id)
 
         # Call the method being tested
         InterestsService.set_is_active_false_in_active_interests([interest1, interest2])
@@ -89,3 +89,19 @@ class InterestsServiceTest(TestCase):
 
         # Check if the method returns the expected send periods
         self.assertEqual(send_periods, Interests.periods)
+
+    def test_check_if_bot_user_have_interest(self):
+        self.assertTrue(InterestsService.check_if_bot_user_have_interest(self.bot_user.pk))
+
+
+    # def test_bulk_create_interests(self):
+    #     interests = [self.interest1, self.interest2]
+    #     InterestsService.bulk_create_interests(self.bot_user, interests)
+    #     interests_count = Interests.objects.filter(bot_user=self.bot_user).count()
+    #     self.assertEqual(interests_count, 2)
+
+    def test_update_date_and_time_interests_last_sending_time(self):
+        interests = Interests.objects.create(bot_user=self.bot_user, category_id=self.category.id)
+        InterestsService.update_date_and_time_interests_last_sending_time([interests.id])
+        updated_interest = Interests.objects.get(pk=interests.id)
+        self.assertGreater(updated_interest.last_send, interests.last_send)
