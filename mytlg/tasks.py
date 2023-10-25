@@ -2,18 +2,15 @@ import datetime
 import hashlib
 import json
 import time
-from io import BytesIO
 
 import pytz
 from celery import shared_task
-from django.core.exceptions import ObjectDoesNotExist
 from langchain.embeddings import OpenAIEmbeddings
 
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE, BOT_TOKEN
-from mytlg.api_requests import post_req_to_accounts_service_for_start_subscription
+from mytlg.api_requests import AccountsServiceRequests
 from mytlg.servises.text_process_service import TextProcessService
 from mytlg.servises.categories_service import CategoriesService
-from mytlg.servises.channels_service import ChannelsService
 from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.news_posts_service import NewsPostsService
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
@@ -21,10 +18,9 @@ from mytlg.servises.account_subscription_tasks_service import AccountsSubscripti
 from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.servises.interests_service import InterestsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
-from mytlg.models import Categories, Channels, BotUser, NewsPosts, TlgAccounts, AccountsSubscriptionTasks, BotSettings, \
-    Interests, ScheduledPosts
+from mytlg.models import Channels, AccountsSubscriptionTasks, BotSettings
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
-    send_file_by_bot, bot_command_for_start_or_stop_account
+    bot_command_for_start_or_stop_account
 
 text_processor = TextProcessService()
 
@@ -230,7 +226,7 @@ def subscription_to_new_channels():
         if len(ch_lst) <= 0:
             MY_LOGGER.debug('Список каналов закончился, кидаем запрос в сервис аккаунтов для старта подписки и '
                             'останавливаем цикл итерации по аккаунтам')
-            req_rslt, resp_info = post_req_to_accounts_service_for_start_subscription(
+            req_rslt, resp_info = AccountsServiceRequests.post_req_for_start_subscription(
                 req_data=start_subscription_general_data
             )
             if not req_rslt:

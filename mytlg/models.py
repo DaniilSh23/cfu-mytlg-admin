@@ -6,6 +6,7 @@ from django.db.models.signals import pre_delete, pre_save, m2m_changed
 from django.dispatch import receiver
 
 from cfu_mytlg_admin.settings import MY_LOGGER
+from mytlg.api_requests import AccountsServiceRequests
 
 from mytlg.utils import bot_command_for_start_or_stop_account
 
@@ -104,7 +105,11 @@ class Proxys(models.Model):
 
     def __str__(self):
         return (f'{self.protocol}:{self.host}:{self.port}:{self.username if self.username else ""}'
-                f':{self.password if self.password else ""}')
+                f':{self.password if self.password else ""}:{self.protocol_type}')
+
+    def make_proxy_string(self):
+        return (f'{self.protocol}:{self.host}:{self.port}:{self.username if self.username else ""}'
+                f':{self.password if self.password else ""}:{self.protocol_type}')
 
     class Meta:
         ordering = ['-id']
@@ -158,6 +163,9 @@ def delete_session_file(sender, instance, **kwargs):
     if os.path.exists(instance.session_file.path):
         MY_LOGGER.debug(f'Удаляем файл сессии {instance.session_file.path!r}')
         os.remove(instance.session_file.path)
+
+    # Кидаем запрос к сервису аккаунтов для удаления аккаунта (остановка акка и удаление файла сессии)
+    AccountsServiceRequests.post_req_for_del_account(acc_pk=instance.pk)
     return
 
 

@@ -1,3 +1,4 @@
+import base64
 import datetime
 from socket import socket
 from typing import List
@@ -224,3 +225,23 @@ def process_json_file(encoding, file):
     )
     json_data = json.loads(json_file.read())
     return json_data
+
+
+def encoding_file_to_base64(file_path: str) -> str | None:
+    """
+    Функция для кодирования файла в base64
+    :param file_path: str - путь к файлу
+    """
+    MY_LOGGER.debug('Вызвана функция для преобразования файла в base64 строку.')
+
+    try:
+        # Открываем файл и преобразовываем его в base64 строку
+        with open(file_path, 'rb') as file:
+            file_content = file.read()
+        base64_string = base64.b64encode(file_content).decode('utf-8')
+    except Exception as err:
+        MY_LOGGER.warning(f'Произошла ошибка при преобразовании файла в base64 строку. | {err}')
+        return
+
+    MY_LOGGER.success(f"Файл {file_path!r} успешно преобразован в base64 строку.")
+    return base64_string
