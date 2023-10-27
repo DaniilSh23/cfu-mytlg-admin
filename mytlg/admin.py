@@ -90,6 +90,10 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "category",
         "is_ready",
     )
+    list_filter = (
+        "category",
+        "is_ready",
+    )
 
     def import_json(self, request: HttpRequest) -> HttpResponse:
         """
@@ -176,12 +180,14 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
 class ProxysAdmin(admin.ModelAdmin):
     list_display = (
         "pk",
+        "description",
         "display_proxy_data_together",
         "is_checked",
         "last_check",
     )
     list_display_links = (
         "pk",
+        "description",
         "display_proxy_data_together",
         "is_checked",
         "last_check",

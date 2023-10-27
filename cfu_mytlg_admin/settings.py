@@ -59,7 +59,6 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = ['*']
 DOMAIN_NAME = env('DOMAIN_NAME')
-ACCOUNT_SERVICE_HOST = env('ACCOUNT_SERVICE_HOST')
 
 # Application definition
 
@@ -232,6 +231,13 @@ MY_LOGGER.add(  # системные логи в файл
 
 # Настройки для Telegram
 BOT_TOKEN = env('BOT_TOKEN')
+
+# Сервис управления аккаунтами
+ACCOUNT_SERVICE_HOST = env('ACCOUNT_SERVICE_HOST')
+DEL_ACCOUNT_URL = f"{ACCOUNT_SERVICE_HOST}del_acc/"
+START_SUBSCRIPTION_ULR = f"{ACCOUNT_SERVICE_HOST}subs_accs_to_channels/"
+START_ACCOUNT_ULR = f"{ACCOUNT_SERVICE_HOST}start_acc/"
+STOP_ACCOUNT_ULR = f"{ACCOUNT_SERVICE_HOST}stop_acc/"
 
 # OpenAI Token
 OPENAI_API_KEY = env('OPENAI_API_KEY')

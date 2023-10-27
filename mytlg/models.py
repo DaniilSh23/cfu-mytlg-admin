@@ -104,8 +104,7 @@ class Proxys(models.Model):
     last_check = models.DateTimeField(verbose_name='крайняя проверка', blank=True, null=True)
 
     def __str__(self):
-        return (f'{self.protocol}:{self.host}:{self.port}:{self.username if self.username else ""}'
-                f':{self.password if self.password else ""}:{self.protocol_type}')
+        return self.description
 
     def make_proxy_string(self):
         return (f'{self.protocol}:{self.host}:{self.port}:{self.username if self.username else ""}'
@@ -182,12 +181,21 @@ def send_bot_command(sender, instance, **kwargs):
         return
 
     if old_instance.is_run != instance.is_run:
-        # TODO: разделить функционал отправки команды на старт и стоп аккаунта
-        bot_command = 'start_acc' if instance.is_run else 'stop_acc'
-        MY_LOGGER.info(f'Выполним отправку боту команды: {bot_command!r}')
-        bot_admin = BotSettings.objects.get(key='bot_admins').value.split()[0]
-        # Функция для отправки боту команды на старт или стоп аккаунта
-        bot_command_for_start_or_stop_account(instance=instance, bot_command=bot_command, bot_admin=bot_admin)
+
+        # Логика для старта аккаунта
+        if instance.is_run:
+            MY_LOGGER.debug(f'Отправляем запрос для СТАРТА аккаунта с PK == {instance.pk}')
+            AccountsServiceRequests.post_req_for_start_account(
+                acc_pk=instance.pk,
+                tlg_id=instance.acc_tlg_id,
+                proxy=instance.proxy.make_proxy_string(),
+                channel_ids=[i_ch.channel_id for i_ch in instance.channels.all()]
+            )
+            return
+
+        # Логика для остановки аккаунта
+        MY_LOGGER.debug(f'Отправляем запрос для ОСТАНОВКИ аккаунта с PK == {instance.pk}')
+        AccountsServiceRequests.post_req_for_stop_account(acc_pk=instance.pk)
 
 
 class AccountsErrors(models.Model):
@@ -306,7 +314,7 @@ class Interests(models.Model):
 # TODO: эту штуку надо дописать, чтобы при изменении или создании записи в т. Интересов автоматом
 #  генерировались эмбеддинги
 @receiver(pre_save, sender=Interests)
-def send_bot_command(sender, instance, **kwargs):
+def start_or_stop_account(sender, instance, **kwargs):
     """
     Обработка сигнала перед сохранением интереса пользователя
     """

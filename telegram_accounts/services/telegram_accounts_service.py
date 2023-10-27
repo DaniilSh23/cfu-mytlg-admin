@@ -22,7 +22,7 @@ class TelegramAccountService:
             result.append({
                 'pk': i_acc.pk,
                 'tlg_id': i_acc.acc_tlg_id,
-                'proxy': i_acc.proxy.__str__(),
+                'proxy': i_acc.proxy.make_proxy_string(),
                 'channels_ids': [str(i_ch.channel_id) for i_ch in i_acc.channels.all()]
             })
 
