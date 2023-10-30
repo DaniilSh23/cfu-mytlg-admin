@@ -11,9 +11,7 @@ class TextProcessService:
 
     similarity_index_for_interests = float(
         BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
-
-    def __init__(self):
-        self.embeddings = OpenAIEmbeddings()
+    embeddings = OpenAIEmbeddings()
 
     def make_index_db_from_embeddings(self, interest_lst):
         index_db = FAISS.from_embeddings(text_embeddings=interest_lst, embedding=self.embeddings)
