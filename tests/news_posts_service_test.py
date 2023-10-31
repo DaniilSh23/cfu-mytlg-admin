@@ -1,6 +1,7 @@
 from django.test import TestCase
-from mytlg.models import NewsPosts, Channels, Categories
-from mytlg.servises.news_posts_service import NewsPostsService
+import datetime
+from mytlg.models import NewsPosts, Channels, Categories, BotSettings
+from mytlg.servises.news_posts_service import NewsPostsService, BotSettingsService
 from mytlg.serializers import NewsPostsSerializer
 
 
@@ -88,3 +89,34 @@ class NewsPostsServiceTest(TestCase):
         self.assertEqual(created_post.post_link, "http://example.com")
         self.assertEqual(created_post.embedding, "Test Embedding")
         self.assertEqual(created_post.short_text, None)  # Short text should be None
+
+    # TODO вернуться к этому тесту после того как пофиксим баг с периодом
+    def test_get_posts_by_sending_period(self):
+        post_1 = NewsPosts.objects.create(
+            channel=self.channel,
+            text="Test Post 1",
+            embedding="Test Embedding 1",
+        )
+        post_1.created_at = datetime.datetime.now() - datetime.timedelta(days=1)
+        post_1.save()
+        post_2 = NewsPosts.objects.create(
+            channel=self.channel,
+            text="Test Post 2",
+            embedding="Test Embedding 2",
+        )
+        post_2.created_at = datetime.datetime.now() - datetime.timedelta(days=2)
+        post_2.save()
+        post_3 = NewsPosts.objects.create(
+            channel=self.channel,
+            text="Test Post 3",
+            embedding="Test Embedding 3",
+        )
+        post_3.created_at = datetime.datetime.now() - datetime.timedelta(days=12)
+        post_3.save()
+        BotSettings.objects.create(key='period_for_what_was_interest_sec', value='604800')
+        period = datetime.datetime.now() - datetime.timedelta(
+            seconds=int(BotSettingsService.get_bot_settings_by_key(key='period_for_what_was_interest_sec')))
+        posts = NewsPostsService.get_posts_by_sending_period()
+        self.assertEqual(len(posts), 2)  # Only two post should be inside the sending period
+        self.assertListEqual([post_2, post_1], list(posts))  # The post created within the period should be in the result
+        self.assertNotIn(post_3, posts)

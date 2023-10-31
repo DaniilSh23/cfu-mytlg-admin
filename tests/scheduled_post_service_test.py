@@ -2,7 +2,9 @@ from django.test import TestCase
 from mytlg.serializers import NewsPostsSerializer
 from mytlg.models import ScheduledPosts, BotUser, Interests, NewsPosts, Categories, Channels
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
-import datetime
+from datetime import datetime, timedelta
+import pytz
+from cfu_mytlg_admin.settings import TIME_ZONE
 
 
 class ScheduledPostsServiceTest(TestCase):
@@ -18,40 +20,73 @@ class ScheduledPostsServiceTest(TestCase):
         )
         cls.category = Categories.objects.create(category_name="test")
         cls.serializer = NewsPostsSerializer()
-
-    def test_get_posts_for_show(self):
-        # Create test data
-        channel = Channels.objects.create(
+        cls.channel = Channels.objects.create(
             channel_name='название канала',
             channel_link='https://t.me/+19vCK2iwUic2Y2Iy',
             description='описание',
             subscribers_numb=4,
-            category=self.category,
+            category=cls.category,
             is_ready=True
         )
-        interest = Interests.objects.create(bot_user=self.bot_user, is_active=True, interest_type='main',
-                                            category_id=self.category.id)
 
-        news_post = NewsPosts.objects.create(
-            channel=channel,
+        cls.now = datetime.now(pytz.timezone(TIME_ZONE))
+        cls.one_hour = timedelta(hours=1)
+
+        # Create a sample BotUser
+        cls.bot_user = BotUser.objects.create(tlg_id="test_bot")
+
+        # Create a sample NewsPost
+        cls.news_post = NewsPosts.objects.create(
+            channel=cls.channel,
             text='В инвесткомпании BlackRoock назвали фейком новость о том, что SEC одобрила спотовый биткоин-ETF. Главный аналитик BBG по ETF говорит, что новость «очень странная» и никак не подтверждена. @bankrollo',
             short_text='BlackRock отвергает новость о том, что SEC одобрила спотовый биткоин-ETF, называя ее фейком. Новость не подтверждена и является странной, согласно главному аналитику BBG по ETF.',
             post_link='https://t.me/bankrollo/20300',
-            embedding=self.emd,
+            embedding=cls.emd,
             is_sent=False,
         )
 
-        ScheduledPosts.objects.create(
-            selection_hash="test_hash",
-            bot_user=self.bot_user,
-            news_post=news_post,
-            interest=interest,
-            when_send=datetime.datetime.now()
+        # Create a sample Interest
+        cls.interest = Interests.objects.create(
+            bot_user=cls.bot_user,
+            is_active=True,
+            interest_type='main',
+            category_id=cls.category.id
         )
 
+        # Create a ScheduledPosts entry
+        cls.scheduled_post = ScheduledPosts.objects.create(
+            selection_hash="test_hash",
+            bot_user=cls.bot_user,
+            news_post=cls.news_post,
+            interest=cls.interest,
+            when_send=datetime.now()
+        )
+
+    def test_get_posts_for_show(self):
         # Call the method you want to test
         posts, tlg_id = ScheduledPostsService.get_posts_for_show("test_hash")
 
         # Assertions
         self.assertEqual(len(posts), 1)
         self.assertEqual(tlg_id, self.bot_user.tlg_id)
+
+    def test_create_scheduled_post(self):
+        sending_datetime = self.now + self.one_hour
+        ScheduledPostsService.create_scheduled_post(self.bot_user, self.interest, self.news_post, sending_datetime)
+
+        self.assertEqual(ScheduledPosts.objects.count(), 2)  # Check if a new entry is created
+
+    def test_get_posts_that_need_to_send(self):
+        posts = ScheduledPostsService.get_posts_that_need_to_send()
+        self.assertEqual(len(posts), 1)  # There should be one entry ready to send
+        self.assertEqual(posts[0], self.scheduled_post)  # The retrieved entry should match the created one
+
+    def test_get_scheduled_posts_by_bot_user_and_news_post_for_task(self):
+        posts_qset = ScheduledPostsService.get_scheduled_posts_by_bot_user_and_news_post_for_task(self.bot_user, self.news_post)
+        self.assertEqual(len(posts_qset), 1)  # There should be one matching entry
+        self.assertEqual(posts_qset[0], self.scheduled_post)  # The retrieved entry should match the created one
+
+    def test_update_when_send_for_not_sended_posts(self):
+        ScheduledPostsService.update_when_send_for_not_sended_posts(ScheduledPosts.objects.all())
+        updated_scheduled_post = ScheduledPosts.objects.get(id=self.scheduled_post.id)
+        self.assertTrue(updated_scheduled_post.when_send <= datetime.now(pytz.timezone(TIME_ZONE)))
