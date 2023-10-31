@@ -9,7 +9,7 @@ from langchain.embeddings import OpenAIEmbeddings
 
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE, BOT_TOKEN
 from mytlg.api_requests import AccountsServiceRequests
-from mytlg.servises.text_process_service import TextProcessService
+from posts.services.text_process_service import TextProcessService
 from mytlg.servises.categories_service import CategoriesService
 from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.news_posts_service import NewsPostsService

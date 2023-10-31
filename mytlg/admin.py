@@ -13,6 +13,9 @@ from mytlg.servises.channels_service import ChannelsService
 from mytlg.common import save_json_channels
 
 
+admin.site.site_header = 'Администрирование YOUR TELEGRAM PROJECT'
+
+
 @admin.register(BotUser)
 class BotUserAdmin(admin.ModelAdmin):
     list_display = (

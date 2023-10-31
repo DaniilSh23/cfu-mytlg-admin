@@ -72,6 +72,8 @@ INSTALLED_APPS = [
 
     # Созданные приложения
     'mytlg.apps.MytlgConfig',
+    'posts.apps.PostsConfig',
+    'telegram_accounts.apps.TelegramAccountsConfig',
 
     # сторонние приложения
     'rest_framework',

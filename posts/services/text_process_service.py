@@ -8,10 +8,9 @@ from cfu_mytlg_admin.settings import MY_LOGGER
 
 
 class TextProcessService:
-    def __init__(self):
-        self.similarity_index_for_interests = float(
-            BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
-        self.embeddings = OpenAIEmbeddings()
+    similarity_index_for_interests = float(
+        BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
+    embeddings = OpenAIEmbeddings()
 
     def make_index_db_from_embeddings(self, interest_lst):
         index_db = FAISS.from_embeddings(text_embeddings=interest_lst, embedding=self.embeddings)
@@ -129,3 +128,4 @@ class TextProcessService:
             return False
         answer = completion.choices[0].message.content
         return answer  # возвращает ответ
+

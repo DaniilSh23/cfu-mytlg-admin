@@ -28,7 +28,7 @@ from mytlg.servises.bot_token_service import BotTokenService
 from mytlg.servises.account_errors_service import TlgAccountErrorService
 from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
-from mytlg.servises.text_process_service import TextProcessService
+from posts.services.text_process_service import TextProcessService
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
