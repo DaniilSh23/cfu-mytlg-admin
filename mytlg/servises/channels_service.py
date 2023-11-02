@@ -64,6 +64,11 @@ class ChannelsService:
         return channels_lst
 
     @staticmethod
+    def update_or_create(channel_link, defaults):
+        ch_obj, ch_created = Channels.objects.update_or_create(channel_link=channel_link, defaults=defaults)
+        return ch_obj, ch_created
+
+    @staticmethod
     def get_channels_qset_only_ids(theme_obj):
         try:
             return Channels.objects.filter(category=theme_obj).only("id")
@@ -73,14 +78,8 @@ class ChannelsService:
             return None
 
     @staticmethod
-    def update_or_create(channel_link, defaults):
-        ch_obj, ch_created = Channels.objects.update_or_create(channel_link=channel_link, defaults=defaults)
-        return ch_obj, ch_created
-
-    @staticmethod
     def update_or_create_channels_from_data_file(i_data, theme_obj):
         for i_key, i_val in i_data.items():
-            # ch_obj, ch_created = Channels.objects.update_or_create(
             ch_obj, ch_created = ChannelsService.update_or_create(
                 channel_link=i_val[1],
                 defaults={

@@ -26,6 +26,6 @@ class NewsPostsService:
     @staticmethod
     def get_posts_by_sending_period():
         period = int(BotSettingsService.get_bot_settings_by_key(key='period_for_what_was_interest_sec'))
-        period = datetime.datetime.fromtimestamp(float(period))
-        posts = NewsPosts.objects.filter(created_at__gt=period).only('embedding', 'post_link', 'short_text')
+        period = datetime.datetime.now() - datetime.timedelta(seconds=int(period))
+        posts = NewsPosts.objects.filter(created_at__gte=period).only('embedding', 'post_link', 'short_text')
         return posts
