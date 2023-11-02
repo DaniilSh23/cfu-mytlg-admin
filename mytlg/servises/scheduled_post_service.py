@@ -1,11 +1,10 @@
 import datetime
 import pytz
-from mytlg.models import ScheduledPosts, BotUser, Interests, NewsPosts, BlackLists
+from mytlg.models import ScheduledPosts, BotUser, Interests, NewsPosts
 from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.black_lists_service import BlackListsService
-from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.servises.interests_service import InterestsService
-from mytlg.servises.text_process_service import TextProcessService
+from posts.services.text_process_service import TextProcessService
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
 
 

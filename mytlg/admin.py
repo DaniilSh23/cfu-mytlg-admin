@@ -13,6 +13,9 @@ from mytlg.servises.channels_service import ChannelsService
 from mytlg.common import save_json_channels
 
 
+admin.site.site_header = 'Администрирование YOUR TELEGRAM PROJECT'
+
+
 @admin.register(BotUser)
 class BotUserAdmin(admin.ModelAdmin):
     list_display = (
@@ -87,6 +90,10 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "channel_name",
         "channel_link",
         "created_at",
+        "category",
+        "is_ready",
+    )
+    list_filter = (
         "category",
         "is_ready",
     )
@@ -176,12 +183,14 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
 class ProxysAdmin(admin.ModelAdmin):
     list_display = (
         "pk",
+        "description",
         "display_proxy_data_together",
         "is_checked",
         "last_check",
     )
     list_display_links = (
         "pk",
+        "description",
         "display_proxy_data_together",
         "is_checked",
         "last_check",

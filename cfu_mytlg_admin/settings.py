@@ -38,6 +38,7 @@ env = environ.Env(
     SEND_NEWS_TIMEOUT=int,
     SHOW_SQL_LOG=bool,
     SENTRY_DSN=str,
+    ACCOUNT_SERVICE_HOST=str,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -71,6 +72,8 @@ INSTALLED_APPS = [
 
     # Созданные приложения
     'mytlg.apps.MytlgConfig',
+    'posts.apps.PostsConfig',
+    'telegram_accounts.apps.TelegramAccountsConfig',
 
     # сторонние приложения
     'rest_framework',
@@ -230,6 +233,13 @@ MY_LOGGER.add(  # системные логи в файл
 
 # Настройки для Telegram
 BOT_TOKEN = env('BOT_TOKEN')
+
+# Сервис управления аккаунтами
+ACCOUNT_SERVICE_HOST = env('ACCOUNT_SERVICE_HOST')
+DEL_ACCOUNT_URL = f"{ACCOUNT_SERVICE_HOST}del_acc/"
+START_SUBSCRIPTION_ULR = f"{ACCOUNT_SERVICE_HOST}subs_accs_to_channels/"
+START_ACCOUNT_ULR = f"{ACCOUNT_SERVICE_HOST}start_acc/"
+STOP_ACCOUNT_ULR = f"{ACCOUNT_SERVICE_HOST}stop_acc/"
 
 # OpenAI Token
 OPENAI_API_KEY = env('OPENAI_API_KEY')
