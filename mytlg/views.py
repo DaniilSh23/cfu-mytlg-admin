@@ -113,6 +113,7 @@ class WriteUsrView(APIView):
                 "tlg_id": request.data.get("tlg_id"),
                 "tlg_username": request.data.get("tlg_username"),
                 "language_code": request.data.get("language_code", 'ru'),
+                "source_tag": request.data.get("source_tag")
             }
         )
         MY_LOGGER.success(f'Данные о юзере успешно {"созданы" if created else "обновлены"} даём ответ на запрос.')
