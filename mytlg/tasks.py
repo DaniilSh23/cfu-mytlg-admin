@@ -195,7 +195,9 @@ def subscription_to_new_channels():
         subs_data=[],
     )
 
-    for i_acc in acc_qset:
+    MY_LOGGER.debug(f'Итерируемся по {len(acc_qset)} для создания задач на подписку.')
+    for i_indx, i_acc in enumerate(acc_qset):
+        MY_LOGGER.debug(f'Итерируемся по {i_indx+1} аккаунту из {len(acc_qset)}')
         ch_available_numb = max_ch_per_acc - i_acc.channels.count()  # На сколько каналов может подписаться акк
         i_acc_channels_lst = ch_lst[:ch_available_numb]  # Срезаем нужные каналы для аккаунта в отдельный список
 
@@ -224,9 +226,10 @@ def subscription_to_new_channels():
         # Отрезаем из общего списка каналы, которые забрал аккаунт и проверяем закончился ли список с каналами
         ch_lst = ch_lst[ch_available_numb:]
         MY_LOGGER.debug(f'Осталось {len(ch_lst)} каналов в общем списки для подписки на них.')
-        if len(ch_lst) <= 0:
-            MY_LOGGER.debug('Список каналов закончился, кидаем запрос в сервис аккаунтов для старта подписки и '
-                            'останавливаем цикл итерации по аккаунтам')
+        if len(ch_lst) <= 0 or i_indx + 1 == len(acc_qset):
+            MY_LOGGER.debug('Список каналов закончился или закончился список аккаунтов, которые могут подписываться,'
+                            ' кидаем запрос в сервис аккаунтов для старта подписки и останавливаем цикл итерации по '
+                            'аккаунтам')
             req_rslt, resp_info = AccountsServiceRequests.post_req_for_start_subscription(
                 req_data=start_subscription_general_data
             )
