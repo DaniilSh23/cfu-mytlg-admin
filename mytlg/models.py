@@ -18,10 +18,13 @@ class BotUser(models.Model):
     tlg_id = models.CharField(verbose_name='tlg_id', max_length=30, db_index=True)
     tlg_username = models.CharField(verbose_name='username', max_length=100, blank=False, null=True)
     language_code = models.CharField(verbose_name='language_code', default='RU', max_length=5)
-    start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
     category = models.ManyToManyField(verbose_name='категории', related_name='bot_user', to='Categories', blank=True)
     channels = models.ManyToManyField(verbose_name='каналы', related_name='bot_user', to='Channels', blank=True)
     when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
+    source_tag = models.CharField(verbose_name='Тег источника', max_length=50, blank=True)
+
+    start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name='Дата изменения пользователя', auto_now=True)
 
     def __str__(self):
         return f'User TG_ID {self.tlg_id}'
