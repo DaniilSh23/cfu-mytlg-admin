@@ -8,7 +8,6 @@ from cfu_mytlg_admin.settings import MY_LOGGER
 
 
 class TextProcessService:
-
     similarity_index_for_interests = float(
         BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
     embeddings = OpenAIEmbeddings()

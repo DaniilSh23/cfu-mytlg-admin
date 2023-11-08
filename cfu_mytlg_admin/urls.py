@@ -23,6 +23,8 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, Sp
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('mytlg/', include('mytlg.urls')),
+    path('telegram_accounts/', include('telegram_accounts.urls')),
+    path('posts/', include('posts.urls')),
 
     # Урлы для страниц документации API (сделано через drf_spectacular)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
