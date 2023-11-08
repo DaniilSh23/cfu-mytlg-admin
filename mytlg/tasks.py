@@ -209,7 +209,7 @@ def subscription_to_new_channels():
         }
 
         # Создаём таск на подписку
-        MY_LOGGER.debug('Создаём в БД запись о задаче аккаунту')
+        MY_LOGGER.debug(f'Создаём в БД запись о задаче аккаунту PK = {i_acc.pk}')
         acc_task = AccountsSubscriptionTasks.objects.create(
             total_channels=len(i_acc_channels_lst),
             tlg_acc=i_acc,
@@ -223,6 +223,7 @@ def subscription_to_new_channels():
 
         # Отрезаем из общего списка каналы, которые забрал аккаунт и проверяем закончился ли список с каналами
         ch_lst = ch_lst[ch_available_numb:]
+        MY_LOGGER.debug(f'Осталось {len(ch_lst)} каналов в общем списки для подписки на них.')
         if len(ch_lst) <= 0:
             MY_LOGGER.debug('Список каналов закончился, кидаем запрос в сервис аккаунтов для старта подписки и '
                             'останавливаем цикл итерации по аккаунтам')
