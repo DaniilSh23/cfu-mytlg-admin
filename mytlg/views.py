@@ -12,7 +12,7 @@ from rest_framework import status
 from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
-from mytlg.forms import BlackListForm, WhatWasInterestingForm
+from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
 from mytlg.servises.reactions_service import ReactionsService
@@ -34,6 +34,7 @@ from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, 
 
 INVALID_TOKEN_TEXT = 'invalid token'
 SUCCESS_TEMPLATE_PATH = 'mytlg/success.html'
+CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH = 'mytlg/channels_search_results.html'
 NOT_VALID_DATA = 'Not valid data'
 VALID_DATA_CHECK_TOKEN = 'Данные валидны, проверяем токен'
 OK_THANKS = 'Хорошо, спасибо!'
@@ -623,7 +624,27 @@ class SearchAndAddNewChannels(View):
         MY_LOGGER.info('GET запрос на вьюшку SearchAndAddNewChannels')
         return render(request, template_name='mytlg/search_and_add_channels.html')
 
+    def post(self, request):
+        MY_LOGGER.info('Поступил POST запрос на вьюшку для поиска телеграм канала')
 
+        form = SearchAndAddNewChannelsForm(request.POST)
+        print(request.POST)
+        if not form.is_valid():
+            MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
+            err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            return redirect(to=reverse_lazy('mytlg:search_and_add_channels'))
+        tlg_id = form.cleaned_data.get("tlg_id")
+
+        context = dict(
+            channels_list=[
+                {'name': 'channel_name1', 'link': 'channel_link1'},
+                {'name': 'channel_name2', 'link': 'channel_link2'},
+                {'name': 'channel_name3', 'link': 'channel_link3'},
+                {'name': 'channel_name4', 'link': 'channel_link4'},
+                {'name': 'channel_name5', 'link': 'channel_link5'}
+            ]
+        )
+        return render(request, template_name=CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH, context=context)
 
 
 

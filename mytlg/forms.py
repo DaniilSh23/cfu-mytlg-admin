@@ -31,3 +31,15 @@ class WhatWasInterestingForm(forms.Form):
         message='запрос не из телеграмма',
         code='invalid_tlg_id'
     )])
+
+
+class SearchAndAddNewChannelsForm(forms.Form):
+    """
+    Форма для функции "что было нового".
+    """
+    search_keywords = forms.CharField()
+    tlg_id = forms.CharField(validators=[RegexValidator(
+        regex=r'^\d+$',  # Регулярное выражение для цифр
+        message='запрос не из телеграмма',
+        code='invalid_tlg_id'
+    )])
