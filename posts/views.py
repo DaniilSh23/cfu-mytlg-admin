@@ -17,7 +17,7 @@ class RawChannelPost(APIView):
     """
     def post(self, request: Request):
         MY_LOGGER.info(f'Получен запрос на вьюшку приёма сырых постов.')
-        ser = RawChannelPostSerializer(request.data)
+        ser = RawChannelPostSerializer(data=request.data)
 
         # Проверка токена
         if BOT_TOKEN != request.data.get("token"):
