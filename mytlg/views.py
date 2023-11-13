@@ -614,6 +614,19 @@ class WhatWasInteresting(View):
         return render(request, template_name=SUCCESS_TEMPLATE_PATH, context=context)
 
 
+class SearchAndAddNewChannels(View):
+    """
+    Вьюшки для поиска и добавления собственных телеграм каналов.
+    """
+
+    def get(self, request):
+        MY_LOGGER.info('GET запрос на вьюшку SearchAndAddNewChannels')
+        return render(request, template_name='mytlg/search_and_add_channels.html')
+
+
+
+
+
 def test_view(request):
     """
     Тестовая вьюшка. Тестим всякое
