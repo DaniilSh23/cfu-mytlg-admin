@@ -135,6 +135,8 @@ class TlgAccounts(models.Model):
     created_at = models.DateTimeField(verbose_name='дата и время добавления акка', auto_now_add=True)
     channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='tlg_accounts', blank=True)
     subscribed_numb_of_channels = models.IntegerField(verbose_name='кол-во подписок на каналы', default=0)
+    for_search = models.BooleanField(verbose_name='Аккаунт используется для поиска каналов', default=False)
+
 
     def __str__(self):
         return f'TLG Account ID=={self.acc_tlg_id}'

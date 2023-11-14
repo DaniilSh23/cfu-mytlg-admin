@@ -118,6 +118,17 @@ class ChannelsService:
                                          fields=["channel_id", "channel_name", "subscribers_numb", "is_ready"])
             tlg_acc_obj.channels.add(*ch_ids_lst)
 
+    @staticmethod
+    def send_request_for_search_channels(searh_keywords):
+        founded_channels = [
+                {'name': 'channel_name1', 'link': 'channel_link1'},
+                {'name': 'channel_name2', 'link': 'channel_link2'},
+                {'name': 'channel_name3', 'link': 'channel_link3'},
+                {'name': 'channel_name4', 'link': 'channel_link4'},
+                {'name': 'channel_name5', 'link': 'channel_link5'}
+            ]
+        return founded_channels
+
     # @staticmethod
     # def create_new_channels_in_admin_dashboard_from_json_file(file, encoding):  # TODO: переписать
     #     """

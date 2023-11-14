@@ -636,16 +636,10 @@ class SearchAndAddNewChannels(View):
         cleaned_form_data = form.cleaned_data
         tlg_id = cleaned_form_data.get("tlg_id")
         search_keywords = cleaned_form_data.get('search_keywords')
-
+        founded_channels = ChannelsService.send_request_for_search_channels(search_keywords)
         # TODO Получаем найденные каналы и передаем пользователю результаты
         context = dict(
-            channels_list=[
-                {'name': 'channel_name1', 'link': 'channel_link1'},
-                {'name': 'channel_name2', 'link': 'channel_link2'},
-                {'name': 'channel_name3', 'link': 'channel_link3'},
-                {'name': 'channel_name4', 'link': 'channel_link4'},
-                {'name': 'channel_name5', 'link': 'channel_link5'}
-            ],
+            channels_list=founded_channels,
             search_keywords=search_keywords
         )
         return render(request, template_name=CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH, context=context)
