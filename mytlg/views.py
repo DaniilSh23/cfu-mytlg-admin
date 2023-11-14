@@ -634,7 +634,7 @@ class SearchAndAddNewChannels(View):
             err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:search_and_add_channels'))
         tlg_id = form.cleaned_data.get("tlg_id")
-
+        # TODO Получаем найденные каналы и передаем пользователю результаты
         context = dict(
             channels_list=[
                 {'name': 'channel_name1', 'link': 'channel_link1'},
