@@ -25,9 +25,13 @@ class RawChannelPost(APIView):
             return Response(status=403, data={"result": f"{INVALID_TOKEN} | "
                                                         f"{BOT_TOKEN} != {request.data.get('token')}"})
         if ser.is_valid():
-
+            validated_data = ser.validated_data
             # Вызываем таск селери для обработки поста и даём ответ на запрос
-            raw_post_processing.delay()
+            raw_post_processing(
+                ch_pk=validated_data.get('ch_pk'),
+                new_post_text=validated_data.get('new_post_text'),
+                post_link=validated_data.get('post_link')
+            ).delay()
             return Response(status=200, data={'result': 'OK!'})
 
         else:
