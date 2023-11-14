@@ -75,7 +75,7 @@
           success: function(data) {
             $('#ajaxResult').html(data); // обновляем содержимое элемента с id="ajaxResult"
             $('#searchChannelForm').hide();   // Скрываем форму с интересами
-            $('#cardHeader').text('Результаты поиска:');
+            $('#cardHeader').hide();
           },
           error: function() {
             alert('Произошла ошибка');

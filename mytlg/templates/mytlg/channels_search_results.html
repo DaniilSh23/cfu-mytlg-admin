@@ -1,7 +1,10 @@
 <div>
-    {% for channel in channels_list %}
-    <ul>
-        <li><p>{{ channel.name }} {{ channel.link }}</p></li>
-    </ul>
-    {% endfor %}
+    <h5 id="cardHeader" class="card-header">Результаты поиска для {{ search_keywords }}:</h5>
+    <div>
+        {% for channel in channels_list %}
+        <ul>
+            <li><p>{{ channel.name }} {{ channel.link }}</p></li>
+        </ul>
+        {% endfor %}
+    </div>
 </div>

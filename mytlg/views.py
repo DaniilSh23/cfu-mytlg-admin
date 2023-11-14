@@ -633,7 +633,10 @@ class SearchAndAddNewChannels(View):
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
             err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:search_and_add_channels'))
-        tlg_id = form.cleaned_data.get("tlg_id")
+        cleaned_form_data = form.cleaned_data
+        tlg_id = cleaned_form_data.get("tlg_id")
+        search_keywords = cleaned_form_data.get('search_keywords')
+
         # TODO Получаем найденные каналы и передаем пользователю результаты
         context = dict(
             channels_list=[
@@ -642,7 +645,8 @@ class SearchAndAddNewChannels(View):
                 {'name': 'channel_name3', 'link': 'channel_link3'},
                 {'name': 'channel_name4', 'link': 'channel_link4'},
                 {'name': 'channel_name5', 'link': 'channel_link5'}
-            ]
+            ],
+            search_keywords=search_keywords
         )
         return render(request, template_name=CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH, context=context)
 
