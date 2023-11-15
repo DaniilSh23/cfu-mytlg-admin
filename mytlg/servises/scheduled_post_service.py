@@ -32,14 +32,14 @@ class ScheduledPostsService:
         return posts, tlg_id
 
     @staticmethod
-    def create_scheduled_post(i_user, interest, post, sending_datetime):
+    def create_scheduled_post(i_user, user_interest, post, sending_datetime):
         obj = ScheduledPosts.objects.create(
             bot_user=i_user,
             news_post=post,
             when_send=sending_datetime,
-            interest=interest,
+            interest=user_interest,
         )
-        MY_LOGGER.debug(f'Создана запись в таблице спланированных постов, для юзера {i_user} | интерес: {interest}'
+        MY_LOGGER.debug(f'Создана запись в таблице спланированных постов, для юзера {i_user} | интерес: {user_interest}'
                         f'| пост: {post} | спланированная дата и время отправки: {obj.when_send!r}')
 
     # TODO: требует рефакторинга. Эта функция вызывается при отборе постов, которые необходимо отправить конкретному юзеру
@@ -48,7 +48,7 @@ class ScheduledPostsService:
     #  привести функцию к универсальному виду. Вызывается эта функция во views.RelatedNewsView и
     #  в tasks.search_content_by_new_interest . Надо будет, короче, что-то с ней придумать, чтобы все почище было.
     @staticmethod
-    def scheduling_post_for_sending(post: NewsPosts, bot_usr: BotUser = None, interest: Interests = None):
+    def scheduling_post_for_sending(post: NewsPosts, bot_usr: BotUser = None, user_interest: Interests = None):
         """
         Отбор пользователей для поста и планирование поста к отправке.
         """
@@ -64,12 +64,13 @@ class ScheduledPostsService:
                     MY_LOGGER.warning(f'Пост {post!r} не прошёл черный список юзера {i_user!r}')
                     continue
 
-            interests = InterestsService.filter_interest_for_scheduling_posts(i_user, interest, post)
+            interests = InterestsService.filter_interest_for_scheduling_posts(i_user, user_interest, post)
+            MY_LOGGER.debug(f'ЭТО ИНТЕРЕСЫ ДЛЯ ЮЗЕРА PK == {i_user.pk} | {interests}')
             if len(interests) < 1:
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} не указаны интересы')
                 continue
 
-            # Делаем список из кортежей с формировками интересов и эмбеддингов
+            # Делаем список из кортежей с формулировками интересов и эмбеддингов
             interest_lst_for_gpt_processing = InterestsService.create_interests_list_for_gpt_processing(interests)
             # Пилим индексную базу из эмбеддингов для интересов
             index_db = text_processor.make_index_db_from_embeddings(interest_lst_for_gpt_processing)
@@ -83,12 +84,12 @@ class ScheduledPostsService:
                 continue
 
             # Определяем когда в следующий раз нужно отправить пользователю посты для данного интереса
-            interest, sending_datetime = InterestsService.calculate_sending_time_for_interest(
+            user_interest, sending_datetime = InterestsService.calculate_sending_time_for_interest(
                 filtered_rel_interest=filtered_rel_interests[0],
                 i_user=i_user,
                 interests=interests,
             )
-            ScheduledPostsService.create_scheduled_post(i_user, interest, post, sending_datetime)
+            ScheduledPostsService.create_scheduled_post(i_user, user_interest, post, sending_datetime)
 
     @staticmethod
     def get_posts_that_need_to_send():

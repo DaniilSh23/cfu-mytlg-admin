@@ -324,7 +324,7 @@ def search_content_by_new_interest(interest, usr_tlg_id):
         ScheduledPostsService.scheduling_post_for_sending(
             post=i_post,
             bot_usr=bot_user_obj,
-            interest=new_interest,
+            user_interest=new_interest,
         )
 
     MY_LOGGER.info(f'Конец задачи селери по поиску контента для юзера с tlg_id=={usr_tlg_id!r}')
