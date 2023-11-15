@@ -20,7 +20,10 @@ from django.conf.urls.static import static
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
+from cfu_mytlg_admin.views import redirect_to_admin
+
 urlpatterns = [
+    path('', redirect_to_admin),
     path('admin/', admin.site.urls),
     path('mytlg/', include('mytlg.urls')),
     path('telegram_accounts/', include('telegram_accounts.urls')),
