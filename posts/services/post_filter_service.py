@@ -65,7 +65,6 @@ class PostFilters:
 
         # Пилим эмбеддинги для нового поста
         MY_LOGGER.debug(f'Пилим эмбеддинги для нового поста')
-        MY_LOGGER.debug(f'НОВЫЙ ПОСТ -- {self.new_post}')
         self.new_post_embedding = embeddings.embed_query(self.new_post)
 
         # Делаем индексную базу из старых кусков текста
