@@ -43,6 +43,7 @@ class TlgAccountsService:
 
     @staticmethod
     def get_tlg_accounts_for_start_or_stop():
-        tlg_accounts = TlgAccounts.objects.filter(is_run=True).only("id", "session_file", "proxy").prefetch_related(
+        tlg_accounts = TlgAccounts.objects.filter(is_run=True, for_search=False).only("id", "session_file",
+                                                                                      "proxy").prefetch_related(
             "proxy")
         return tlg_accounts
