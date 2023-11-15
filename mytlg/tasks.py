@@ -348,7 +348,7 @@ def sending_post_selections():
     bot_user_ids = set(posts.values_list('bot_user', flat=True))
     bot_users = BotUsersService.get_bot_users_id_and_tlg_id_by_ids(bot_user_ids)
 
-    # Поочереди достаём посты для конкретного юзера и отправляем их сокращенный вариант
+    # Поочереди достаём посты для конкретного юзера и отправляем от лица бота сообщение с хэшем подборки постов
     for i_usr in bot_users:
         if InterestsService.check_if_bot_user_have_interest(i_usr.id):
             selection_hash = hashlib.md5(f'{time_now}{i_usr.tlg_id}'.encode('utf-8')).hexdigest()

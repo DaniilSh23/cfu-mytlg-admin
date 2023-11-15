@@ -84,7 +84,9 @@ class ShowScheduledPosts(View):
     def get(self, request):
         MY_LOGGER.info(f'Получен запрос на вьюшку ShowScheduledPosts {request.GET}')
         token = request.GET.get("token")
-        BotTokenService.check_bot_token(token)
+        bad_response = BotTokenService.check_bot_token(token)
+        if bad_response:
+            return bad_response
         post_hash = request.GET.get('post_hash')
         posts, tlg_id = ScheduledPostsService.get_posts_for_show(post_hash=post_hash)
 
@@ -334,6 +336,7 @@ class RelatedNewsView(APIView):
         ser = NewsPostsSerializer(all_posts_lst, many=True)
         return Response(data=ser.data, status=status.HTTP_200_OK)
 
+    @extend_schema(request=WriteNewPostSerializer, responses=str, methods=['post'])
     def post(self, request):
         """
         Запись в БД нового новостного поста.
