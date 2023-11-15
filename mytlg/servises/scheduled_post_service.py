@@ -7,7 +7,6 @@ from mytlg.servises.interests_service import InterestsService
 from posts.services.text_process_service import TextProcessService
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
 
-
 text_processor = TextProcessService()
 
 
@@ -65,26 +64,30 @@ class ScheduledPostsService:
                     MY_LOGGER.warning(f'Пост {post!r} не прошёл черный список юзера {i_user!r}')
                     continue
 
-            interests = InterestsService.filter_interest_for_scheduling_posts(i_user, interest,
-                                                                              post)  # TODO: добавленная доп. логика из-за того, что функция не универсальна
+            interests = InterestsService.filter_interest_for_scheduling_posts(i_user, interest, post)
             if len(interests) < 1:
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} не указаны интересы')
                 continue
-            interest_lst = InterestsService.create_interests_list(interests)
+
+            # Делаем список из кортежей с формировками интересов и эмбеддингов
+            interest_lst_for_gpt_processing = InterestsService.create_interests_list_for_gpt_processing(interests)
             # Пилим индексную базу из эмбеддингов для интересов
-            index_db = text_processor.make_index_db_from_embeddings(interest_lst)
+            index_db = text_processor.make_index_db_from_embeddings(interest_lst_for_gpt_processing)
             # Находим релевантные куски подав на вход эмбеддинги
             relevant_pieces = text_processor.get_relevant_pieces_by_embeddings(index_db, post)
-            # Фильтруем по векторному расстоянию подходящие куски
-            filtered_rel_pieces = text_processor.filter_relevant_pieces_by_vector_distance(relevant_pieces)
+            # Фильтруем по векторному расстоянию подходящие интересы
+            filtered_rel_interests = text_processor.filter_relevant_pieces_by_vector_distance(relevant_pieces)
 
-            if len(filtered_rel_pieces) < 1:  # Выходим, если куски очень далеки от схожести
+            if len(filtered_rel_interests) < 1:  # Выходим, если куски очень далеки от схожести
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} нет релевантных интересов для поста с PK=={post.pk}')
                 continue
 
-            interest, sending_datetime = InterestsService.calculate_sending_time_for_interest(filtered_rel_pieces,
-                                                                                              i_user, interest,
-                                                                                              interests)
+            # Определяем когда в следующий раз нужно отправить пользователю посты для данного интереса
+            interest, sending_datetime = InterestsService.calculate_sending_time_for_interest(
+                filtered_rel_interest=filtered_rel_interests[0],
+                i_user=i_user,
+                interests=interests,
+            )
             ScheduledPostsService.create_scheduled_post(i_user, interest, post, sending_datetime)
 
     @staticmethod

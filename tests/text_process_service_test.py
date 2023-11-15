@@ -27,7 +27,7 @@ class TextProcessServiceTestCase(TestCase):
         cls.text_process_service = TextProcessService()
         cls.bot_settings_service = BotSettingsService
         interest_obj_lst = [cls.interest1, cls.interest2]
-        interest_lst = InterestsService.create_interests_list(interest_obj_lst)
+        interest_lst = InterestsService.create_interests_list_for_gpt_processing(interest_obj_lst)
         cls.index_db = cls.text_process_service.make_index_db_from_embeddings(interest_lst)
 
     def test_make_index_db_from_embeddings(self):

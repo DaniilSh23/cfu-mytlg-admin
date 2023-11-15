@@ -67,20 +67,32 @@ class InterestsService:
     # TODO тест для метода
     @staticmethod
     def filter_interest_for_scheduling_posts(i_user, interest, post):
-        return (
-            Interests.objects.filter(category=post.channel.category, bot_user=i_user, is_active=True,
-                                     interest_type='main')
-            .only('id', 'interest', 'embedding', 'when_send')
-        ) if not interest else (interest,)
+        """
+        Отбираем интересы пользователя по категории каналов из которой пришёл пост.
+        Если передан параметр interest, то ничего отбирать не надо, а мы просто упаковываем его в кортеж.
+        Это нужно для фичи, когда бот подбирает контент для пользователя по интересу.
+        """
+        if not interest:
+            return (
+                Interests.objects.filter(category=post.channel.category, bot_user=i_user, is_active=True,
+                                         interest_type='main')
+                .only('id', 'interest', 'embedding', 'when_send')
+            )
+        else:
+            return (interest,)
 
     @staticmethod
-    def calculate_sending_time_for_interest(filtered_rel_pieces, i_user, interest, interests):
-        sending_datetime = None
-        interest = interests[0]
+    def calculate_sending_time_for_interest(filtered_rel_interest, i_user, interests):
+        """
+        Расчет времени отправки для интереса.
+        Функция принимает пользователя, все его интересы и отфильтрованный релевантный интерес.
+        Находим в общем списке релеватный интерес и возвращаем его объект, а также время следующей
+        отправки для данного интереса.
+        """
         for i_interest in interests:
-            if filtered_rel_pieces[0][0].page_content == i_interest.interest:
+            if filtered_rel_interest[0].page_content == i_interest.interest:
                 MY_LOGGER.debug(f'Найден релевантный интерес у юзера {i_user.pk!r} | {i_interest.interest!r} | '
-                                f'Векторное расстояние: {filtered_rel_pieces[0][1]}')
+                                f'Векторное расстояние: {filtered_rel_interest[1]}')
                 # Рассчитываем время предстоящей отправки
                 sending_datetime = calculate_sending_datetime(
                     last_send=i_interest.last_send,
@@ -88,11 +100,15 @@ class InterestsService:
                     when_send=i_interest.when_send,
                 )
                 interest = i_interest
-                break
-        return interest, sending_datetime
+                return interest, sending_datetime
 
     @staticmethod
-    def create_interests_list(interests):
+    def create_interests_list_for_gpt_processing(interests):
+        """
+        Делаем список, в который упаковываем кортежи из текста интереса и эмбеддингов.
+        Эмбеддинги представляются в виде списка float чисел.
+        Именно поэтому здесь такой хитровые.. list comprehension.
+        """
         interest_lst = [
             (i_interest.interest, [float(i_emb) for i_emb in i_interest.embedding.split()])
             for i_interest in interests
