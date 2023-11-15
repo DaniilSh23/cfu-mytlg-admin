@@ -1,4 +1,5 @@
 from django.http import HttpRequest
+from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.request import Request
@@ -15,6 +16,7 @@ class RawChannelPost(APIView):
     """
     Приём сырых постов.
     """
+    @extend_schema(request=RawChannelPostSerializer, responses=dict, methods=['post'])
     def post(self, request: Request):
         MY_LOGGER.info(f'Получен запрос на вьюшку приёма сырых постов.')
         ser = RawChannelPostSerializer(data=request.data)
@@ -27,11 +29,11 @@ class RawChannelPost(APIView):
         if ser.is_valid():
             validated_data = ser.validated_data
             # Вызываем таск селери для обработки поста и даём ответ на запрос
-            raw_post_processing(
+            raw_post_processing.delay(
                 ch_pk=validated_data.get('ch_pk'),
-                new_post_text=validated_data.get('new_post_text'),
+                new_post_text=validated_data.get('text'),
                 post_link=validated_data.get('post_link')
-            ).delay()
+            )
             return Response(status=200, data={'result': 'OK!'})
 
         else:
