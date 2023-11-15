@@ -48,7 +48,7 @@ class ScheduledPostsService:
     #  привести функцию к универсальному виду. Вызывается эта функция во views.RelatedNewsView и
     #  в tasks.search_content_by_new_interest . Надо будет, короче, что-то с ней придумать, чтобы все почище было.
     @staticmethod
-    def scheduling_post_for_sending(post: NewsPosts, bot_usr: BotUser = None, user_interest: Interests = None):
+    def scheduling_post_for_sending(post: NewsPosts, bot_usr: BotUser = None, interest: Interests = None):
         """
         Отбор пользователей для поста и планирование поста к отправке.
         """
@@ -64,7 +64,7 @@ class ScheduledPostsService:
                     MY_LOGGER.warning(f'Пост {post!r} не прошёл черный список юзера {i_user!r}')
                     continue
 
-            interests = InterestsService.filter_interest_for_scheduling_posts(i_user, user_interest, post)
+            interests = InterestsService.filter_interest_for_scheduling_posts(i_user, interest, post)
             MY_LOGGER.debug(f'ЭТО ИНТЕРЕСЫ ДЛЯ ЮЗЕРА PK == {i_user.pk} | {interests}')
             if len(interests) < 1:
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} не указаны интересы')
