@@ -12,7 +12,7 @@ from rest_framework import status
 from django.contrib import messages as err_msgs
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
-from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm
+from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
 from mytlg.servises.reactions_service import ReactionsService
@@ -615,39 +615,76 @@ class WhatWasInteresting(View):
         return render(request, template_name=SUCCESS_TEMPLATE_PATH, context=context)
 
 
-class SearchAndAddNewChannels(View):
+class SearchCustomChannels(View):
     """
-    Вьюшки для поиска и добавления собственных телеграм каналов.
+    Вьюшки для поиска собственных телеграм каналов.
     """
 
     def get(self, request):
-        MY_LOGGER.info('GET запрос на вьюшку SearchAndAddNewChannels')
+        MY_LOGGER.info('GET запрос на вьюшку SearchNewChannels')
         return render(request, template_name='mytlg/search_and_add_channels.html')
 
     def post(self, request):
         MY_LOGGER.info('Поступил POST запрос на вьюшку для поиска телеграм канала')
 
         form = SearchAndAddNewChannelsForm(request.POST)
+        if not form.is_valid():
+            MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
+            err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            return redirect(to=reverse_lazy('mytlg:search_custom_channels'))
+        search_keywords = form.cleaned_data.get('search_keywords')
+
+        # Получаем найденные каналы и передаем пользователю результаты
+        account_for_search_pk = TlgAccountsService.get_tlg_account_id_for_search_custom_channels()
+        founded_channels = ChannelsService.send_request_for_search_channels(search_keywords,
+                                                                            account_for_search_pk=account_for_search_pk,
+                                                                            results_limit=5)
+        print(founded_channels)
+        subscribe_form = SubscribeChannelForm()
+        # founded_channels = [
+        #     ('channel-1',
+        #      'Рекламное агентство TiAR | Продвижение SMM | Разработка сайта | Реклама | Маркетинг | Дизайн | Бизнес | Франшиза'),
+        #     ('channel-2', 'Семейка ботов'),
+        #     # ... другие каналы ...
+        # ]
+
+        subscribe_form.fields['channels_for_subscribe'].choices = founded_channels
+        print(subscribe_form)
+        context = dict(
+            form=subscribe_form,
+            channels_list=founded_channels,
+            search_keywords=search_keywords
+        )
+        return render(request, CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH, context)
+
+
+class SubscribeCustomChannels(View):
+    """
+    Вьюшки для обработки формы добавления собственных телеграм каналов.
+    """
+
+    def get(self, request):
+        MY_LOGGER.info('GET запрос на вьюшку SubscribeNewChannels')
+
+        return render(request, template_name='mytlg/channels_search_results.html')
+
+    def post(self, request):
+        MY_LOGGER.info('Поступил POST запрос на вьюшку для подписки на собственные телеграм каналы')
+        form = SubscribeChannelForm(request.POST)
+
         print(request.POST)
         if not form.is_valid():
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
             err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
-            return redirect(to=reverse_lazy('mytlg:search_and_add_channels'))
-        cleaned_form_data = form.cleaned_data
-        tlg_id = cleaned_form_data.get("tlg_id")
-        search_keywords = cleaned_form_data.get('search_keywords')
-        founded_channels = ChannelsService.send_request_for_search_channels(search_keywords)
+            return redirect(to=reverse_lazy('mytlg:subscribe_custom_channels'))
+        channels_for_subscribe = form.cleaned_data.get('channels_for_subscribe')
+
         # TODO Получаем найденные каналы и передаем пользователю результаты
-        context = dict(
-            channels_list=founded_channels,
-            search_keywords=search_keywords
-        )
-        return render(request, template_name=CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH, context=context)
 
-
-
-def test_view(request):
-    """
-    Тестовая вьюшка. Тестим всякое
-    """
-    return HttpResponse(content='okay my friend !', status=200)
+        # founded_channels = ChannelsService.send_request_for_search_channels(search_keywords)
+        # context = dict(
+        #     channels_list=founded_channels,
+        #     search_keywords=search_keywords
+        # )
+        # return render(request, template_name=CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH, context=context)
+        return 'Ok'

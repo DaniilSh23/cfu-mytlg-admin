@@ -3,11 +3,12 @@ from django.db.models import QuerySet
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+import requests
 # import json
 #
 # from mytlg.servises.categories_service import CategoriesService
 # from mytlg.utils import process_json_file
-from cfu_mytlg_admin.settings import MY_LOGGER
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, ACCOUNT_SERVICE_HOST
 
 
 class ChannelsService:
@@ -119,15 +120,26 @@ class ChannelsService:
             tlg_acc_obj.channels.add(*ch_ids_lst)
 
     @staticmethod
-    def send_request_for_search_channels(searh_keywords):
-        founded_channels = [
-                {'name': 'channel_name1', 'link': 'channel_link1'},
-                {'name': 'channel_name2', 'link': 'channel_link2'},
-                {'name': 'channel_name3', 'link': 'channel_link3'},
-                {'name': 'channel_name4', 'link': 'channel_link4'},
-                {'name': 'channel_name5', 'link': 'channel_link5'}
-            ]
-        return founded_channels
+    def send_request_for_search_channels(search_keywords, account_for_search_pk, results_limit=5, limit=5):
+        data = {
+            "token": BOT_TOKEN,
+            "search_data": {
+                "account_for_search_pk": account_for_search_pk,
+                "text_for_search": search_keywords,
+                "results_limit": results_limit
+            }
+        }
+        result = requests.post(url=ACCOUNT_SERVICE_HOST + 'search_channels_in_telegram/', json=data)
+        if result.status_code == 200:
+            founded_channels = result.json().get('search_results')
+            if len(founded_channels) > limit:
+                founded_channels = founded_channels[:limit]
+            channels_for_subscribe = []
+            for index, channel in enumerate(founded_channels):
+                channels_for_subscribe.append((f'channel-{index}', f'{channel["channel_name"]}'))
+            return channels_for_subscribe
+        else:
+            return
 
     # @staticmethod
     # def create_new_channels_in_admin_dashboard_from_json_file(file, encoding):  # TODO: переписать
@@ -162,5 +174,3 @@ class ChannelsService:
     #                 subscribers_numb=i_ch_data[0],
     #             ))
     #     return channels
-
-

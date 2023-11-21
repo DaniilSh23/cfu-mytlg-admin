@@ -35,9 +35,24 @@ class WhatWasInterestingForm(forms.Form):
 
 class SearchAndAddNewChannelsForm(forms.Form):
     """
-    Форма для функции "что было нового".
+    Форма для ввода ключевых слов для поиска своих каналов.
     """
     search_keywords = forms.CharField()
+    tlg_id = forms.CharField(validators=[RegexValidator(
+        regex=r'^\d+$',  # Регулярное выражение для цифр
+        message='запрос не из телеграмма',
+        code='invalid_tlg_id'
+    )])
+
+
+class SubscribeChannelForm(forms.Form):
+    """
+    Форма для подписки на найденные каналы".
+    """
+    channels_for_subscribe = forms.MultipleChoiceField(
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
     tlg_id = forms.CharField(validators=[RegexValidator(
         regex=r'^\d+$',  # Регулярное выражение для цифр
         message='запрос не из телеграмма',

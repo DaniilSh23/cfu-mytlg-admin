@@ -1,10 +1,46 @@
+{% extends 'mytlg/base.html' %}
+
+<!--{% block 'title' %}-->
+<!--Найдите и добавьте свои собственные телеграм каналы-->
+<!--{% endblock %}-->
+
+{% block 'body' %}
 <div>
     <h5 id="cardHeader" class="card-header">Результаты поиска для {{ search_keywords }}:</h5>
-    <div>
-        {% for channel in channels_list %}
-        <ul>
-            <li><p>{{ channel.name }} {{ channel.link }}</p></li>
-        </ul>
-        {% endfor %}
-    </div>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button id="subscribeChannelBtn" type="submit" class="btn btn-info my-btn-clr"
+                style="width:100%">Подписаться
+        </button>
+    </form>
+
 </div>
+</form>
+
+</div>
+<script>
+    $(document).ready(function() {
+        $('#subscribeChannelForm').submit(function(event) {
+        event.preventDefault(); // предотвращаем стандартное поведение формы
+        var formData = $(this).serialize();
+
+        $.ajax({
+          url: '{% url 'mytlg:subscribe_custom_channels' %}', // путь к обработчику на сервере
+          type: 'POST',
+          data: formData,
+          dataType: 'html', // указываем, что ожидаем ответ в виде HTML
+          success: function(data) {
+            $('#ajaxResult').html(data); // обновляем содержимое элемента с id="ajaxResult"
+            $('#searchChannelForm').hide();   // Скрываем форму с интересами
+<!--            $('#cardHeader').hide();-->
+          },
+          error: function() {
+            alert('Произошла ошибка');
+          }
+        });
+      });
+
+    });
+</script>
+{% endblock %}
