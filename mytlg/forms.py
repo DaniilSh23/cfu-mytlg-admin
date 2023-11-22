@@ -52,9 +52,17 @@ class SubscribeChannelForm(forms.Form):
     channels_for_subscribe = forms.MultipleChoiceField(
         required=False,
         widget=forms.CheckboxSelectMultiple,
+        label=''
     )
     tlg_id = forms.CharField(validators=[RegexValidator(
         regex=r'^\d+$',  # Регулярное выражение для цифр
         message='запрос не из телеграмма',
         code='invalid_tlg_id'
-    )])
+    )],
+        widget=forms.TextInput(attrs={
+            'class': 'my-filling-fields',
+            'id': 'tg-id-input',
+            'name': 'tg-id',
+            'type': 'hidden'
+        })
+    )

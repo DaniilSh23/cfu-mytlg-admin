@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib import messages as err_msgs
 
-from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, CHANNELS_FOR_FORM, CHANNEL_DATA_FOR_SUBSCIBE
 from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
@@ -632,24 +632,19 @@ class SearchCustomChannels(View):
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
             err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:search_custom_channels'))
+        tlg_id = form.cleaned_data.get("tlg_id")
         search_keywords = form.cleaned_data.get('search_keywords')
 
         # Получаем найденные каналы и передаем пользователю результаты
         account_for_search_pk = TlgAccountsService.get_tlg_account_id_for_search_custom_channels()
-        founded_channels = ChannelsService.send_request_for_search_channels(search_keywords,
-                                                                            account_for_search_pk=account_for_search_pk,
-                                                                            results_limit=5)
-        print(founded_channels)
-        subscribe_form = SubscribeChannelForm()
-        # founded_channels = [
-        #     ('channel-1',
-        #      'Рекламное агентство TiAR | Продвижение SMM | Разработка сайта | Реклама | Маркетинг | Дизайн | Бизнес | Франшиза'),
-        #     ('channel-2', 'Семейка ботов'),
-        #     # ... другие каналы ...
-        # ]
+        channel_for_subscrbe_form, founded_channels = ChannelsService.send_request_for_search_channels(search_keywords,
+                                                                                                       account_for_search_pk=account_for_search_pk,
+                                                                                                       results_limit=5)
 
-        subscribe_form.fields['channels_for_subscribe'].choices = founded_channels
-        print(subscribe_form)
+        subscribe_form = SubscribeChannelForm(initial={'tlg_id': tlg_id})
+        subscribe_form.fields['channels_for_subscribe'].choices = channel_for_subscrbe_form
+        CHANNELS_FOR_FORM.extend(channel_for_subscrbe_form)
+        CHANNEL_DATA_FOR_SUBSCIBE.extend(founded_channels)
         context = dict(
             form=subscribe_form,
             channels_list=founded_channels,
@@ -665,26 +660,32 @@ class SubscribeCustomChannels(View):
 
     def get(self, request):
         MY_LOGGER.info('GET запрос на вьюшку SubscribeNewChannels')
-
         return render(request, template_name='mytlg/channels_search_results.html')
 
     def post(self, request):
         MY_LOGGER.info('Поступил POST запрос на вьюшку для подписки на собственные телеграм каналы')
         form = SubscribeChannelForm(request.POST)
-
-        print(request.POST)
+        form.fields['channels_for_subscribe'].choices = CHANNELS_FOR_FORM
         if not form.is_valid():
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
             err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('mytlg:subscribe_custom_channels'))
-        channels_for_subscribe = form.cleaned_data.get('channels_for_subscribe')
+        founded_channels = form.cleaned_data.get('channels_for_subscribe')
 
-        # TODO Получаем найденные каналы и передаем пользователю результаты
+        # Проверяем каналы на подписку и блэклист и формируем список для отправки задачи на подписку
+        channels_for_subscribe = [
+            channel_id
+            for channel_id in founded_channels
+            if ChannelsService.check_channel_before_subscribe(channel_id)
+        ]
+        founded_channels_data = CHANNEL_DATA_FOR_SUBSCIBE
+        channels_data = [channel for channel in founded_channels_data if
+                         str(channel.get('channel_id')) in channels_for_subscribe]
 
-        # founded_channels = ChannelsService.send_request_for_search_channels(search_keywords)
-        # context = dict(
-        #     channels_list=founded_channels,
-        #     search_keywords=search_keywords
-        # )
-        # return render(request, template_name=CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH, context=context)
-        return 'Ok'
+        # TODO создать сущность канала в базе, сформировать список каналов для оправки на подписку, создать задачу на подписку
+        # Создаем найденые каналы в админке
+        ChannelsService.create_founded_channels(channels_data)
+        #ChannelsService.send_command_to_accounts_for_subscribe_channels()
+        print(channels_data)
+        CHANNELS_FOR_FORM.clear()
+        return HttpResponse('<p>Ok</p>')

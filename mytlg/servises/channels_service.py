@@ -1,4 +1,5 @@
 from mytlg.models import Channels
+from mytlg.servises.tlg_accounts_service import TlgAccountsService
 from django.db.models import QuerySet
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
@@ -8,7 +9,7 @@ import requests
 #
 # from mytlg.servises.categories_service import CategoriesService
 # from mytlg.utils import process_json_file
-from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, ACCOUNT_SERVICE_HOST
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, ACCOUNT_SERVICE_HOST, CHANNELS_BLACK_LIST
 
 
 class ChannelsService:
@@ -34,6 +35,13 @@ class ChannelsService:
     def get_channel_by_pk(pk: int) -> Channels | None:
         try:
             return Channels.objects.get(pk=pk)
+        except ObjectDoesNotExist:
+            return None
+
+    @staticmethod
+    def get_channel_by_channel_tlg_id(channel_id: int) -> Channels | None:
+        try:
+            return Channels.objects.get(channel_id=channel_id)
         except ObjectDoesNotExist:
             return None
 
@@ -120,6 +128,30 @@ class ChannelsService:
             tlg_acc_obj.channels.add(*ch_ids_lst)
 
     @staticmethod
+    def bulk_create_channels(channels_list: list):
+        with transaction.atomic():
+            Channels.objects.bulk_create(channels_list)
+
+    @staticmethod
+    def make_channels_entities_list(channels_data_list):
+        channels_list = []
+        for channel in channels_data_list:
+            channel_entity = Channels(
+                                channel_id=channel.get('channel_id'),
+                                channel_name=channel.get('channel_name'),
+                                channel_link=channel.get('channel_link'),
+                                description=channel.get('channel_description'),
+                                subscribers_numb=channel.get('subscribers_number'),
+                )
+            channels_list.append(channel_entity)
+        return channels_list
+
+    @staticmethod
+    def create_founded_channels(channels_data_list):
+        channels_list = ChannelsService.make_channels_entities_list(channels_data_list)
+        ChannelsService.bulk_create_channels(channels_list)
+
+    @staticmethod
     def send_request_for_search_channels(search_keywords, account_for_search_pk, results_limit=5, limit=5):
         data = {
             "token": BOT_TOKEN,
@@ -129,17 +161,86 @@ class ChannelsService:
                 "results_limit": results_limit
             }
         }
-        result = requests.post(url=ACCOUNT_SERVICE_HOST + 'search_channels_in_telegram/', json=data)
+
+        result = requests.post(
+            url=f'{ACCOUNT_SERVICE_HOST}search_channels_in_telegram/', json=data
+        )
         if result.status_code == 200:
             founded_channels = result.json().get('search_results')
             if len(founded_channels) > limit:
                 founded_channels = founded_channels[:limit]
             channels_for_subscribe = []
-            for index, channel in enumerate(founded_channels):
-                channels_for_subscribe.append((f'channel-{index}', f'{channel["channel_name"]}'))
-            return channels_for_subscribe
+            # TODO дописать добавление новой более полной информации о канале
+            for channel in founded_channels:
+                channels_for_subscribe.append((channel["channel_id"], channel["channel_name"]))
+            return channels_for_subscribe, founded_channels
         else:
             return
+
+    @staticmethod
+    def check_channel_all_ready_subscribed(channel_id: int) -> bool:
+        """
+        Метод для проверки не подписаны ли мы на канал
+        :param channel_id: id телеграм канала
+        :return:
+        """
+        channel = ChannelsService.get_channel_by_channel_tlg_id(channel_id=channel_id)
+        if not channel:
+            return True
+        accounts_with_channel = TlgAccountsService.get_tlg_account_by_channel(channel)
+        if accounts_with_channel and not accounts_with_channel.is_ready:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def check_if_channel_in_black_list(channel: int) -> bool:
+        """
+        Метод для проверки не входит ли канал в список запрещенных каналов
+        :param channel: id телеграм канала
+        :return:
+        """
+        if channel in CHANNELS_BLACK_LIST:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def check_channel_before_subscribe(channel: int) -> bool:
+        """
+        Метод для проверки канала перед отправкой на подписку
+        :param channel: id телеграм канала
+        :return:
+        """
+        print('check_channel_before_subscribe', channel)
+        if ChannelsService.check_channel_all_ready_subscribed(
+                channel) and ChannelsService.check_if_channel_in_black_list(channel):
+            return False
+        else:
+            return True
+
+    @staticmethod
+    def send_command_to_accounts_for_subscribe_channels(channels_for_subscribe: list, account_pk_for_subscribe: int):
+        """
+        Метод для отправки задачу сервису аккаунтов на подписку на каналы заданным телеграм аккаунтом
+        :param channels_for_subscribe: список id каналов для подписки
+        :param account_pk_for_subscribe: первичный ключ телеграм аккаунта который будет использоваться для подписки
+        :return:
+        """
+        data = {
+            "token": BOT_TOKEN,
+            "account_for_subscribe_pk": account_pk_for_subscribe,
+            "channels_for_subscribe": channels_for_subscribe
+        }
+        result = requests.post(
+            url=f'{ACCOUNT_SERVICE_HOST}subs_accs_to_channels/', json=data
+        )
+        # TODO дописать логику с уведомлениями в случае ошибки или постановки задачи на подписку
+        if result.status_code != 200:
+            return False
+        return True
+
+
 
     # @staticmethod
     # def create_new_channels_in_admin_dashboard_from_json_file(file, encoding):  # TODO: переписать

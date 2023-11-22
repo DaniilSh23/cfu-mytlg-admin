@@ -43,19 +43,22 @@ class TlgAccountsService:
 
     @staticmethod
     def get_tlg_accounts_for_start_or_stop():
-        tlg_accounts = TlgAccounts.objects.filter(is_run=True, for_search=False).only("id", "session_file",
-                                                                                      "proxy").prefetch_related(
+        tlg_accounts = TlgAccounts.objects.filter(is_run=True).only("id", "session_file",
+                                                                    "proxy").prefetch_related(
             "proxy")
         return tlg_accounts
 
     @staticmethod
     def get_tlg_account_id_for_search_custom_channels():
-        # TODO поменять for_search=True
         tlg_accounts = TlgAccounts.objects.filter(for_search=True).only("id")
         if tlg_accounts:
             tlg_account_id = tlg_accounts[0].id
             MY_LOGGER.info(f'Найден телеграм аккаунт с PK == {tlg_account_id} для использования при поиске каналов.')
         else:
             tlg_account_id = None
-            MY_LOGGER.warning(f'Не найден телеграм аккаунт для использования при поиске каналов')
+            MY_LOGGER.warning('Не найден телеграм аккаунт для использования при поиске каналов')
         return tlg_account_id
+
+    @staticmethod
+    def get_tlg_account_by_channel(channel):
+        return TlgAccounts.objects.filter(channels__id=channel).first()
