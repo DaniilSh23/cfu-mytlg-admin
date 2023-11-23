@@ -681,10 +681,10 @@ class SubscribeCustomChannels(View):
         founded_channels_data = CHANNEL_DATA_FOR_SUBSCIBE
         channels_data = [channel for channel in founded_channels_data if
                          str(channel.get('channel_id')) in channels_for_subscribe]
-
-        # TODO создать сущность канала в базе, сформировать список каналов для оправки на подписку, создать задачу на подписку
         # Создаем найденые каналы в админке
         ChannelsService.create_founded_channels(channels_data)
+
+        # TODO создать задачу на подписку
         #ChannelsService.send_command_to_accounts_for_subscribe_channels()
         print(channels_data)
         CHANNELS_FOR_FORM.clear()
