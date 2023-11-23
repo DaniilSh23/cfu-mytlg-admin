@@ -20,6 +20,7 @@ class BotUser(models.Model):
     language_code = models.CharField(verbose_name='language_code', default='RU', max_length=5)
     category = models.ManyToManyField(verbose_name='категории', related_name='bot_user', to='Categories', blank=True)
     channels = models.ManyToManyField(verbose_name='каналы', related_name='bot_user', to='Channels', blank=True)
+    custom_channels = models.JSONField(verbose_name='Добавленные пользователем каналы', blank=True, default=list)
     when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
     source_tag = models.CharField(verbose_name='Тег источника', max_length=50, blank=True)
 
