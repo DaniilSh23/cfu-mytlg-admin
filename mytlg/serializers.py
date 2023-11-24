@@ -70,6 +70,7 @@ class WriteSubsResultSerializer(serializers.Serializer):
     fail_subs = serializers.IntegerField()
     status = serializers.CharField(max_length=10)
     end_flag = serializers.BooleanField()
+    channel_link = serializers.URLField()
 
 
 class UpdateChannelsSerializer(serializers.Serializer):

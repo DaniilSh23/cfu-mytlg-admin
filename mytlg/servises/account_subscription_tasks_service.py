@@ -3,6 +3,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from cfu_mytlg_admin.settings import MY_LOGGER
 import datetime
 
+from mytlg.utils import send_message_by_bot
+
 
 class AccountsSubscriptionTasksService:
 
@@ -23,6 +25,18 @@ class AccountsSubscriptionTasksService:
         if ser.validated_data.get("end_flag"):
             task_obj.ends_at = datetime.datetime.now()
         task_obj.save()
+
+    @staticmethod
+    def send_subscription_notification(success: bool, channel_link: str, user_tlg_id: int):
+        """
+        Сервис для отправки уведомления пользователю о подписке на собственный телеграм канал.
+        :param success: bool - успешная ли подписка.
+        :param channel_link: str - ссылка на канал, на который была попытка подписаться.
+        :param user_tlg_id: int - telegram ID пользователя, для которого выполняли подписку на канал.
+        """
+        MY_LOGGER.debug(f'Выполняем сервис отправки уведомления пользователю о подписке на собственный канал.')
+        msg_txt = f'{"👍 Успешная" if success else "🙅‍♂️ Неудачная"} подписка на канал 🔗 {channel_link}'
+        send_message_by_bot(chat_id=user_tlg_id, text=msg_txt)
 
     @staticmethod
     def get_subscription_tasks_in_works():
