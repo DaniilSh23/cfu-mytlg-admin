@@ -62,3 +62,11 @@ class TlgAccountsService:
     @staticmethod
     def get_tlg_account_by_channel(channel):
         return TlgAccounts.objects.filter(channels__id=channel).first()
+
+    @staticmethod
+    def get_tlg_account_for_subscribe_custom_channels(max_channels_per_acc, channels_count):
+        # TODO написать правильную логику для отбора нужного аккаунта
+        accounts = TlgAccounts.objects.filter(is_run=True)
+        for account in accounts:
+            if account.num_ch - channels_count < max_channels_per_acc:
+                return account

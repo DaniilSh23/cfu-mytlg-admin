@@ -682,10 +682,23 @@ class SubscribeCustomChannels(View):
         channels_data = [channel for channel in founded_channels_data if
                          str(channel.get('channel_id')) in channels_for_subscribe]
         # Создаем найденые каналы в админке
-        ChannelsService.create_founded_channels(channels_data)
+        new_channels = ChannelsService.create_founded_channels(channels_data)
+
+        # Получаем телеграм аккаунт который будет использоваться для подписки на собственные каналы пользователя
+        max_ch_per_acc = int(BotSettingsService.get(key='max_channels_per_acc'))
+        tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
+                                                                                       len(channels_data))
 
         # TODO создать задачу на подписку
-        #ChannelsService.send_command_to_accounts_for_subscribe_channels()
-        print(channels_data)
+        subs_task_pk = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
+
+        MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
+        ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=channels_data,
+                                                                        account_pk_for_subscribe=tlg_account.pk,
+                                                                        subs_task_pk=subs_task_pk
+                                                                        )
+        # Очищаем промежуточный словарь для хранения данных для формы
+        # TODO добавить в словаре привязку к телеграм айди
         CHANNELS_FOR_FORM.clear()
+        CHANNEL_DATA_FOR_SUBSCIBE.clear()
         return HttpResponse('<p>Ok</p>')

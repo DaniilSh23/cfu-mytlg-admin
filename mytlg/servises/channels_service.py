@@ -130,26 +130,28 @@ class ChannelsService:
     @staticmethod
     def bulk_create_channels(channels_list: list):
         with transaction.atomic():
-            Channels.objects.bulk_create(channels_list)
+            new_channels = Channels.objects.bulk_create(channels_list)
+        return new_channels
 
     @staticmethod
     def make_channels_entities_list(channels_data_list):
         channels_list = []
         for channel in channels_data_list:
             channel_entity = Channels(
-                                channel_id=channel.get('channel_id'),
-                                channel_name=channel.get('channel_name'),
-                                channel_link=channel.get('channel_link'),
-                                description=channel.get('channel_description'),
-                                subscribers_numb=channel.get('subscribers_number'),
-                )
+                channel_id=channel.get('channel_id'),
+                channel_name=channel.get('channel_name'),
+                channel_link=channel.get('channel_link'),
+                description=channel.get('channel_description'),
+                subscribers_numb=channel.get('subscribers_number'),
+            )
             channels_list.append(channel_entity)
         return channels_list
 
     @staticmethod
     def create_founded_channels(channels_data_list):
         channels_list = ChannelsService.make_channels_entities_list(channels_data_list)
-        ChannelsService.bulk_create_channels(channels_list)
+        new_channels = ChannelsService.bulk_create_channels(channels_list)
+        return new_channels
 
     @staticmethod
     def send_request_for_search_channels(search_keywords, account_for_search_pk, results_limit=5, limit=5):
@@ -220,17 +222,25 @@ class ChannelsService:
             return True
 
     @staticmethod
-    def send_command_to_accounts_for_subscribe_channels(channels_for_subscribe: list, account_pk_for_subscribe: int):
+    def send_command_to_accounts_for_subscribe_channels(channels_for_subscribe: list, account_pk_for_subscribe: int,
+                                                        subs_task_pk: int):
         """
         Метод для отправки задачу сервису аккаунтов на подписку на каналы заданным телеграм аккаунтом
         :param channels_for_subscribe: список id каналов для подписки
         :param account_pk_for_subscribe: первичный ключ телеграм аккаунта который будет использоваться для подписки
+        :param subs_task_pk: первичный ключ таски на подписку на каналы в джанго админке
         :return:
         """
+
         data = {
             "token": BOT_TOKEN,
-            "account_for_subscribe_pk": account_pk_for_subscribe,
-            "channels_for_subscribe": channels_for_subscribe
+            "subs_data": [
+                {
+                    "acc_pk": account_pk_for_subscribe,
+                    "subs_task_pk": subs_task_pk,
+                    "channels": channels_for_subscribe
+                }
+            ]
         }
         result = requests.post(
             url=f'{ACCOUNT_SERVICE_HOST}subs_accs_to_channels/', json=data
@@ -239,8 +249,6 @@ class ChannelsService:
         if result.status_code != 200:
             return False
         return True
-
-
 
     # @staticmethod
     # def create_new_channels_in_admin_dashboard_from_json_file(file, encoding):  # TODO: переписать
