@@ -430,12 +430,23 @@ class WriteSubsResults(APIView):
                 AccountsSubscriptionTasksService.update_task_obj_data(ser, task_obj)
 
                 if task_obj.tlg_acc.acc_tlg_id:
+                    success_subscription = True if int(ser.validated_data.get("success_subs")) > 0 else False
                     # Отправка уведомления юзеру
                     AccountsSubscriptionTasksService.send_subscription_notification(
-                        success=True if int(ser.validated_data.get("success_subs")) > 0 else False,
+                        success=success_subscription,
                         channel_link=ser.validated_data.get("channel_link"),
-                        user_tlg_id=task_obj.tlg_acc.acc_tlg_id,
+                        user_tlg_id=task_obj.assigned_user.tlg_id,
                     )
+                    if success_subscription:
+                        # Получаем каналы по ссылкам на них
+                        channels_qset = ChannelsService.filter_channels_by_link_only_pk(
+                            channels_links=[ser.validated_data.get("channel_link")]
+                        )
+                        # Связываем пользователя с каналами
+                        BotUsersService.relating_channels_with_user(
+                            user_tlg_id=int(task_obj.assigned_user.tlg_id),
+                            channels_qset=channels_qset
+                        )
 
                 return Response(data={'result': 'task status changed successful'}, status=status.HTTP_200_OK)
 

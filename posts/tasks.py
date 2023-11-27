@@ -16,6 +16,13 @@ def raw_post_processing(ch_pk: int, new_post_text: str, post_link: str):
     """
     MY_LOGGER.info(f'Запущен таск селери для обработки сырых постов (raw_post_processing).')
 
+    # Обработка поста из кастомных каналов пользователей
+    PostService.suitable_post_processing_from_users_list(
+        post_text=new_post_text,
+        ch_pk=ch_pk,
+        post_link=post_link,
+    )
+
     # Достать посты из БД с общей категорией для нового поста
     similar_posts = PostService.get_posts_with_similar_category(ch_pk)
     if similar_posts is None:

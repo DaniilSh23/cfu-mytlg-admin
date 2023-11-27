@@ -233,6 +233,7 @@ class NewsPosts(models.Model):
     embedding = models.TextField(verbose_name='эмбеддинг', blank=True, null=False)
     created_at = models.DateTimeField(verbose_name='дата и время', auto_now_add=True)
     is_sent = models.BooleanField(verbose_name='отправлен пользователям', default=False)
+    from_custom_channel = models.BooleanField(verbose_name='из кастомного канала юзера', default=False)
 
     def to_dict(self):
         return {

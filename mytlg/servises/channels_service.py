@@ -1,3 +1,5 @@
+from typing import List
+
 from mytlg.models import Channels
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
 from django.db.models import QuerySet
@@ -13,6 +15,14 @@ from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, ACCOUNT_SERVICE_HOST,
 
 
 class ChannelsService:
+
+    @staticmethod
+    def filter_channels_by_link_only_pk(channels_links: List[str]):
+        """
+        Фильтруем каналы (только их PK) по ссылке (поле channel_link).
+        """
+        return Channels.objects.filter(channel_link__in=channels_links)
+
 
     @staticmethod
     def check_selected_channels(selected_channels_lst: list) -> list:
@@ -44,6 +54,13 @@ class ChannelsService:
             return Channels.objects.get(channel_id=channel_id)
         except ObjectDoesNotExist:
             return None
+
+    @staticmethod
+    def filter_channels_qset_by_channel_ids(channel_ids: List[str]):
+        """
+        Фильтруем из БД объекты Channels по списку из их channel_id
+        """
+        return Channels.objects.filter(channel_id__in=channel_ids)
 
     @staticmethod
     def filter_channel_by_category(category):

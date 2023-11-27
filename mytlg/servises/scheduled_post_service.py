@@ -17,6 +17,22 @@ class ScheduledPostsService:
     """
 
     @staticmethod
+    def planning_to_send_post_from_custom_user_channel(post, bot_users_qset):
+        """
+        Планируем к отправке пост, который пришёл из канала, что пользователи добавили себе для отслеживания
+        (кастомный канал юзера).
+        """
+        MY_LOGGER.debug(f'Планируем к отправке пост из кастомного канала юзеров.')
+        # TODO: Встречайте! Вашему вниманию представляется охуенное место для оптимизации запросов к БД. Апплодисменты!
+        for i_user in bot_users_qset:
+            ScheduledPostsService.create_scheduled_post(
+                i_user=i_user,
+                interest=None,
+                sending_datetime=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE)),
+                post=post
+            )
+
+    @staticmethod
     def get_posts_for_show(post_hash: str) -> tuple:
         """
         Метод для получения запланированных к отправке пользователю постов
