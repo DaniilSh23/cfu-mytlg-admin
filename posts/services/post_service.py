@@ -6,9 +6,11 @@ from typing import List
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.models import NewsPosts
 from mytlg.servises.bot_settings_service import BotSettingsService
+from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.channels_service import ChannelsService
 from mytlg.servises.news_posts_service import NewsPostsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
+from posts.services.post_filter_service import PostFilters
 from posts.services.text_process_service import TextProcessService
 
 
@@ -69,5 +71,43 @@ class PostService:
         # Планируем пост к отправке для конкретных юзеров
         ScheduledPostsService.scheduling_post_for_sending(post=new_post)
         MY_LOGGER.debug('Сервис обработки подходящего поста ОТРАБОТАЛ.')
+
+    @staticmethod
+    def suitable_post_processing_from_users_list(post_text: str, ch_pk: int, post_link: str):
+        """
+        Метод для обработки подходящего поста из списка каналов, которые пользователи сами себе добавили для
+        отслеживания.
+        """
+        MY_LOGGER.debug('ВЫЗВАН сервис обработки подходящего поста из списка кастомных каналов пользователей.')
+
+        ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
+        bot_users_qset = BotUsersService.filter_bot_users_by_channel_pk(channel_pk=ch_obj.pk)
+        if len(bot_users_qset) < 1:
+            MY_LOGGER.debug(f'НЕТ пользоваталей, у которых канал, где вышел пост, добавлен в список кастомных!')
+            return
+
+        # Пилим посту сокращённый варианта через ChatGPT
+        embedding = PostFilters.make_embedding(text=post_text)
+        text_processor = TextProcessService()
+        prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
+        short_post = text_processor.gpt_text_reduction(prompt=prompt, text=post_text)
+
+        # Создаём новый пост в БД
+        new_post = NewsPosts.objects.create(
+            channel=ch_obj,
+            text=post_text,
+            post_link=post_link,
+            embedding=' '.join(list(map(lambda numb: str(numb), embedding))),
+            short_text=short_post,
+            from_custom_channel=True,
+        )
+        MY_LOGGER.success(f'Новый пост из кастомного канала юзеров успешно создан, его PK == {new_post.pk!r}')
+
+        # Планируем пост к отправке для конкретных юзеров
+        ScheduledPostsService.planning_to_send_post_from_custom_user_channel(
+            post=new_post,
+            bot_users_qset=bot_users_qset
+        )
+        MY_LOGGER.debug('Сервис обработки подходящего поста из списка кастомных каналов пользователей ОТРАБОТАЛ.')
 
 
