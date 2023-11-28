@@ -9,13 +9,15 @@ class TelegramAccountService:
     """
     Сервис для бизнес-логики, связанной с телеграм аккаунтами.
     """
+
     @staticmethod
     def get_running_accounts():
         """
         Метод для получения аккаунтов, которые должны быть запущены
         """
-        MY_LOGGER.debug(f'Запущен сервис с бизнес-логикой для получения аккаунтов, которые должны быть запущены')
-        accounts = (TlgAccounts.objects.filter(is_run=True).only('id', 'acc_tlg_id').prefetch_related('proxy').
+        MY_LOGGER.debug('Запущен сервис с бизнес-логикой для получения аккаунтов, которые должны быть запущены')
+        accounts = (TlgAccounts.objects.filter(is_run=True, for_search=True).only('id', 'acc_tlg_id').prefetch_related(
+            'proxy').
                     prefetch_related('channels'))
         result = []
         for i_acc in accounts:

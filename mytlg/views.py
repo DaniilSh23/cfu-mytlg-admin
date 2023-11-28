@@ -11,8 +11,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib import messages as err_msgs
 
-from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
-from mytlg.forms import BlackListForm, WhatWasInterestingForm
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, CHANNELS_FOR_FORM_CHOICES, CHANNEL_DATA_FOR_SUBSCIBE
+from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
 from mytlg.servises.reactions_service import ReactionsService
@@ -34,6 +34,7 @@ from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, 
 
 INVALID_TOKEN_TEXT = 'invalid token'
 SUCCESS_TEMPLATE_PATH = 'mytlg/success.html'
+CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH = 'mytlg/channels_search_results.html'
 NOT_VALID_DATA = 'Not valid data'
 VALID_DATA_CHECK_TOKEN = 'Данные валидны, проверяем токен'
 OK_THANKS = 'Хорошо, спасибо!'
@@ -617,8 +618,92 @@ class WhatWasInteresting(View):
         return render(request, template_name=SUCCESS_TEMPLATE_PATH, context=context)
 
 
-def test_view(request):
+class SearchCustomChannels(View):
     """
-    Тестовая вьюшка. Тестим всякое
+    Вьюшки для поиска собственных телеграм каналов.
     """
-    return HttpResponse(content='okay my friend !', status=200)
+
+    def get(self, request):
+        MY_LOGGER.info('GET запрос на вьюшку SearchNewChannels')
+        return render(request, template_name='mytlg/search_custom_channels.html')
+
+    def post(self, request):
+        MY_LOGGER.info('Поступил POST запрос на вьюшку для поиска телеграм канала')
+
+        form = SearchAndAddNewChannelsForm(request.POST)
+        if not form.is_valid():
+            MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
+            err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            return redirect(to=reverse_lazy('mytlg:search_custom_channels'))
+        tlg_id = form.cleaned_data.get("tlg_id")
+        search_keywords = form.cleaned_data.get('search_keywords')
+
+        # Получаем найденные каналы и передаем пользователю результаты
+        account_for_search_pk = TlgAccountsService.get_tlg_account_id_for_search_custom_channels()
+        channel_for_subscrbe_form, founded_channels = ChannelsService.send_request_for_search_channels(search_keywords,
+                                                                                                       account_for_search_pk=account_for_search_pk,
+                                                                                                       results_limit=5)
+
+        subscribe_form = SubscribeChannelForm(initial={'tlg_id': tlg_id})
+        subscribe_form.fields['channels_for_subscribe'].choices = channel_for_subscrbe_form
+        CHANNELS_FOR_FORM_CHOICES[tlg_id] = channel_for_subscrbe_form
+        CHANNEL_DATA_FOR_SUBSCIBE[tlg_id] = founded_channels
+        context = dict(
+            form=subscribe_form,
+            channels_list=founded_channels,
+            search_keywords=search_keywords
+        )
+        return render(request, CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH, context)
+
+
+class SubscribeCustomChannels(View):
+    """
+    Вьюшки для обработки формы добавления собственных телеграм каналов.
+    """
+
+    def get(self, request):
+        MY_LOGGER.info('GET запрос на вьюшку SubscribeNewChannels')
+        return render(request, template_name='mytlg/channels_search_results.html')
+
+    def post(self, request):
+        MY_LOGGER.info('Поступил POST запрос на вьюшку для подписки на собственные телеграм каналы')
+        form = SubscribeChannelForm(request.POST)
+        print(request.POST)
+        tlg_id = request.POST.get("tlg_id")
+        form.fields['channels_for_subscribe'].choices = CHANNELS_FOR_FORM_CHOICES.get(tlg_id)
+        if not form.is_valid():
+            MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
+            err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            return redirect(to=reverse_lazy('mytlg:subscribe_custom_channels'))
+        founded_channels = form.cleaned_data.get('channels_for_subscribe')
+
+        # Проверяем каналы на подписку и блэклист и формируем список для отправки задачи на подписку
+        channels_for_subscribe = [
+            channel_id
+            for channel_id in founded_channels
+            if ChannelsService.check_channel_before_subscribe(channel_id)
+        ]
+        founded_channels_data = CHANNEL_DATA_FOR_SUBSCIBE
+        channels_data = [channel for channel in founded_channels_data if
+                         str(channel.get('channel_id')) in channels_for_subscribe]
+        # Создаем найденые каналы в админке
+        new_channels = ChannelsService.create_founded_channels(channels_data)
+
+        # Получаем телеграм аккаунт который будет использоваться для подписки на собственные каналы пользователя
+        max_ch_per_acc = int(BotSettingsService.get(key='max_channels_per_acc'))
+        tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
+                                                                                       len(channels_data))
+
+        # TODO создать задачу на подписку
+        subs_task_pk = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
+
+        MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
+        ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=channels_data,
+                                                                        account_pk_for_subscribe=tlg_account.pk,
+                                                                        subs_task_pk=subs_task_pk
+                                                                        )
+        # Очищаем промежуточный словарь для хранения данных для формы
+        # TODO добавить в словаре привязку к телеграм айди
+        del CHANNELS_FOR_FORM_CHOICES[tlg_id]
+        del CHANNEL_DATA_FOR_SUBSCIBE[tlg_id]
+        return HttpResponse('<p>Ok</p>')

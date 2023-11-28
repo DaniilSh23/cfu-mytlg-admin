@@ -1,0 +1,47 @@
+<div>
+    <h5 id="cardHeader" class="card-header">Результаты поиска по запросу - {{ search_keywords }}:</h5>
+    <div><p>Отметьте каналы на которые хотите подписаться и нажмите на кнопку - Подписаться</p></div>
+    <form id="subscribeChannelForm" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button id="subscribeChannelBtn" type="submit" class="btn btn-info my-btn-clr"
+                style="width:100%">Подписаться
+        </button>
+    </form>
+
+</div>
+</form>
+
+</div>
+<script>
+    $(document).ready(function() {
+      var tgObject = window.Telegram.WebApp;
+      const tlgIdElements = document.querySelectorAll('[name="tlg_id"]');
+      tlgIdElements.forEach(function (elem) {
+        // Выполнение действий с каждым элементом, устанавливаем TG ID от скрипта телеги
+        elem.value = tgObject.initDataUnsafe.user.id;
+        elem.type = "hidden";
+      });
+
+        $('#subscribeChannelForm').submit(function(event) {
+        event.preventDefault(); // предотвращаем стандартное поведение формы
+        var formData = $(this).serialize();
+        formData += '&tlg_id=' + tgObject.initDataUnsafe.user.id;
+        $.ajax({
+          url: '{% url 'mytlg:subscribe_custom_channels' %}', // путь к обработчику на сервере
+          type: 'POST',
+          data: formData,
+          dataType: 'html', // указываем, что ожидаем ответ в виде HTML
+          success: function(data) {
+            $('#ajaxResult').html(data); // обновляем содержимое элемента с id="ajaxResult"
+            $('#subscribeChannelForm').hide();
+            $('#searchChannelForm').hide();   // Скрываем форму
+          },
+          error: function() {
+            alert('Произошла ошибка');
+          }
+        });
+      });
+
+    });
+</script>

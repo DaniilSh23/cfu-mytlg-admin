@@ -29,3 +29,7 @@ class AccountsSubscriptionTasksService:
         subs_tasks_qset = (AccountsSubscriptionTasks.objects.filter(status='at_work', channels__isnull=False)
                            .only('channels', 'tlg_acc'))
         return subs_tasks_qset
+
+    @staticmethod
+    def create_subscription_task(tlg_account, channels):
+        return AccountsSubscriptionTasks.objects.create(tlg_account, channels)
