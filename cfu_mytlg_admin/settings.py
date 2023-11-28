@@ -295,6 +295,6 @@ sentry_sdk.init(
     profiles_sample_rate=1.0,
 )
 
-CHANNELS_FOR_FORM = []
-CHANNEL_DATA_FOR_SUBSCIBE = []
+CHANNELS_FOR_FORM_CHOICES = {}
+CHANNEL_DATA_FOR_SUBSCIBE = {}
 CHANNELS_BLACK_LIST = []
