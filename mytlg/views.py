@@ -686,9 +686,8 @@ class SubscribeCustomChannels(View):
         return render(request, template_name='mytlg/channels_search_results.html')
 
     def post(self, request):
-        MY_LOGGER.info('Поступил POST запрос на вьюшку для подписки на собственные телеграм каналы')
+        MY_LOGGER.info(f'{request.POST} Поступил POST запрос на вьюшку для подписки на собственные телеграм каналы')
         form = SubscribeChannelForm(request.POST)
-        print(request.POST)
         tlg_id = request.POST.get("tlg_id")
         form.fields['channels_for_subscribe'].choices = CHANNELS_FOR_FORM_CHOICES.get(tlg_id)
         if not form.is_valid():
