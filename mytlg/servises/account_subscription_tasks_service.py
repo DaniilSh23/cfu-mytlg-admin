@@ -46,4 +46,6 @@ class AccountsSubscriptionTasksService:
 
     @staticmethod
     def create_subscription_task(tlg_account, channels):
-        return AccountsSubscriptionTasks.objects.create(tlg_account=tlg_account, channels=channels)
+        task = AccountsSubscriptionTasks.objects.create(tlg_account=tlg_account)
+        task.channels.set(channels)
+        return task
