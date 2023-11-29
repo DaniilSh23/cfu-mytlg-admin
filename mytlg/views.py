@@ -688,7 +688,7 @@ class SubscribeCustomChannels(View):
     def post(self, request):
         MY_LOGGER.info(f'{request.POST} Поступил POST запрос на вьюшку для подписки на собственные телеграм каналы')
         form = SubscribeChannelForm(request.POST)
-        tlg_id = request.POST.get("tlg_id")
+        tlg_id = request.POST.get("tlg_id")[0]
         form.fields['channels_for_subscribe'].choices = CHANNELS_FOR_FORM_CHOICES.get(tlg_id)
         if not form.is_valid():
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
