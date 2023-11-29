@@ -702,7 +702,7 @@ class SubscribeCustomChannels(View):
             for channel_id in founded_channels
             if ChannelsService.check_channel_before_subscribe(channel_id)
         ]
-        founded_channels_data = CHANNEL_DATA_FOR_SUBSCIBE
+        founded_channels_data = CHANNEL_DATA_FOR_SUBSCIBE[tlg_id]
         channels_data = [channel for channel in founded_channels_data if
                          str(channel.get('channel_id')) in channels_for_subscribe]
         # Создаем найденые каналы в админке
