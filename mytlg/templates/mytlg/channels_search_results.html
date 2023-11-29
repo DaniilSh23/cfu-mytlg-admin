@@ -26,7 +26,7 @@
         $('#subscribeChannelForm').submit(function(event) {
         event.preventDefault(); // предотвращаем стандартное поведение формы
         var formData = $(this).serialize();
-        formData += '&tlg_id=' + tgObject.initDataUnsafe.user.id;
+<!--        formData += '&tlg_id=' + tgObject.initDataUnsafe.user.id;-->
         $.ajax({
           url: '{% url 'mytlg:subscribe_custom_channels' %}', // путь к обработчику на сервере
           type: 'POST',
