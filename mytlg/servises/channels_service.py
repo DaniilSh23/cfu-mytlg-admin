@@ -167,6 +167,7 @@ class ChannelsService:
     @staticmethod
     def create_founded_channels(channels_data_list):
         all_channels_ids = Channels.objects.all().only('channel_id')
+        MY_LOGGER.info(f"Список айдишников телеграм каналов {all_channels_ids}")
         channels_list = ChannelsService.make_channels_entities_list(channels_data_list)
         for channel in channels_list:
             if channel.channel_id in all_channels_ids:
