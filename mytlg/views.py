@@ -711,7 +711,7 @@ class SubscribeCustomChannels(View):
         new_channels = ChannelsService.create_founded_channels(channels_data)
 
         # Получаем телеграм аккаунт который будет использоваться для подписки на собственные каналы пользователя
-        max_ch_per_acc = int(BotSettingsService.get(key='max_channels_per_acc'))
+        max_ch_per_acc = int(BotSettingsService.get_bot_settings_by_key(key='max_channels_per_acc'))
         tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
                                                                                        len(channels_data))
 
