@@ -213,13 +213,13 @@ class ChannelsService:
             return False
 
     @staticmethod
-    def check_if_channel_in_black_list(channel: int) -> bool:
+    def check_if_channel_in_black_list(channel_id: int) -> bool:
         """
         Метод для проверки не входит ли канал в список запрещенных каналов
-        :param channel: id телеграм канала
+        :param channel_id: id телеграм канала
         :return:
         """
-        if channel in CHANNELS_BLACK_LIST:
+        if channel_id in CHANNELS_BLACK_LIST:
             return True
         else:
             return False
