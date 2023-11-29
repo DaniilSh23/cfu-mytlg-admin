@@ -716,12 +716,12 @@ class SubscribeCustomChannels(View):
                                                                                        len(channels_data))
 
         # TODO создать задачу на подписку
-        subs_task_pk = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
+        subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
 
         MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
         ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=channels_data,
                                                                         account_pk_for_subscribe=tlg_account.pk,
-                                                                        subs_task_pk=subs_task_pk
+                                                                        subs_task_pk=subs_task.pk
                                                                         )
         # Очищаем промежуточный словарь для хранения данных для формы
         # TODO добавить в словаре привязку к телеграм айди
