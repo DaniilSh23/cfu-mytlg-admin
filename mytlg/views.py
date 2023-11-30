@@ -721,7 +721,7 @@ class SubscribeCustomChannels(View):
 
             MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
             ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=channels_data,
-                                                                            account_pk_for_subscribe=tlg_account.pk,
+                                                                            account_pk_for_subscribe=tlg_account,
                                                                             subs_task_pk=subs_task.pk
                                                                             )
             return HttpResponse('<p>Ok</p>')
