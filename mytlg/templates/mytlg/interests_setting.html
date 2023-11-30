@@ -5,44 +5,52 @@
 <div class="row">
     <h3 class="fw-bold py-3 mb-1 my-form-border"><span class="text-muted">Укажите Ваши интересы</span></h3>
 
-    <div class="row">
-        <div class="col-12 my-form-border">
-            <div class="col-md mb-4 mb-md-0">
-                <div class="accordion mt-3" id="accordionExample">
+    <div class="col-12 my-form-border">
+        <div class="col-md mb-2 mb-md-0">
+            <div class="accordion mt-3" id="accordionExample">
 
-                    {% for i_interest in interests %}
-                        <div class="card accordion-item">
-                            <h2 class="accordion-header" id="interest-{{ forloop.counter }}">
-                                <button type="button" class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#accordionInterest{{ forloop.counter }}" aria-expanded="false" aria-controls="accordionInterest{{ forloop.counter }}">
-                                Блок интересов № {{ forloop.counter }}
-                                </button>
-                            </h2>
+                {% for i_interest in interests %}
+                    <div class="card accordion-item">
+                        <h2 class="accordion-header" id="interest-{{ forloop.counter }}">
+                            <button type="button" class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#accordionInterest{{ forloop.counter }}" aria-expanded="false" aria-controls="accordionInterest{{ forloop.counter }}">
+                            Блок интересов № {{ forloop.counter }}
+                            </button>
+                        </h2>
 
-                            <div id="accordionInterest{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#accordionExample" style="">
-                                <div class="accordion-body">
-                                    <div class="col-sm-10">
-                                        <small class="text-light fw-semibold">Укажите интересы</small>
-                                        <div class="input-group input-group-merge">
-                                            <textarea id="basic-icon-default-message" name="interest{{ forloop.counter }}" class="form-control my-filling-fields" rows="4" maxlength="300" placeholder="" aria-label="{{ i_interest }}" aria-describedby="basic-icon-default-message2">{{ i_interest.interest }}</textarea>
-                                        </div>
-                                        <div id="selectPeriod{{ forloop.counter }}">
-                                            <small class="text-light fw-semibold">Получать новости:</small>
-                                            {% for i_period in send_periods %}
-                                                <div class="form-check">
-                                                    <input name="send_period_{{ i_interest.pk }}" class="form-check-input" type="radio" value="{{ i_period.0 }}" id="sendPeriod-{{ i_period.0 }}" {% if i_period.0 == i_interest.send_period %} checked {% endif %}>
-                                                    <label class="form-check-label" for="sendPeriod-{{ i_period.0 }}"> {{i_period.1}} </label>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
+                        <div id="accordionInterest{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#accordionExample" style="">
+                            <div class="accordion-body">
+                                <div class="col-sm-10">
+                                    <small class="text-light fw-semibold">Укажите интересы</small>
+                                    <div class="input-group input-group-merge">
+                                        <textarea id="basic-icon-default-message" name="interest{{ forloop.counter }}" class="form-control my-filling-fields" rows="4" maxlength="300" placeholder="" aria-label="{{ i_interest }}" aria-describedby="basic-icon-default-message2">{{ i_interest.interest }}</textarea>
+                                    </div>
+                                    <div id="selectPeriod{{ forloop.counter }}">
+                                        <small class="text-light fw-semibold">Получать новости:</small>
+                                        {% for i_period in send_periods %}
+                                            <div class="form-check">
+                                                <input name="send_period_{{ i_interest.pk }}" class="form-check-input" type="radio" value="{{ i_period.0 }}" id="sendPeriod-{{ i_period.0 }}" {% if i_period.0 == i_interest.send_period %} checked {% endif %}>
+                                                <label class="form-check-label" for="sendPeriod-{{ i_period.0 }}"> {{i_period.1}} </label>
+                                            </div>
+                                        {% endfor %}
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    {% endfor %}
-                </div>
+                    </div>
+                {% endfor %}
             </div>
         </div>
     </div>
+
+    <div class="card-body">
+        <div class="row">
+            <div class="d-grid gap-2 col-lg-auto mx-auto">
+                <button class="btn btn-primary btn-lg" type="button">Добавить интерес</button>
+                <button class="btn btn-secondary btn-lg" type="button">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
 </div>
 <div id="tlg-data" data-tlg_id="{{ tlg_id }}"></div>
 
