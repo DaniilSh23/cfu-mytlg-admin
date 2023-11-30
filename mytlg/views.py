@@ -716,7 +716,7 @@ class SubscribeCustomChannels(View):
                                                                                        len(channels_data))
 
         # TODO создать задачу на подписку
-        subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
+        subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account.pk, new_channels)
 
         MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
         ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=channels_data,
