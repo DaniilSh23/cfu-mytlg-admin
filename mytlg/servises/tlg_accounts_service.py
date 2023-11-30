@@ -69,7 +69,7 @@ class TlgAccountsService:
         accounts = TlgAccounts.objects.filter(is_run=True, for_search=False)
 
         for account in accounts:
-            if account.num_ch - channels_count < max_channels_per_acc:
+            if account.subscribed_numb_of_channels - channels_count < max_channels_per_acc:
                 MY_LOGGER.info(f'Выбран аккаунт для подписки на кастомные каналы {account}')
                 return account
             else:
