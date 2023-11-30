@@ -709,7 +709,7 @@ class SubscribeCustomChannels(View):
                          str(channel.get('channel_id')) in channels_for_subscribe]
         # Создаем найденые каналы в админке
         new_channels = ChannelsService.create_founded_channels(channels_data)
-
+        new_channels = [{'channel_pk': channel.pk, 'channel_link': channel.channel_link} for channel in new_channels]
         # Получаем телеграм аккаунт который будет использоваться для подписки на собственные каналы пользователя
         max_ch_per_acc = int(BotSettingsService.get_bot_settings_by_key(key='max_channels_per_acc'))
         tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
@@ -719,7 +719,7 @@ class SubscribeCustomChannels(View):
             subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
 
             MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
-            ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=channels_data,
+            ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=new_channels,
                                                                             account_pk_for_subscribe=tlg_account.pk,
                                                                             subs_task_pk=subs_task.pk
                                                                             )
