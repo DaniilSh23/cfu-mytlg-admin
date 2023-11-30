@@ -123,45 +123,6 @@ class WriteUsrView(APIView):
                         status=status.HTTP_200_OK)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class StartSettingsView(View):
-    """
-    Вьюшка для установки стартовых настроек бота
-    """
-
-    def get(self, request):
-        context = {
-            "themes": CategoriesService.get_all_categories()
-        }
-        return render(request, template_name='mytlg/start_settings.html', context=context)
-
-    @csrf_exempt
-    def post(self, request):
-        MY_LOGGER.info(f'Получен POST запрос для записи каналов. {request.POST}')
-
-        MY_LOGGER.debug('Проверка параметров запроса')
-        tlg_id = request.POST.get("tlg_id")
-        selected_channels_lst = request.POST.getlist("selected_channel")
-        check_selected_channels = list(map(lambda i_ch: i_ch.isdigit(), selected_channels_lst))
-        if not tlg_id or not tlg_id.isdigit() or not all(check_selected_channels):
-            MY_LOGGER.warning('Данные запроса не прошли валидацию')
-            return HttpResponse(content='Request params is not valid', status=400)
-
-        MY_LOGGER.debug('Связываем в БД юзера с выбранными каналами')
-        bot_usr_obj = BotUsersService.get_bot_user_by_tg_id(tlg_id=int(tlg_id))
-
-        if not bot_usr_obj:
-            MY_LOGGER.warning(f'Объект юзера с tlg_id=={tlg_id} не найден в БД.')
-            return HttpResponse('User not found', status=404)
-
-        selected_channels_lst = list(map(lambda i_ch: int(i_ch), selected_channels_lst))
-        channels_qset = ChannelsService.get_channels_qset_by_list_of_ids(selected_channels_lst)
-        MY_LOGGER.debug(f'Получены объекты каналов для привязки к юзеру с tlg_id=={tlg_id} на основании списка '
-                        f'PK={selected_channels_lst}\n{channels_qset}')
-        bot_usr_obj.channels.set(channels_qset)
-        return render(request, template_name=SUCCESS_TEMPLATE_PATH)
-
-
 @method_decorator(decorator=csrf_exempt, name='dispatch')
 class WriteInterestsView(View):
     """

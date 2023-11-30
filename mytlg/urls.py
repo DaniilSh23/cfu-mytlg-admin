@@ -8,7 +8,6 @@ from mytlg.views import StartSettingsView, WriteUsrView, WriteInterestsView, tes
 app_name = 'mytlg'
 
 urlpatterns = [
-    path('start_settings/', StartSettingsView.as_view(), name='start_settings'),
     path('write_usr/', WriteUsrView.as_view(), name='write_usr'),
     path('write_interests/', WriteInterestsView.as_view(), name='write_interests'),
     # path('set_acc_run_flag/', SetAccRunFlag.as_view(), name='set_acc_run_flag'),
