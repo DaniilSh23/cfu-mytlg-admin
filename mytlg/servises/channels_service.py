@@ -194,7 +194,6 @@ class ChannelsService:
             if len(founded_channels) > limit:
                 founded_channels = founded_channels[:limit]
             channels_for_subscribe = []
-            # TODO дописать добавление новой более полной информации о канале
             for channel in founded_channels:
                 channels_for_subscribe.append((channel["channel_id"], channel["channel_name"]))
             return channels_for_subscribe, founded_channels
@@ -236,7 +235,6 @@ class ChannelsService:
         :param channel: id телеграм канала
         :return:
         """
-        print('check_channel_before_subscribe', channel)
         if ChannelsService.check_channel_all_ready_subscribed(
                 channel) and ChannelsService.check_if_channel_in_black_list(channel):
             return False
@@ -267,6 +265,7 @@ class ChannelsService:
         result = requests.post(
             url=f'{ACCOUNT_SERVICE_HOST}subs_accs_to_channels/', json=data
         )
+        MY_LOGGER.info(f'Данные запроса на подписку {data}')
         # TODO дописать логику с уведомлениями в случае ошибки или постановки задачи на подписку
         if result.status_code != 200:
             return False
