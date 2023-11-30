@@ -10,8 +10,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib import messages as err_msgs
-
-from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, CHANNELS_FOR_FORM_CHOICES, CHANNEL_DATA_FOR_SUBSCIBE
+from django.core.cache import cache
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
@@ -666,8 +666,8 @@ class SearchCustomChannels(View):
 
         subscribe_form = SubscribeChannelForm(initial={'tlg_id': tlg_id})
         subscribe_form.fields['channels_for_subscribe'].choices = channel_for_subscrbe_form
-        CHANNELS_FOR_FORM_CHOICES[tlg_id] = channel_for_subscrbe_form
-        CHANNEL_DATA_FOR_SUBSCIBE[tlg_id] = founded_channels
+        cache.set(f'{tlg_id}-CHANNELS_FOR_FORM_CHOICES', channel_for_subscrbe_form, timeout=3600)
+        cache.set(f'{tlg_id}-CHANNEL_DATA_FOR_SUBSCRIBE', founded_channels, timeout=3600)
         context = dict(
             form=subscribe_form,
             channels_list=founded_channels,
@@ -689,9 +689,9 @@ class SubscribeCustomChannels(View):
         MY_LOGGER.info(f'{request.POST} Поступил POST запрос на вьюшку для подписки на собственные телеграм каналы')
         form = SubscribeChannelForm(request.POST)
         tlg_id = request.POST.get("tlg_id")
-        MY_LOGGER.info(f'Каналы для формы подписки {CHANNELS_FOR_FORM_CHOICES}')
-        MY_LOGGER.info(f'Каналы для подписки {CHANNEL_DATA_FOR_SUBSCIBE}')
-        form.fields['channels_for_subscribe'].choices = CHANNELS_FOR_FORM_CHOICES.get(tlg_id)
+        # MY_LOGGER.info(f'Каналы для формы подписки {CHANNELS_FOR_FORM_CHOICES}')
+        # MY_LOGGER.info(f'Каналы для подписки {CHANNEL_DATA_FOR_SUBSCIBE}')
+        form.fields['channels_for_subscribe'].choices = cache.get(f'{tlg_id}-CHANNELS_FOR_FORM_CHOICES')
         if not form.is_valid():
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
             err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
@@ -704,7 +704,7 @@ class SubscribeCustomChannels(View):
             for channel_id in founded_channels
             if ChannelsService.check_channel_before_subscribe(channel_id)
         ]
-        founded_channels_data = CHANNEL_DATA_FOR_SUBSCIBE[tlg_id]
+        founded_channels_data = cache.get(f'{tlg_id}-CHANNEL_DATA_FOR_SUBSCIBE')
         channels_data = [channel for channel in founded_channels_data if
                          str(channel.get('channel_id')) in channels_for_subscribe]
         # Создаем найденые каналы в админке

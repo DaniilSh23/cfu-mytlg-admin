@@ -295,6 +295,15 @@ sentry_sdk.init(
     profiles_sample_rate=1.0,
 )
 
-CHANNELS_FOR_FORM_CHOICES = {}
-CHANNEL_DATA_FOR_SUBSCIBE = {}
+# Настройка Redis cache
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://localhost:6379',  # Ваша конфигурация Redis
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
 CHANNELS_BLACK_LIST = []
