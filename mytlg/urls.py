@@ -1,9 +1,10 @@
 from django.urls import path
 
 from cfu_mytlg_admin.settings import DEBUG
-from mytlg.views import StartSettingsView, WriteUsrView, WriteInterestsView, test_view, \
+from mytlg.views import WriteUsrView, WriteInterestsView, test_view, \
     GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, GetActiveAccounts, \
-    AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler
+    AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler, \
+    InterestsSetting
 
 app_name = 'mytlg'
 
@@ -23,6 +24,7 @@ urlpatterns = [
     path('what_was_interesting/', WhatWasInteresting.as_view(), name='what_was_interesting'),
     path('show_scheduled_posts/', ShowScheduledPosts.as_view(), name='show_scheduled_posts'),
     path('sent_reaction/', SentReactionHandler.as_view(), name='sent_reaction'),
+    path('interests_setting/', InterestsSetting.as_view(), name='interests_setting'),
 ]
 
 if DEBUG:

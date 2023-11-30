@@ -24,7 +24,7 @@ from mytlg.servises.interests_service import InterestsService
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
 from mytlg.servises.news_posts_service import NewsPostsService
 from mytlg.servises.bot_settings_service import BotSettingsService
-from mytlg.servises.bot_token_service import BotTokenService
+from mytlg.servises.check_request_services import CheckRequestService
 from mytlg.servises.account_errors_service import TlgAccountErrorService
 from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
@@ -40,6 +40,36 @@ OK_THANKS = 'Хорошо, спасибо!'
 TOKEN_CHECK_OK = 'Токен успешно проверен'
 
 text_processor = TextProcessService()
+
+
+class InterestsSetting(View):
+    """
+    Вьюшка для страницы, где мы настраиваем интересы.
+    """
+    def get(self, request: HttpRequest) -> HttpResponse:
+        MY_LOGGER.info(f'Получен GET запрос на вьюшку InterestsSetting')
+        token = request.GET.get("token")
+        tlg_id = request.GET.get("tlg_id")
+
+        # Проверки запросов
+        bad_response = CheckRequestService.check_bot_token(token, api_request=False)
+        if bad_response:
+            return bad_response
+        bad_response = CheckRequestService.check_telegram_id(tlg_id, api_request=False)
+        if bad_response:
+            return bad_response
+
+        # Вызов сервисов с бизнес-логикой
+        bot_user = BotUsersService.get_bot_user_by_tg_id(tlg_id)
+        interests = InterestsService.get_active_interests(bot_user)
+        send_periods = InterestsService.get_send_periods()
+
+        context = {
+            "tlg_id": bot_user.tlg_id,
+            "interests": interests,
+            "send_periods": send_periods,
+        }
+        return render(request, template_name='mytlg/interests_setting.html', context=context)
 
 
 class SentReactionHandler(APIView):
@@ -84,7 +114,7 @@ class ShowScheduledPosts(View):
     def get(self, request):
         MY_LOGGER.info(f'Получен запрос на вьюшку ShowScheduledPosts {request.GET}')
         token = request.GET.get("token")
-        bad_response = BotTokenService.check_bot_token(token)
+        bad_response = CheckRequestService.check_bot_token(token)
         if bad_response:
             return bad_response
         post_hash = request.GET.get('post_hash')
@@ -105,7 +135,7 @@ class WriteUsrView(APIView):
     def post(self, request):
         MY_LOGGER.info(f'Получен запрос на вьюшку WriteUsrView: {request.data}')
         token = request.data.get("token")
-        BotTokenService.check_bot_token(token)
+        CheckRequestService.check_bot_token(token)
 
         MY_LOGGER.debug('Записываем/обновляем данные о юзере в БД')
 
@@ -243,7 +273,7 @@ class GetChannelsListView(APIView):
         MY_LOGGER.info(f'Поступил GET запрос на вьюшку получения списка запущенных аккаунтов: {request.GET}')
 
         token = request.query_params.get("token")
-        BotTokenService.check_bot_token(token)
+        CheckRequestService.check_bot_token(token)
 
         acc_pk = request.query_params.get("acc_pk")
         if not acc_pk or not acc_pk.isdigit():
@@ -272,7 +302,7 @@ class RelatedNewsView(APIView):
         MY_LOGGER.info(f'Получен GET запрос для получения новостей по определённой тематике: {request.GET}')
 
         token = request.query_params.get("token")
-        BotTokenService.check_bot_token(token)
+        CheckRequestService.check_bot_token(token)
         ch_pk = request.query_params.get("ch_pk")
         if not ch_pk or not ch_pk.isdigit():
             MY_LOGGER.warning(f'ch_pk невалидный или отсутствует. Значение параметра ch_pk={ch_pk}')
@@ -447,7 +477,7 @@ class GetActiveAccounts(APIView):
         """
         MY_LOGGER.info('Получен GET запрос на вьюшку для получения активных аккаунтов')
         token = request.query_params.get("token")
-        BotTokenService.check_bot_token(token)
+        CheckRequestService.check_bot_token(token)
         # Запускаем функцию отправки боту команд для старта аккаунтов
         start_or_stop_accounts.delay()
         return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
@@ -471,7 +501,7 @@ class AccountError(APIView):
             return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
 
         token = ser.validated_data.get("token")
-        BotTokenService.check_bot_token(token)
+        CheckRequestService.check_bot_token(token)
         pk = ser.validated_data.get("account")
         tlg_acc = TlgAccountsService.get_tlg_account_only_id_by_pk(pk)
 
