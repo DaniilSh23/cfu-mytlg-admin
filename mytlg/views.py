@@ -716,11 +716,16 @@ class SubscribeCustomChannels(View):
                                                                                        len(channels_data))
 
         # TODO создать задачу на подписку
-        subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account.pk, new_channels)
+        try:
+            subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account.pk, new_channels)
 
-        MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
-        ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=channels_data,
-                                                                        account_pk_for_subscribe=tlg_account.pk,
-                                                                        subs_task_pk=subs_task.pk
-                                                                        )
-        return HttpResponse('<p>Ok</p>')
+            MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
+            ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=channels_data,
+                                                                            account_pk_for_subscribe=tlg_account.pk,
+                                                                            subs_task_pk=subs_task.pk
+                                                                            )
+            return HttpResponse('<p>Ok</p>')
+        except Exception as e:
+            MY_LOGGER.warning(f'Ошибка при создании задачу на подписку на собственные каналы {e}')
+
+            return HttpResponse(f'<p>Ошибка при создании задачу на подписку на собственные каналы {e}</p>')
