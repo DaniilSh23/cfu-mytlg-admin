@@ -704,7 +704,7 @@ class SubscribeCustomChannels(View):
             for channel_id in founded_channels
             if ChannelsService.check_channel_before_subscribe(channel_id)
         ]
-        founded_channels_data = cache.get(f'{tlg_id}-CHANNEL_DATA_FOR_SUBSCIBE')
+        founded_channels_data = cache.get(f'{tlg_id}-CHANNEL_DATA_FOR_SUBSCRIBE')
         channels_data = [channel for channel in founded_channels_data if
                          str(channel.get('channel_id')) in channels_for_subscribe]
         # Создаем найденые каналы в админке
@@ -723,8 +723,4 @@ class SubscribeCustomChannels(View):
                                                                         account_pk_for_subscribe=tlg_account.pk,
                                                                         subs_task_pk=subs_task.pk
                                                                         )
-        # Очищаем промежуточный словарь для хранения данных для формы
-        # TODO добавить в словаре привязку к телеграм айди
-        del CHANNELS_FOR_FORM_CHOICES[tlg_id]
-        del CHANNEL_DATA_FOR_SUBSCIBE[tlg_id]
         return HttpResponse('<p>Ok</p>')
