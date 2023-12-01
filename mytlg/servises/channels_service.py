@@ -224,9 +224,9 @@ class ChannelsService:
         :return:
         """
         if channel_id in CHANNELS_BLACK_LIST:
-            return True
-        else:
             return False
+        else:
+            return True
 
     @staticmethod
     def check_channel_before_subscribe(channel: int) -> bool:
@@ -237,9 +237,9 @@ class ChannelsService:
         """
         if ChannelsService.check_channel_all_ready_subscribed(
                 channel) and ChannelsService.check_if_channel_in_black_list(channel):
-            return False
-        else:
             return True
+        else:
+            return False
 
     @staticmethod
     def send_command_to_accounts_for_subscribe_channels(channels_for_subscribe: list, account_pk_for_subscribe: int,

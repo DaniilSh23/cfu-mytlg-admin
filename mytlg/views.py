@@ -689,8 +689,6 @@ class SubscribeCustomChannels(View):
         MY_LOGGER.info(f'{request.POST} Поступил POST запрос на вьюшку для подписки на собственные телеграм каналы')
         form = SubscribeChannelForm(request.POST)
         tlg_id = request.POST.get("tlg_id")
-        # MY_LOGGER.info(f'Каналы для формы подписки {CHANNELS_FOR_FORM_CHOICES}')
-        # MY_LOGGER.info(f'Каналы для подписки {CHANNEL_DATA_FOR_SUBSCIBE}')
         form.fields['channels_for_subscribe'].choices = cache.get(f'{tlg_id}-CHANNELS_FOR_FORM_CHOICES')
         if not form.is_valid():
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
@@ -711,7 +709,7 @@ class SubscribeCustomChannels(View):
         new_channels = ChannelsService.create_founded_channels(channels_data)
         new_channels_data = [{'channel_pk': channel.pk, 'channel_link': channel.channel_link} for channel in
                              new_channels]
-        # Получаем телеграм аккаунт который будет использоваться для подписки на собственные каналы пользователя
+        # Получаем телеграм аккаунт, который будет использоваться для подписки на собственные каналы пользователя
         max_ch_per_acc = int(BotSettingsService.get_bot_settings_by_key(key='max_channels_per_acc'))
         tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
                                                                                        len(channels_data))
@@ -723,7 +721,6 @@ class SubscribeCustomChannels(View):
 
         try:
             subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
-
             MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
             ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=new_channels_data,
                                                                             account_pk_for_subscribe=tlg_account.pk,
