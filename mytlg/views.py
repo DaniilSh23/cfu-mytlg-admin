@@ -709,7 +709,8 @@ class SubscribeCustomChannels(View):
                          str(channel.get('channel_id')) in channels_for_subscribe]
         # Создаем найденые каналы в админке
         new_channels = ChannelsService.create_founded_channels(channels_data)
-        new_channels_data = [{'channel_pk': channel.pk, 'channel_link': channel.channel_link} for channel in new_channels]
+        new_channels_data = [{'channel_pk': channel.pk, 'channel_link': channel.channel_link} for channel in
+                             new_channels]
         # Получаем телеграм аккаунт который будет использоваться для подписки на собственные каналы пользователя
         max_ch_per_acc = int(BotSettingsService.get_bot_settings_by_key(key='max_channels_per_acc'))
         tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
@@ -718,6 +719,7 @@ class SubscribeCustomChannels(View):
         message = '<p>Задача по подписке на каналы'
         for channel in new_channels:
             message += f' {channel.channel_name}, '
+        message += ' отправлена в работу. \n О результатах подписки придет сообщение</p>'
 
         try:
             subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
@@ -727,8 +729,8 @@ class SubscribeCustomChannels(View):
                                                                             account_pk_for_subscribe=tlg_account.pk,
                                                                             subs_task_pk=subs_task.pk
                                                                             )
-            return HttpResponse(f'{message} отправлена в работу. \n О результатах подписки придет сообщение</p>')
+            return HttpResponse(message)
         except Exception as e:
             MY_LOGGER.warning(f'Ошибка при создании задачу на подписку на собственные каналы {e}')
-
-            return HttpResponse(f'<p>Ошибка при создании задачу на подписку на собственные каналы {e}</p>')
+            return HttpResponse(
+                '<p>Что-то пошло не так. Мы уже работаем на устранением проблемы. Попробуйте пожалуйста позже.</p>')
