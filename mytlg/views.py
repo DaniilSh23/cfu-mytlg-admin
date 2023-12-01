@@ -715,6 +715,10 @@ class SubscribeCustomChannels(View):
         tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
                                                                                        len(channels_data))
 
+        message = '<p>Задача по подписке на каналы'
+        for channel in new_channels:
+            message += f'{channel.channel_name}, '
+
         try:
             subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
 
@@ -724,7 +728,7 @@ class SubscribeCustomChannels(View):
                                                                             subs_task_pk=subs_task.pk
                                                                             )
             # TODO дописать вывод сообщения со списком каналов на которые отправлена задача по подписке
-            return HttpResponse('<p>Задача по подписке на </p>')
+            return HttpResponse(f'{message} отправлена в работу. \n О результатах подписки придет сообщение</p>')
         except Exception as e:
             MY_LOGGER.warning(f'Ошибка при создании задачу на подписку на собственные каналы {e}')
 
