@@ -77,3 +77,28 @@ class BotUsersService:
         и установлен флаг получения постов только со своих каналов.
         """
         return BotUser.objects.filter(channels__pk=channel_pk, only_custom_channels=True).only("id")
+
+    @staticmethod
+    def switch_only_custom_channels_and_get_custom_channels_lst(tlg_id: str):
+        """
+        Переключаем BotUser.only_custom_channels и достаем список кастомных каналов пользователя.
+        Возвращаем словарь:
+        {
+            "only_custom_channels": True/False,   # Получать только со своих каналов
+            "custom_channels_is_empty": True/False,  # Список кастомных каналов пустой
+        }
+        """
+        try:
+            bot_user = BotUser.objects.get(tlg_id=tlg_id)
+        except ObjectDoesNotExist:
+            return None
+
+        bot_user.only_custom_channels = False if bot_user.only_custom_channels else True
+        bot_user.save()
+        channels = bot_user.channels.all()
+        custom_channels_is_empty = False
+        if not channels:
+            custom_channels_is_empty = True
+
+        return {"only_custom_channels": bot_user.only_custom_channels,
+                "custom_channels_is_empty": custom_channels_is_empty}

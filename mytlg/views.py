@@ -1,3 +1,5 @@
+from typing import Dict
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpRequest
 from django.shortcuts import render, redirect
@@ -14,7 +16,8 @@ from django.core.cache import cache
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
-    UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
+    UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer, \
+    SwitchOnlyCustomChannelsSerializer
 from mytlg.servises.check_request_services import CheckRequestService
 from mytlg.servises.reactions_service import ReactionsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
@@ -41,6 +44,34 @@ OK_THANKS = 'Хорошо, спасибо!'
 TOKEN_CHECK_OK = 'Токен успешно проверен'
 
 text_processor = TextProcessService()
+
+
+class SwitchOnlyCustomChannels(APIView):
+    """
+    Вьюшка для логики переключения в боте кнопки 'Посты только из моих каналов'
+    """
+    @extend_schema(request=SwitchOnlyCustomChannelsSerializer, responses=Dict[str, bool], methods=['post'])
+    def post(self, request):
+        MY_LOGGER.info(f'Получен POST запрос на вьюшку InterestsSetting')
+        ser = SwitchOnlyCustomChannelsSerializer(data=request.data)
+
+        if ser.is_valid():
+            token = ser.validated_data.get("token")
+            tlg_id = ser.validated_data.get("tlg_id")
+
+            # Проверки запросов
+            bad_response = CheckRequestService.check_bot_token(token, api_request=True)
+            if bad_response:
+                return bad_response
+            bad_response = CheckRequestService.check_telegram_id(tlg_id, api_request=True)
+            if bad_response:
+                return bad_response
+
+            response_data = BotUsersService.switch_only_custom_channels_and_get_custom_channels_lst(tlg_id=tlg_id)
+            return Response(data=response_data, status=200)
+        else:
+            MY_LOGGER.info(f'Неудачный POST запрос на вьюшку SwitchOnlyCustomChannels | {request.data} | {ser.errors}')
+            return Response(data={'result': f'not valid data | {ser.errors!r}'}, status=400)
 
 
 class InterestsSetting(View):
