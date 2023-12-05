@@ -23,6 +23,7 @@ class BotUserAdmin(admin.ModelAdmin):
         "tlg_id",
         "tlg_username",
         "start_bot_at",
+        "only_custom_channels",
     )
     list_display_links = (
         "pk",

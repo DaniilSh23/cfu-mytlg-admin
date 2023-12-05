@@ -24,7 +24,6 @@ from mytlg.servises.interests_service import InterestsService
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
 from mytlg.servises.news_posts_service import NewsPostsService
 from mytlg.servises.bot_settings_service import BotSettingsService
-from mytlg.servises.bot_token_service import BotTokenService
 from mytlg.servises.account_errors_service import TlgAccountErrorService
 from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
@@ -41,6 +40,37 @@ OK_THANKS = 'Хорошо, спасибо!'
 TOKEN_CHECK_OK = 'Токен успешно проверен'
 
 text_processor = TextProcessService()
+
+
+class InterestsSetting(View):
+    """
+    Вьюшка для страницы, где мы настраиваем интересы.
+    """
+    def get(self, request: HttpRequest) -> HttpResponse:
+        MY_LOGGER.info(f'Получен GET запрос на вьюшку InterestsSetting')
+        token = request.GET.get("token")
+        tlg_id = request.GET.get("tlg_id")
+
+        # Проверки запросов
+        bad_response = CheckRequestService.check_bot_token(token, api_request=False)
+        if bad_response:
+            return bad_response
+        bad_response = CheckRequestService.check_telegram_id(tlg_id, api_request=False)
+        if bad_response:
+            return bad_response
+
+        # Вызов сервисов с бизнес-логикой
+        bot_user = BotUsersService.get_bot_user_by_tg_id(tlg_id)
+        interests = InterestsService.get_active_interests(bot_user)
+        send_periods = InterestsService.get_send_periods()
+
+        context = {
+            "tlg_id": bot_user.tlg_id,
+            "interests": interests,
+            "send_periods": send_periods,
+        }
+        return render(request, template_name='mytlg/interests_setting.html', context=context)
+
 
 
 class SentReactionHandler(APIView):

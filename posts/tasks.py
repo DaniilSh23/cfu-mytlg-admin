@@ -26,7 +26,7 @@ def raw_post_processing(ch_pk: int, new_post_text: str, post_link: str):
     # Достать посты из БД с общей категорией для нового поста
     similar_posts = PostService.get_posts_with_similar_category(ch_pk)
     if similar_posts is None:
-        MY_LOGGER.warning(f'Неудачная обработка поста!')
+        MY_LOGGER.warning(f'Неудачная обработка поста!')    # TODO: поправить лог
         return False
 
     # Если нет постов для сравнения

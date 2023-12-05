@@ -26,7 +26,7 @@ class ScheduledPostsService:
         for i_user in bot_users_qset:
             ScheduledPostsService.create_scheduled_post(
                 i_user=i_user,
-                interest=None,
+                user_interest=None,
                 sending_datetime=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE)),
                 post=post
             )
@@ -69,7 +69,9 @@ class ScheduledPostsService:
         Отбор пользователей для поста и планирование поста к отправке.
         """
         MY_LOGGER.debug('Планируем пост к отправке.')
-        users_qset = BotUsersService.get_users_queryset_for_scheduling_post(bot_usr)
+        # TODO: добавить в этот сервис логику, чтобы доставать только тех юзеров, у которых не установлен флаг
+        #  получения постов со своих каналов - ВРОДЕ ГОТОВО, НО НЕ ПРОВЕРЕНО
+        users_qset = BotUsersService.filter_users_queryset_without_custom_channels_flag(bot_usr)
 
         for i_user in users_qset:
             # Проверяем на предмет соответствия черному списку
