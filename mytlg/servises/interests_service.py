@@ -24,7 +24,7 @@ class InterestsService:
     @staticmethod
     def get_active_interests(bot_user):
         return (Interests.objects.filter(bot_user=bot_user, is_active=True, interest_type='main')
-                .only('pk', 'is_active'))
+                .only('pk', 'is_active', 'interest', 'send_period', 'when_send'))
 
     @staticmethod
     def set_is_active_false_in_active_interests(active_interests):
