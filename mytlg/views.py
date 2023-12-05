@@ -15,6 +15,7 @@ from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
+from mytlg.servises.check_request_services import CheckRequestService
 from mytlg.servises.reactions_service import ReactionsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
 from mytlg.servises.bot_users_service import BotUsersService
@@ -72,7 +73,6 @@ class InterestsSetting(View):
         return render(request, template_name='mytlg/interests_setting.html', context=context)
 
 
-
 class SentReactionHandler(APIView):
     """
     Вьюшка для обработки AJAX запрос с реакцией пользователя на пост
@@ -115,9 +115,12 @@ class ShowScheduledPosts(View):
     def get(self, request):
         MY_LOGGER.info(f'Получен запрос на вьюшку ShowScheduledPosts {request.GET}')
         token = request.GET.get("token")
-        bad_response = BotTokenService.check_bot_token(token)
+
+        # Проверки запросов
+        bad_response = CheckRequestService.check_bot_token(token, api_request=False)
         if bad_response:
             return bad_response
+
         post_hash = request.GET.get('post_hash')
         posts, tlg_id = ScheduledPostsService.get_posts_for_show(post_hash=post_hash)
 
@@ -136,7 +139,15 @@ class WriteUsrView(APIView):
     def post(self, request):
         MY_LOGGER.info(f'Получен запрос на вьюшку WriteUsrView: {request.data}')
         token = request.data.get("token")
-        BotTokenService.check_bot_token(token)
+        tlg_id = request.data.get("tlg_id")
+
+        # Проверки запросов
+        bad_response = CheckRequestService.check_bot_token(token, api_request=True)
+        if bad_response:
+            return bad_response
+        bad_response = CheckRequestService.check_telegram_id(tlg_id, api_request=True)
+        if bad_response:
+            return bad_response
 
         MY_LOGGER.debug('Записываем/обновляем данные о юзере в БД')
 
@@ -313,7 +324,11 @@ class GetChannelsListView(APIView):
         MY_LOGGER.info(f'Поступил GET запрос на вьюшку получения списка запущенных аккаунтов: {request.GET}')
 
         token = request.query_params.get("token")
-        BotTokenService.check_bot_token(token)
+
+        # Проверки запросов
+        bad_response = CheckRequestService.check_bot_token(token, api_request=True)
+        if bad_response:
+            return bad_response
 
         acc_pk = request.query_params.get("acc_pk")
         if not acc_pk or not acc_pk.isdigit():
@@ -342,7 +357,12 @@ class RelatedNewsView(APIView):
         MY_LOGGER.info(f'Получен GET запрос для получения новостей по определённой тематике: {request.GET}')
 
         token = request.query_params.get("token")
-        BotTokenService.check_bot_token(token)
+
+        # Проверки запросов
+        bad_response = CheckRequestService.check_bot_token(token, api_request=True)
+        if bad_response:
+            return bad_response
+
         ch_pk = request.query_params.get("ch_pk")
         if not ch_pk or not ch_pk.isdigit():
             MY_LOGGER.warning(f'ch_pk невалидный или отсутствует. Значение параметра ch_pk={ch_pk}')
@@ -537,7 +557,12 @@ class GetActiveAccounts(APIView):
         """
         MY_LOGGER.info('Получен GET запрос на вьюшку для получения активных аккаунтов')
         token = request.query_params.get("token")
-        BotTokenService.check_bot_token(token)
+
+        # Проверки запросов
+        bad_response = CheckRequestService.check_bot_token(token, api_request=True)
+        if bad_response:
+            return bad_response
+
         # Запускаем функцию отправки боту команд для старта аккаунтов
         start_or_stop_accounts.delay()
         return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
@@ -561,7 +586,12 @@ class AccountError(APIView):
             return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
 
         token = ser.validated_data.get("token")
-        BotTokenService.check_bot_token(token)
+
+        # Проверки запросов
+        bad_response = CheckRequestService.check_bot_token(token, api_request=True)
+        if bad_response:
+            return bad_response
+
         pk = ser.validated_data.get("account")
         tlg_acc = TlgAccountsService.get_tlg_account_only_id_by_pk(pk)
 
