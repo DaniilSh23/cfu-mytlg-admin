@@ -77,7 +77,7 @@
     <script>
         $(document).ready(function() {
             var interestCounter = {{ interests|length }}; // Получаем текущее количество интересов
-            var maxInterests = 10; // Максимальное количество блоков, которые можно добавить
+            var maxInterests = 5; // Максимальное количество блоков, которые можно добавить
 
             $('.add-interest').on('click', function() {
                 if (interestCounter < maxInterests) {
