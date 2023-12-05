@@ -1,6 +1,8 @@
 from mytlg.models import BotUser
 from django.core.exceptions import ObjectDoesNotExist
 
+from mytlg.servises.channels_service import ChannelsService
+
 
 class BotUsersService:
 
@@ -48,3 +50,18 @@ class BotUsersService:
     def get_bot_users_id_and_tlg_id_by_ids(bot_user_ids):
         bot_users = BotUser.objects.filter(id__in=bot_user_ids).only('id', 'tlg_id')
         return bot_users
+
+    @staticmethod
+    def relating_channels_with_user(user_tlg_id: int, channels_qset):
+        """
+        Сервис для установки связи M2M между пользователем (BotUser) и каналами (Channels).
+        """
+        bot_user_obj = BotUsersService.get_bot_user_by_tg_id(tlg_id=user_tlg_id)
+        bot_user_obj.channels.add(*channels_qset)
+
+    @staticmethod
+    def filter_bot_users_by_channel_pk(channel_pk):
+        """
+        Фильтруем юзеров, у которых в числе связанных записей channel указан канал с требуемым PK.
+        """
+        return BotUser.objects.filter(channels__pk=channel_pk).only("id")

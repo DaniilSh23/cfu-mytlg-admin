@@ -10,9 +10,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib import messages as err_msgs
-
+from django.core.cache import cache
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
-from mytlg.forms import BlackListForm, WhatWasInterestingForm
+from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer
 from mytlg.servises.reactions_service import ReactionsService
@@ -34,6 +34,7 @@ from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, 
 
 INVALID_TOKEN_TEXT = 'invalid token'
 SUCCESS_TEMPLATE_PATH = 'mytlg/success.html'
+CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH = 'mytlg/channels_search_results.html'
 NOT_VALID_DATA = 'Not valid data'
 VALID_DATA_CHECK_TOKEN = 'Данные валидны, проверяем токен'
 OK_THANKS = 'Хорошо, спасибо!'
@@ -403,6 +404,7 @@ class WriteSubsResults(APIView):
     Вьюшки для записи результатов подписок аккаунтов.
     """
 
+    @extend_schema(request=WriteSubsResultSerializer, responses=str, methods=['post'])
     def post(self, request):
         MY_LOGGER.info('Получен POST запрос на вьюшку записи результатов подписки аккаунта')
 
@@ -420,6 +422,25 @@ class WriteSubsResults(APIView):
 
                 MY_LOGGER.debug(f'Обновляем данные в БД по задаче аккаунта c PK=={task_obj.pk}')
                 AccountsSubscriptionTasksService.update_task_obj_data(ser, task_obj)
+
+                if task_obj.tlg_acc.acc_tlg_id:
+                    success_subscription = True if int(ser.validated_data.get("success_subs")) > 0 else False
+                    # Отправка уведомления юзеру
+                    AccountsSubscriptionTasksService.send_subscription_notification(
+                        success=success_subscription,
+                        channel_link=ser.validated_data.get("channel_link"),
+                        user_tlg_id=task_obj.assigned_user.tlg_id,
+                    )
+                    if success_subscription:
+                        # Получаем каналы по ссылкам на них
+                        channels_qset = ChannelsService.filter_channels_by_link_only_pk(
+                            channels_links=[ser.validated_data.get("channel_link")]
+                        )
+                        # Связываем пользователя с каналами
+                        BotUsersService.relating_channels_with_user(
+                            user_tlg_id=int(task_obj.assigned_user.tlg_id),
+                            channels_qset=channels_qset
+                        )
 
                 return Response(data={'result': 'task status changed successful'}, status=status.HTTP_200_OK)
 
@@ -608,8 +629,96 @@ class WhatWasInteresting(View):
         return render(request, template_name=SUCCESS_TEMPLATE_PATH, context=context)
 
 
-def test_view(request):
+class SearchCustomChannels(View):
     """
-    Тестовая вьюшка. Тестим всякое
+    Вьюшки для поиска собственных телеграм каналов.
     """
-    return HttpResponse(content='okay my friend !', status=200)
+
+    def get(self, request):
+        MY_LOGGER.info('GET запрос на вьюшку SearchNewChannels')
+        return render(request, template_name='mytlg/search_custom_channels.html')
+
+    def post(self, request):
+        MY_LOGGER.info('Поступил POST запрос на вьюшку для поиска телеграм канала')
+
+        form = SearchAndAddNewChannelsForm(request.POST)
+        if not form.is_valid():
+            MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
+            err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            return redirect(to=reverse_lazy('mytlg:search_custom_channels'))
+        tlg_id = form.cleaned_data.get("tlg_id")
+        search_keywords = form.cleaned_data.get('search_keywords')
+
+        # Получаем найденные каналы и передаем пользователю результаты
+        account_for_search_pk = TlgAccountsService.get_tlg_account_id_for_search_custom_channels()
+        channel_for_subscrbe_form, founded_channels = ChannelsService.send_request_for_search_channels(search_keywords,
+                                                                                                       account_for_search_pk=account_for_search_pk,
+                                                                                                       results_limit=5)
+
+        subscribe_form = SubscribeChannelForm(initial={'tlg_id': tlg_id})
+        subscribe_form.fields['channels_for_subscribe'].choices = channel_for_subscrbe_form
+        cache.set(f'{tlg_id}-CHANNELS_FOR_FORM_CHOICES', channel_for_subscrbe_form, timeout=3600)
+        cache.set(f'{tlg_id}-CHANNEL_DATA_FOR_SUBSCRIBE', founded_channels, timeout=3600)
+        context = dict(
+            form=subscribe_form,
+            channels_list=founded_channels,
+            search_keywords=search_keywords
+        )
+        return render(request, CHANNEL_SEARCH_RESULTS_TEMPLATE_PATH, context)
+
+
+class SubscribeCustomChannels(View):
+    """
+    Вьюшки для обработки формы добавления собственных телеграм каналов.
+    """
+
+    def get(self, request):
+        MY_LOGGER.info('GET запрос на вьюшку SubscribeNewChannels')
+        return render(request, template_name='mytlg/channels_search_results.html')
+
+    def post(self, request):
+        MY_LOGGER.info(f'{request.POST} Поступил POST запрос на вьюшку для подписки на собственные телеграм каналы')
+        form = SubscribeChannelForm(request.POST)
+        tlg_id = request.POST.get("tlg_id")
+        form.fields['channels_for_subscribe'].choices = cache.get(f'{tlg_id}-CHANNELS_FOR_FORM_CHOICES')
+        if not form.is_valid():
+            MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
+            err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
+            return redirect(to=reverse_lazy('mytlg:subscribe_custom_channels'))
+        founded_channels = form.cleaned_data.get('channels_for_subscribe')
+
+        # Проверяем каналы на подписку и блэклист и формируем список для отправки задачи на подписку
+        channels_for_subscribe = [
+            channel_id
+            for channel_id in founded_channels
+            if ChannelsService.check_channel_before_subscribe(channel_id)
+        ]
+        founded_channels_data = cache.get(f'{tlg_id}-CHANNEL_DATA_FOR_SUBSCRIBE')
+        channels_data = [channel for channel in founded_channels_data if
+                         str(channel.get('channel_id')) in channels_for_subscribe]
+        # Создаем найденые каналы в админке
+        new_channels = ChannelsService.create_founded_channels(channels_data)
+        new_channels_data = [{'channel_pk': channel.pk, 'channel_link': channel.channel_link} for channel in
+                             new_channels]
+        # Получаем телеграм аккаунт, который будет использоваться для подписки на собственные каналы пользователя
+        max_ch_per_acc = int(BotSettingsService.get_bot_settings_by_key(key='max_channels_per_acc'))
+        tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
+                                                                                       len(channels_data))
+
+        message = '<p>Задача по подписке на каналы'
+        for channel in new_channels:
+            message += f' {channel.channel_name}, '
+        message += ' отправлена в работу. \n О результатах подписки придет сообщение</p>'
+
+        try:
+            subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
+            MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
+            ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=new_channels_data,
+                                                                            account_pk_for_subscribe=tlg_account.pk,
+                                                                            subs_task_pk=subs_task.pk
+                                                                            )
+            return HttpResponse(message)
+        except Exception as e:
+            MY_LOGGER.warning(f'Ошибка при создании задачу на подписку на собственные каналы {e}')
+            return HttpResponse(
+                '<p>Что-то пошло не так. Мы уже работаем на устранением проблемы. Попробуйте пожалуйста позже.</p>')

@@ -20,6 +20,7 @@ class BotUser(models.Model):
     language_code = models.CharField(verbose_name='language_code', default='RU', max_length=5)
     category = models.ManyToManyField(verbose_name='категории', related_name='bot_user', to='Categories', blank=True)
     channels = models.ManyToManyField(verbose_name='каналы', related_name='bot_user', to='Channels', blank=True)
+    custom_channels = models.JSONField(verbose_name='Добавленные пользователем каналы', blank=True, default=list)
     when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
     source_tag = models.CharField(verbose_name='Тег источника', max_length=50, blank=True)
 
@@ -74,7 +75,8 @@ class Channels(models.Model):
     description = models.TextField(verbose_name='описание', max_length=500, blank=True, null=False)
     subscribers_numb = models.IntegerField(verbose_name='кол-во подписчиков', default=0)
     created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
-    category = models.ForeignKey(verbose_name='категория канала', to=Categories, on_delete=models.CASCADE, blank=True, null=True)
+    category = models.ForeignKey(verbose_name='категория канала', to=Categories, on_delete=models.CASCADE, blank=True,
+                                 null=True)
     is_ready = models.BooleanField(verbose_name='готов', default=False)
 
     def __str__(self):
@@ -135,6 +137,7 @@ class TlgAccounts(models.Model):
     created_at = models.DateTimeField(verbose_name='дата и время добавления акка', auto_now_add=True)
     channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='tlg_accounts', blank=True)
     subscribed_numb_of_channels = models.IntegerField(verbose_name='кол-во подписок на каналы', default=0)
+    for_search = models.BooleanField(verbose_name='Аккаунт используется для поиска каналов', default=False)
 
     def __str__(self):
         return f'TLG Account ID=={self.acc_tlg_id}'
@@ -230,6 +233,7 @@ class NewsPosts(models.Model):
     embedding = models.TextField(verbose_name='эмбеддинг', blank=True, null=False)
     created_at = models.DateTimeField(verbose_name='дата и время', auto_now_add=True)
     is_sent = models.BooleanField(verbose_name='отправлен пользователям', default=False)
+    from_custom_channel = models.BooleanField(verbose_name='из кастомного канала юзера', default=False)
 
     def to_dict(self):
         return {
@@ -264,7 +268,9 @@ class AccountsSubscriptionTasks(models.Model):
     ends_at = models.DateTimeField(verbose_name='окончание', blank=True, null=True)
     tlg_acc = models.ForeignKey(verbose_name='аккаунт', to=TlgAccounts, on_delete=models.CASCADE)
     initial_data = models.TextField(verbose_name='исходные данные', max_length=5000)
-    channels = models.ManyToManyField(verbose_name='каналы', to=Channels,  related_name='subs_task', blank=True)
+    channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='subs_task', blank=True)
+    assigned_user = models.ForeignKey(verbose_name='Привязана к пользователю', to=BotUser, on_delete=models.CASCADE,
+                                      blank=True, null=True)
 
     def __str__(self):
         return f'задача на подписку для аккаунта: {self.tlg_acc!r}'

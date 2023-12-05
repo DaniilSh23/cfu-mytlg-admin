@@ -10,7 +10,11 @@ class NewsPostsService:
 
     @staticmethod
     def get_posts_only_text_and_embeddings_by_channels_ids_list(ch_ids_lst):
-        return NewsPosts.objects.filter(channel__id__in=ch_ids_lst).only("text", "embedding")
+        """
+        Фильтрация постов из списка каналов и которые пришли не из кастомных каналов пользователя.
+        Достаем для постов только text, embedding.
+        """
+        return NewsPosts.objects.filter(channel__id__in=ch_ids_lst, from_custom_channel=False).only("text", "embedding")
 
     @staticmethod
     def create_news_post(ch_obj, ser, short_post):
