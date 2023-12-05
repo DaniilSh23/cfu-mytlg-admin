@@ -1,15 +1,21 @@
 from django.urls import path
 
 from cfu_mytlg_admin.settings import DEBUG
+<<<<<<< mytlg/urls.py
+from mytlg.views import WriteUsrView, WriteInterestsView, test_view, \
+    GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, GetActiveAccounts, \
+    AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler, \
+    InterestsSetting
+=======
 from mytlg.views import StartSettingsView, WriteUsrView, WriteInterestsView, \
     GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, GetActiveAccounts, \
     AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler, \
-    SearchCustomChannels, SubscribeCustomChannels
+    SearchCustomChannels, SubscribeCustomChannels, InterestsSetting
+>>>>>>> mytlg/urls.py
 
 app_name = 'mytlg'
 
 urlpatterns = [
-    path('start_settings/', StartSettingsView.as_view(), name='start_settings'),
     path('write_usr/', WriteUsrView.as_view(), name='write_usr'),
     path('write_interests/', WriteInterestsView.as_view(), name='write_interests'),
     # path('set_acc_run_flag/', SetAccRunFlag.as_view(), name='set_acc_run_flag'),
@@ -25,7 +31,12 @@ urlpatterns = [
     path('what_was_interesting/', WhatWasInteresting.as_view(), name='what_was_interesting'),
     path('show_scheduled_posts/', ShowScheduledPosts.as_view(), name='show_scheduled_posts'),
     path('sent_reaction/', SentReactionHandler.as_view(), name='sent_reaction'),
+<<<<<<< mytlg/urls.py
+    path('interests_setting/', InterestsSetting.as_view(), name='interests_setting'),
+=======
     path('search_custom_channels/', SearchCustomChannels.as_view(), name='search_custom_channels'),
-    path('subscribe_custom_channels/', SubscribeCustomChannels.as_view(), name='subscribe_custom_channels')
+    path('subscribe_custom_channels/', SubscribeCustomChannels.as_view(), name='subscribe_custom_channels'),
+    path('interests_setting/', InterestsSetting.as_view(), name='interests_setting'),
+>>>>>>> mytlg/urls.py
 ]
 
