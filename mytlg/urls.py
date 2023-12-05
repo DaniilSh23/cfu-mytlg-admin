@@ -1,6 +1,5 @@
 from django.urls import path
 
-from cfu_mytlg_admin.settings import DEBUG
 from mytlg.views import WriteUsrView, WriteInterestsView, \
     GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, GetActiveAccounts, \
     AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler, \

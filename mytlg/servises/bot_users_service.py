@@ -36,6 +36,17 @@ class BotUsersService:
         return users_qset
 
     @staticmethod
+    def filter_users_queryset_without_custom_channels_flag(bot_usr):
+        """
+        Фильтрация пользователей, у которых не установлен флаг получения постов из своих каналов.
+        """
+        if not bot_usr:
+            users_qset = BotUsersService.objects.filter(only_custom_channels=False).only("id")
+        else:
+            users_qset = (bot_usr,)  # Сделал из одного элемента кортеж, чтобы можно было итерироваться
+        return users_qset
+
+    @staticmethod
     def clear_bot_users_category_and_channels(tlg_id):
         bot_usr = BotUser.objects.get(tlg_id=tlg_id)
         bot_usr.category.clear()
@@ -62,6 +73,7 @@ class BotUsersService:
     @staticmethod
     def filter_bot_users_by_channel_pk(channel_pk):
         """
-        Фильтруем юзеров, у которых в числе связанных записей channel указан канал с требуемым PK.
+        Фильтруем юзеров, у которых в числе связанных записей channel указан канал с требуемым PK
+        и установлен флаг получения постов только со своих каналов.
         """
-        return BotUser.objects.filter(channels__pk=channel_pk).only("id")
+        return BotUser.objects.filter(channels__pk=channel_pk, only_custom_channels=True).only("id")
