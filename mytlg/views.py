@@ -711,8 +711,13 @@ class SubscribeCustomChannels(View):
                              new_channels]
         # Получаем телеграм аккаунт, который будет использоваться для подписки на собственные каналы пользователя
         max_ch_per_acc = int(BotSettingsService.get_bot_settings_by_key(key='max_channels_per_acc'))
-        tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
-                                                                                       len(channels_data))
+        try:
+            tlg_account = TlgAccountsService.get_tlg_account_for_subscribe_custom_channels(max_ch_per_acc,
+                                                                                           len(channels_data))
+        except Exception as e:
+            # TODO сообщение админу
+            return HttpResponse(
+                '<p>Что-то пошло не так. Мы уже работаем на устранением проблемы. Попробуйте пожалуйста позже.</p>')
 
         message = '<p>Задача по подписке на каналы'
         for channel in new_channels:
