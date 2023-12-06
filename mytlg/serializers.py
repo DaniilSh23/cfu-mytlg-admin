@@ -1,6 +1,14 @@
 from rest_framework import serializers
 
 
+class SwitchOnlyCustomChannelsSerializer(serializers.Serializer):
+    """
+    Сериалайзер для запроса изменения параметра BotUser.only_custom_channels
+    """
+    token = serializers.CharField(max_length=50)
+    tlg_id = serializers.CharField()
+
+
 class SetAccDataSerializer(serializers.Serializer):
     """
     Сериалайзер для установки данных модели TlgAccounts

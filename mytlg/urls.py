@@ -3,7 +3,7 @@ from django.urls import path
 from mytlg.views import WriteUsrView, WriteInterestsView, \
     GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, GetActiveAccounts, \
     AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler, \
-    SearchCustomChannels, SubscribeCustomChannels, InterestsSetting
+    SearchCustomChannels, SubscribeCustomChannels, InterestsSetting, SwitchOnlyCustomChannels
 
 app_name = 'mytlg'
 
@@ -26,5 +26,6 @@ urlpatterns = [
     path('search_custom_channels/', SearchCustomChannels.as_view(), name='search_custom_channels'),
     path('subscribe_custom_channels/', SubscribeCustomChannels.as_view(), name='subscribe_custom_channels'),
     path('interests_setting/', InterestsSetting.as_view(), name='interests_setting'),
+    path('get_news_from_only_my_channels/', SwitchOnlyCustomChannels.as_view(), name='get_news_from_only_my_channels'),
 ]
 
