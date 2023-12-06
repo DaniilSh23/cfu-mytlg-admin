@@ -4,6 +4,7 @@
 from langchain import FAISS
 from langchain.embeddings import OpenAIEmbeddings
 import openai
+from openai.error import RateLimitError
 from cfu_mytlg_admin.settings import MY_LOGGER
 from rest_framework.response import Response
 
@@ -61,23 +62,23 @@ class PostFilters:
         Поиск похожего поста. Это необходимо для фильтрации дублирующих новостей.
         Вернёт True, если релевантный кусок не найден и None, если релевантный кусок найден.
         """
-        MY_LOGGER.debug(f'Получаем объект эмбеддингов от OpenAI')
+        MY_LOGGER.debug('Получаем объект эмбеддингов от OpenAI')
         embeddings = OpenAIEmbeddings(max_retries=2)  # добавил кол-во попыток запросов к OpenAI
 
         # Пилим эмбеддинги для нового поста
-        MY_LOGGER.debug(f'Пилим эмбеддинги для нового поста')
+        MY_LOGGER.debug('Пилим эмбеддинги для нового поста')
         self.new_post_embedding = embeddings.embed_query(self.new_post)
 
         # Делаем индексную базу из старых кусков текста
-        MY_LOGGER.debug(f'Делаем индексную базу из старых кусков текста')
+        MY_LOGGER.debug('Делаем индексную базу из старых кусков текста')
         index_db = FAISS.from_embeddings(text_embeddings=self.old_posts, embedding=embeddings)
 
         # Поиск релевантных кусков текста, имея на входе уже готовые векторы
-        MY_LOGGER.debug(f'Поиск релевантных кусков текста из уже имеющихся векторов')
+        MY_LOGGER.debug('Поиск релевантных кусков текста из уже имеющихся векторов')
         relevant_piece = index_db.similarity_search_with_score_by_vector(embedding=self.new_post_embedding, k=1)[0]
 
         if relevant_piece[1] > 0.3:
-            MY_LOGGER.warning(f'Не найдено похожих новостных постов.')
+            MY_LOGGER.warning('Не найдено похожих новостных постов.')
             self.filtration_result.append(True)
             return True
         self.rel_old_post = relevant_piece[0].page_content
@@ -116,7 +117,7 @@ class PostFilters:
         """
         Метод для создания эмбеддингов для текста
         """
-        MY_LOGGER.debug(f'Вызван метод для создания эмбеддингов к тексту')
+        MY_LOGGER.debug('Вызван метод для создания эмбеддингов к тексту')
         embeddings = OpenAIEmbeddings(max_retries=2)
         text_embedding = embeddings.embed_query(text)
         return text_embedding
@@ -127,3 +128,20 @@ class PostFilters:
         if 'erid=' in text or '#реклама' in text:
             MY_LOGGER.warning(f'Пост содержит рекламу и будет проигнорирован {validated_data} | Текст: {text}')
             return Response(status=200, data={'result': 'OK!', 'description': 'Пост содержит рекламу'})
+
+    @staticmethod
+    def get_filtration_result(new_post_text, similar_posts):
+        try:
+            post_filters_obj = PostFilters(
+                new_post=new_post_text,
+                old_posts=[(i_post.get("text"), i_post.get("embedding").split()) for i_post in similar_posts],
+            )
+            filtration_rslt = post_filters_obj.complete_filtering()
+            return filtration_rslt, post_filters_obj
+        except RateLimitError as err:
+            MY_LOGGER.warning(f'Проблема с запросами к OpenAI, откидываем пост. Ошибка: {err.error}')
+            return False
+        except Exception as err:
+            MY_LOGGER.error(f'Необрабатываемая проблема на этапе фильтрации поста и запросов к OpenAI. '
+                            f'Пост будет отброшен. Ошибка: {err} | Текст поста: {new_post_text[:30]!r}...')
+            return False
