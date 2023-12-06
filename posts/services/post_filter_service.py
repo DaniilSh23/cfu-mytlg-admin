@@ -5,6 +5,7 @@ from langchain import FAISS
 from langchain.embeddings import OpenAIEmbeddings
 import openai
 from cfu_mytlg_admin.settings import MY_LOGGER
+from rest_framework.response import Response
 
 
 class PostFilters:
@@ -119,3 +120,10 @@ class PostFilters:
         embeddings = OpenAIEmbeddings(max_retries=2)
         text_embedding = embeddings.embed_query(text)
         return text_embedding
+
+    @staticmethod
+    def check_advertising_in_post(validated_data):
+        text = validated_data.get('text')
+        if 'erid=' in text or '#реклама' in text:
+            MY_LOGGER.warning(f'Пост содержит рекламу и будет проигнорирован {validated_data} | Текст: {text}')
+            return Response(status=200, data={'result': 'OK!', 'description': 'Пост содержит рекламу'})

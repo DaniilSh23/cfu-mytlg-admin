@@ -7,6 +7,7 @@ from rest_framework.request import Request
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from posts.serializers import RawChannelPostSerializer
 from posts.tasks import raw_post_processing
+from posts.services.post_filter_service import PostFilters
 
 INVALID_TOKEN = 'The request token is invalid!'
 BAD_REQUEST = 'The request data is invalid!'
@@ -28,6 +29,8 @@ class RawChannelPost(APIView):
                                                         f"{BOT_TOKEN} != {request.data.get('token')}"})
         if ser.is_valid():
             validated_data = ser.validated_data
+            # Проверяем пост на наличие рекламы
+            PostFilters.check_advertising_in_post(validated_data)
             # Вызываем таск селери для обработки поста и даём ответ на запрос
             raw_post_processing.delay(
                 ch_pk=validated_data.get('ch_pk'),
