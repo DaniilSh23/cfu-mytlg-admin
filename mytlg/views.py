@@ -791,7 +791,7 @@ class SubscribeCustomChannels(View):
         channels_for_subscribe = [
             channel_id
             for channel_id in founded_channels
-            if ChannelsService.check_channel_before_subscribe(channel_id)
+            if ChannelsService.check_channel_before_subscribe(channel_id, tlg_id)
         ]
         founded_channels_data = cache.get(f'{tlg_id}-CHANNEL_DATA_FOR_SUBSCRIBE')
         channels_data = [channel for channel in founded_channels_data if
