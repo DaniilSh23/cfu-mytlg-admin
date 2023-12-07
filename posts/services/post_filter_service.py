@@ -13,7 +13,7 @@ class PostFilters:
     """
     Класс с фильтрами для постов
     """
-
+    embeddings = OpenAIEmbeddings(max_retries=2)
     # TODO: эту поебень перенести в бизнес-логику, я дял примера пока тут оставлю
     # post_filters_obj = PostFilters(
     #     new_post=update.text,
@@ -29,6 +29,10 @@ class PostFilters:
         self.rel_old_post = None
 
     def __str__(self):
+        return (f"new_post = {self.new_post}\nfiltration_result = {self.filtration_result}\n"
+                f"rel_old_post = {self.rel_old_post}")
+
+    def __repr__(self):
         return (f"new_post = {self.new_post}\nfiltration_result = {self.filtration_result}\n"
                 f"rel_old_post = {self.rel_old_post}")
 
@@ -63,7 +67,7 @@ class PostFilters:
         Вернёт True, если релевантный кусок не найден и None, если релевантный кусок найден.
         """
         MY_LOGGER.debug('Получаем объект эмбеддингов от OpenAI')
-        embeddings = OpenAIEmbeddings(max_retries=2)  # добавил кол-во попыток запросов к OpenAI
+        embeddings = PostFilters.embeddings  # добавил кол-во попыток запросов к OpenAI
 
         # Пилим эмбеддинги для нового поста
         MY_LOGGER.debug('Пилим эмбеддинги для нового поста')
@@ -100,6 +104,7 @@ class PostFilters:
             {"role": "user", "content": f"Текст старого новостного поста: {self.rel_old_post}\n\n"
                                         f"Текст нового новостного поста: \n{self.new_post}"}
         ]
+        # TODO переписать на запрос к приложению опен аи
         try:
             completion = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
@@ -118,7 +123,7 @@ class PostFilters:
         Метод для создания эмбеддингов для текста
         """
         MY_LOGGER.debug('Вызван метод для создания эмбеддингов к тексту')
-        embeddings = OpenAIEmbeddings(max_retries=2)
+        embeddings = PostFilters.embeddings
         text_embedding = embeddings.embed_query(text)
         return text_embedding
 

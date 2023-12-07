@@ -788,10 +788,11 @@ class SubscribeCustomChannels(View):
         founded_channels = form.cleaned_data.get('channels_for_subscribe')
 
         # Проверяем каналы на подписку и блэклист и формируем список для отправки задачи на подписку
+        bot_user = BotUsersService.get_bot_user_by_tg_id(tlg_id=tlg_id)
         channels_for_subscribe = [
             channel_id
             for channel_id in founded_channels
-            if ChannelsService.check_channel_before_subscribe(channel_id, tlg_id)
+            if ChannelsService.check_channel_before_subscribe(channel_id, bot_user)
         ]
         founded_channels_data = cache.get(f'{tlg_id}-CHANNEL_DATA_FOR_SUBSCRIBE')
         channels_data = [channel for channel in founded_channels_data if
