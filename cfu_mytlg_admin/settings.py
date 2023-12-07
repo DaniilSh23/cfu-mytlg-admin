@@ -39,6 +39,8 @@ env = environ.Env(
     SHOW_SQL_LOG=bool,
     SENTRY_DSN=str,
     ACCOUNT_SERVICE_HOST=str,
+    OPEN_AI_APP_TOKEN=str,
+    OPEN_AI_SERVICE_HOST=str,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -307,3 +309,5 @@ CACHES = {
 }
 
 CHANNELS_BLACK_LIST = []
+OPEN_AI_APP_TOKEN = env('OPEN_AI_APP_TOKEN')
+OPEN_AI_SERVICE_HOST = env('OPEN_AI_SERVICE_HOST')

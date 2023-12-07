@@ -1,16 +1,51 @@
 from langchain import FAISS
 from langchain.embeddings import OpenAIEmbeddings
 import openai
+import requests
 from langchain.text_splitter import CharacterTextSplitter
 from mytlg.servises.bot_settings_service import BotSettingsService
 
-from cfu_mytlg_admin.settings import MY_LOGGER
+from cfu_mytlg_admin.settings import MY_LOGGER, OPEN_AI_SERVICE_HOST, OPEN_AI_APP_TOKEN
 
 
 class TextProcessService:
     similarity_index_for_interests = float(
         BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
+    headers_for_gpt = {
+            'Authorization': OPEN_AI_APP_TOKEN
+        }
     embeddings = OpenAIEmbeddings()
+
+    @staticmethod
+    def get_gpt_answer(prompt: str, query: str, base_text='', temp=0.0):
+        data = {
+            "prompt": prompt,
+            "query": query,
+            "base_text": base_text,
+            "temp": temp
+        }
+        response = requests.post(url=f'{OPEN_AI_SERVICE_HOST}get-gpt-answer/',
+                                 json=data,
+                                 headers=TextProcessService.headers_for_gpt)
+        if response.status_code == 200 and response.json().get('success'):
+            return response.json().get('answer')
+        else:
+            MY_LOGGER.warning(f'Ошибка при запросе к приложению для опен аи {response.status_code}, {response}')
+            return False
+
+    @staticmethod
+    def make_embeddings(text: str):
+        data = {
+            "text": text
+        }
+        response = requests.post(url=f'{OPEN_AI_SERVICE_HOST}make-embeddings/',
+                                 json=data,
+                                 headers=TextProcessService.headers_for_gpt)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            MY_LOGGER.warning(f'Ошибка при запросе к приложению для опен аи {response.status_code}, {response.text}')
+            return False
 
     def make_index_db_from_embeddings(self, interest_lst):
         index_db = FAISS.from_embeddings(text_embeddings=interest_lst, embedding=self.embeddings)
@@ -47,9 +82,10 @@ class TextProcessService:
         index_db = FAISS.from_texts(text_chunks, embeddings)
 
         # Отбираем более релевантные куски базового текста (base_text), согласно запросу (query)
-        relevant_pieces = index_db.similarity_search_with_score(query, k=4)     # Достаём куски с Евклидовым расстоянием
-        filtered_rel_pieces = [i_rel_p for i_rel_p in relevant_pieces if i_rel_p[1] < 0.3]  # Фильтруем все, что ниже 0.3
-        if len(filtered_rel_pieces) < 1:    # Выходим, если куски очень далеки от схожести
+        relevant_pieces = index_db.similarity_search_with_score(query, k=4)  # Достаём куски с Евклидовым расстоянием
+        filtered_rel_pieces = [i_rel_p for i_rel_p in relevant_pieces if
+                               i_rel_p[1] < 0.3]  # Фильтруем все, что ниже 0.3
+        if len(filtered_rel_pieces) < 1:  # Выходим, если куски очень далеки от схожести
             MY_LOGGER.warning(f'Не найдено релевантных кусков для запроса: {query!r}')
             return
 
@@ -66,21 +102,10 @@ class TextProcessService:
         base_text - текст, на котором модель должна базировать свой ответ
         temp - (значение от 0 до 1) чем выше, тем более творчески будет ответ модели, то есть она будет додумывать что-то.
         """
-        messages = [
-            {"role": "system", "content": system},
-            {"role": "user", "content": f"Данные с информацией для ответа пользователю: {base_text}\n\n"
-                                        f"Запрос пользователя: \n{query}"}
-        ]
-        try:
-            completion = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                temperature=temp
-            )
-        except openai.error.ServiceUnavailableError as err:
-            MY_LOGGER.error(f'Серверы OpenAI перегружены или недоступны. {err}')
-            return False
-        answer = completion.choices[0].message.content
+        answer = TextProcessService.get_gpt_answer(prompt=system,
+                                                   query=f"Запрос пользователя: \n{query}",
+                                                   base_text=base_text,
+                                                   temp=temp)
         return answer  # возвращает ответ
 
     @staticmethod
@@ -90,20 +115,10 @@ class TextProcessService:
         prompt - промпт для модели
         text - текст, который надо сократить
         """
-        messages = [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": f"Текст, который надо сократить:\n\n{text}"}
-        ]
-        try:
-            completion = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                temperature=temp
-            )
-        except openai.error.ServiceUnavailableError as err:
-            MY_LOGGER.error(f'Серверы OpenAI перегружены или недоступны. {err}')
-            return False
-        answer = completion.choices[0].message.content
+        answer = TextProcessService.get_gpt_answer(prompt,
+                                                   query=f"Текст, который надо сократить:\n\n{text}",
+                                                   base_text='',
+                                                   temp=temp)
         return answer  # возвращает ответ
 
     @staticmethod
@@ -113,19 +128,8 @@ class TextProcessService:
         prompt - промпт для модели
         text - текст, который надо исследовать и перевести
         """
-        messages = [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": f'user_language_code={user_language_code}. {text}'}
-        ]
-        try:
-            completion = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                temperature=temp
-            )
-        except openai.error.ServiceUnavailableError as err:
-            MY_LOGGER.error(f'Серверы OpenAI перегружены или недоступны. {err}')
-            return False
-        answer = completion.choices[0].message.content
+        answer = TextProcessService.get_gpt_answer(prompt,
+                                                   query=f'user_language_code={user_language_code}.\n\n{text}',
+                                                   base_text='',
+                                                   temp=temp)
         return answer  # возвращает ответ
-

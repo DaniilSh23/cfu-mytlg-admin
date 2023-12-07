@@ -2,7 +2,6 @@ from typing import List
 
 from mytlg.models import Channels
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
-from mytlg.servises.bot_users_service import BotUsersService
 from django.db.models import QuerySet
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
@@ -199,11 +198,11 @@ class ChannelsService:
             return
 
     @staticmethod
-    def check_channel_all_ready_subscribed(channel_id: int, tlg_id) -> bool:
+    def check_channel_all_ready_subscribed(channel_id: int, bot_user) -> bool:
         """
         Метод для проверки не подписаны ли мы на канал
         :param channel_id: id телеграм канала
-        :param tlg_id: телеграм айди юзера к которому привяжем найденный у нас канал
+        :param bot_user: юзер к которому привяжем найденный у нас канал
         :return:
         """
         channel = ChannelsService.get_channel_by_channel_tlg_id(channel_id=channel_id)
@@ -214,7 +213,7 @@ class ChannelsService:
             return True
         else:
             # Связываем канал с пользователем
-            bot_user = BotUsersService.get_bot_user_by_tg_id(tlg_id=tlg_id)
+
             bot_user.channels.add([channel])
             return False
 
@@ -231,15 +230,15 @@ class ChannelsService:
             return True
 
     @staticmethod
-    def check_channel_before_subscribe(channel: int, tlg_id) -> bool:
+    def check_channel_before_subscribe(channel: int, bot_user) -> bool:
         """
         Метод для проверки канала перед отправкой на подписку
         :param channel: id телеграм канала
-        :param tlg_id: телеграм айди юзера к которому привяжем найденный у нас канал
+        :param bot_user:  юзер к которому привяжем найденный у нас канал
         :return:
         """
         if ChannelsService.check_channel_all_ready_subscribed(
-                channel, tlg_id) and ChannelsService.check_if_channel_in_black_list(channel):
+                channel, bot_user) and ChannelsService.check_if_channel_in_black_list(channel):
             return True
         else:
             return False
