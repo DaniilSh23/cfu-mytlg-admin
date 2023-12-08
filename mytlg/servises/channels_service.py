@@ -213,8 +213,7 @@ class ChannelsService:
             return True
         else:
             # Связываем канал с пользователем
-
-            bot_user.channels.add([channel])
+            bot_user.channels.add(channel.pk)
             return False
 
     @staticmethod
