@@ -513,7 +513,8 @@ class WriteSubsResults(APIView):
                 MY_LOGGER.debug(f'Обновляем данные в БД по задаче аккаунта c PK=={task_obj.pk}')
                 AccountsSubscriptionTasksService.update_task_obj_data(ser, task_obj)
 
-                if task_obj.tlg_acc.acc_tlg_id:
+                # Если у таски есть связь с юзером бота
+                if task_obj.assigned_user.tlg_id:
                     success_subscription = True if int(ser.validated_data.get("success_subs")) > 0 else False
                     # Отправка уведомления юзеру
                     AccountsSubscriptionTasksService.send_subscription_notification(
