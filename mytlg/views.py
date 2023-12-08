@@ -817,7 +817,7 @@ class SubscribeCustomChannels(View):
         message += ' отправлена в работу. \n О результатах подписки придет сообщение</p>'
 
         try:
-            subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels)
+            subs_task = AccountsSubscriptionTasksService.create_subscription_task(tlg_account, new_channels, bot_user)
             MY_LOGGER.info('Отправляем задачу на подписку на собственные каналы')
             ChannelsService.send_command_to_accounts_for_subscribe_channels(channels_for_subscribe=new_channels_data,
                                                                             account_pk_for_subscribe=tlg_account.pk,

@@ -45,7 +45,7 @@ class AccountsSubscriptionTasksService:
         return subs_tasks_qset
 
     @staticmethod
-    def create_subscription_task(tlg_account, channels):
-        task = AccountsSubscriptionTasks.objects.create(tlg_acc=tlg_account)
+    def create_subscription_task(tlg_account, channels, bot_usr):
+        task = AccountsSubscriptionTasks.objects.create(tlg_acc=tlg_account, assigned_user=bot_usr)
         task.channels.set(channels)
         return task
