@@ -1,6 +1,5 @@
 from langchain import FAISS
 from langchain.embeddings import OpenAIEmbeddings
-import openai
 import requests
 from langchain.text_splitter import CharacterTextSplitter
 from mytlg.servises.bot_settings_service import BotSettingsService
@@ -12,8 +11,8 @@ class TextProcessService:
     similarity_index_for_interests = float(
         BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
     headers_for_gpt = {
-            'Authorization': OPEN_AI_APP_TOKEN
-        }
+        'Authorization': OPEN_AI_APP_TOKEN
+    }
     embeddings = OpenAIEmbeddings()
 
     @staticmethod
@@ -41,10 +40,11 @@ class TextProcessService:
         response = requests.post(url=f'{OPEN_AI_SERVICE_HOST}make-embeddings/',
                                  json=data,
                                  headers=TextProcessService.headers_for_gpt)
-        if response.status_code == 200:
-            return response.json()
+        if response.status_code == 200 and response.json().get('success'):
+            return response.json().get('answer')
         else:
-            MY_LOGGER.warning(f'Ошибка при запросе к приложению для опен аи {response.status_code}, {response.text}')
+            MY_LOGGER.warning(
+                f'Ошибка при запросе к приложению для опен аи при формировании эбедингов {response.status_code}, {response.text}')
             return False
 
     def make_index_db_from_embeddings(self, interest_lst):
@@ -78,7 +78,7 @@ class TextProcessService:
         text_chunks = text_splitter.split_text(base_text)
 
         # Создадим индексную базу векторов по данному тексту (переведом текст в цифры, чтобы его понял комп)
-        embeddings = OpenAIEmbeddings()
+        embeddings = TextProcessService.embeddings
         index_db = FAISS.from_texts(text_chunks, embeddings)
 
         # Отбираем более релевантные куски базового текста (base_text), согласно запросу (query)

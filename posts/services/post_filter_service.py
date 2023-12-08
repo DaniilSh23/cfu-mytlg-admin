@@ -7,6 +7,7 @@ import openai
 from openai.error import RateLimitError
 from cfu_mytlg_admin.settings import MY_LOGGER
 from rest_framework.response import Response
+from posts.services.text_process_service import TextProcessService
 
 
 class PostFilters:
@@ -68,10 +69,10 @@ class PostFilters:
         """
         MY_LOGGER.debug('Получаем объект эмбеддингов от OpenAI')
         embeddings = PostFilters.embeddings  # добавил кол-во попыток запросов к OpenAI
-
         # Пилим эмбеддинги для нового поста
         MY_LOGGER.debug('Пилим эмбеддинги для нового поста')
-        self.new_post_embedding = embeddings.embed_query(self.new_post)
+        #self.new_post_embedding = embeddings.embed_query(self.new_post)
+        self.new_post_embedding = TextProcessService.make_embeddings(self.new_post)
 
         # Делаем индексную базу из старых кусков текста
         MY_LOGGER.debug('Делаем индексную базу из старых кусков текста')
@@ -93,39 +94,48 @@ class PostFilters:
         Функция для того, чтобы проверить через GPT дублируют ли по смыслу друг друга два поста.
         temp - (значение от 0 до 1) чем выше, тем более творчески будет ответ модели, то есть она будет додумывать что-то.
         """
-        system = "Ты занимаешься фильтрацией контента и твоя задача наиболее точно определить дублируют ли друг " \
+        # system = "Ты занимаешься фильтрацией контента и твоя задача наиболее точно определить дублируют ли друг " \
+        #          "друга по смыслу два новостных поста: старый и новый." \
+        #          "Проанализируй смысл двух переданных тебе текстов новостных постов и реши говорится ли в этих " \
+        #          "постах об одном и том же или в них заложен разный смысл. Если тексты новостных постов" \
+        #          " имеют одинаковый смысл, то в ответ пришли слово 'да' и ничего больше. Если же" \
+        #          " в текстах новостных постов заложен разный смысл, то в ответ пришли слово 'нет' и ничего больше."
+        # messages = [
+        #     {"role": "system", "content": system},
+        #     {"role": "user", "content": f"Текст старого новостного поста: {self.rel_old_post}\n\n"
+        #                                 f"Текст нового новостного поста: \n{self.new_post}"}
+        # ]
+
+        prompt = "Ты занимаешься фильтрацией контента и твоя задача наиболее точно определить дублируют ли друг " \
                  "друга по смыслу два новостных поста: старый и новый." \
                  "Проанализируй смысл двух переданных тебе текстов новостных постов и реши говорится ли в этих " \
                  "постах об одном и том же или в них заложен разный смысл. Если тексты новостных постов" \
                  " имеют одинаковый смысл, то в ответ пришли слово 'да' и ничего больше. Если же" \
                  " в текстах новостных постов заложен разный смысл, то в ответ пришли слово 'нет' и ничего больше."
-        messages = [
-            {"role": "system", "content": system},
-            {"role": "user", "content": f"Текст старого новостного поста: {self.rel_old_post}\n\n"
-                                        f"Текст нового новостного поста: \n{self.new_post}"}
-        ]
-        # TODO переписать на запрос к приложению опен аи
-        try:
-            completion = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                temperature=temp
-            )
-        except openai.error.ServiceUnavailableError as err:
-            MY_LOGGER.error(f'Серверы OpenAI перегружены или недоступны. {err}')
-            return False
-        answer = completion.choices[0].message.content
+        text = f"Текст старого новостного поста: {self.rel_old_post}\n\n Текст нового новостного поста: \n{self.new_post}"
+        # try:
+        #     completion = openai.ChatCompletion.create(
+        #         model="gpt-3.5-turbo",
+        #         messages=messages,
+        #         temperature=temp
+        #     )
+        # except openai.error.ServiceUnavailableError as err:
+        #     MY_LOGGER.error(f'Серверы OpenAI перегружены или недоступны. {err}')
+        #     return False
+        # answer = completion.choices[0].message.content
+        answer = TextProcessService.get_gpt_answer(prompt, query=text, base_text='', temp=0)
         return answer
 
-    @staticmethod
-    def make_embedding(text):
-        """
-        Метод для создания эмбеддингов для текста
-        """
-        MY_LOGGER.debug('Вызван метод для создания эмбеддингов к тексту')
-        embeddings = PostFilters.embeddings
-        text_embedding = embeddings.embed_query(text)
-        return text_embedding
+    # @staticmethod
+    # def make_embedding(text):
+    #     """
+    #     Метод для создания эмбеддингов для текста
+    #     """
+    #     MY_LOGGER.debug('Вызван метод для создания эмбеддингов к тексту')
+    #     # embeddings = PostFilters.embeddings
+    #     # text_embedding = embeddings.embed_query(text)
+    #     text_embedding = TextProcessService.make_embeddings(text)
+    #     return text_embedding
 
     @staticmethod
     def check_advertising_in_post(validated_data):
