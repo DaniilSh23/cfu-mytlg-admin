@@ -6,7 +6,7 @@ from cfu_mytlg_admin.settings import MY_LOGGER
 class BotSettingsService:
 
     @staticmethod
-    def get_bot_settings_by_key(key: str) -> BotSettings | None:
+    def get_bot_settings_by_key(key: str) -> str | None:
         try:
             return BotSettings.objects.get(key=key).value
         except ObjectDoesNotExist:
