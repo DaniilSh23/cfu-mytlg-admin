@@ -6,6 +6,7 @@ from celery import shared_task
 from cfu_mytlg_admin.settings import MY_LOGGER
 from posts.services.post_filter_service import PostFilters
 from posts.services.post_service import PostService
+from posts.services.text_process_service import TextProcessService
 
 
 @shared_task
@@ -25,13 +26,15 @@ def raw_post_processing(channel_id: int, new_post_text: str, post_link: str):
     # Достать посты из БД с общей категорией для нового поста
     similar_posts = PostService.get_posts_with_similar_category(channel_id)
     if similar_posts is None:
-        MY_LOGGER.warning('Неудачная обработка поста!')    # TODO: поправить лог
+        MY_LOGGER.warning('Неудачная обработка поста! Не удалось достать посты с общей категорией')
         return False
 
     # Если нет постов для сравнения
     if len(similar_posts) == 0:
         MY_LOGGER.debug('Нет постов для сравнения, сходимся на том, что новый пост уникален.')
-        new_post_embedding = PostFilters.make_embedding(text=new_post_text)
+        new_post_embedding = TextProcessService.make_embeddings(text=new_post_text)
+        if not new_post_embedding:
+            return False
         PostService.suitable_post_processing(ch_pk=channel_id, embedding=new_post_embedding, post_link=post_link,
                                              post_text=new_post_text)
         return True

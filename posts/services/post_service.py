@@ -91,6 +91,8 @@ class PostService:
 
         # Пилим посту сокращённый варианта через ChatGPT
         embedding = TextProcessService.make_embeddings(text=post_text)
+        if not embedding:
+            return False
         text_processor = TextProcessService()
         prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
         short_post = text_processor.gpt_text_reduction(prompt=prompt, text=post_text)

@@ -46,7 +46,6 @@ class TextProcessService:
             MY_LOGGER.warning(
                 f'Ошибка при запросе к приложению для опен аи для формирования эмбеддингов: {response.status_code} | '
                 f'{response.text}')
-            raise   # TODO: убрать
             return False
 
     def make_index_db_from_embeddings(self, interest_lst):
