@@ -58,6 +58,8 @@ class PostService:
 
         # Создаём новый пост в БД
         ch_obj = ChannelsService.get_channel_by_channel_id(channel_id)
+        if not ch_obj:
+            return False    # TODO: тут наверное лучше рейзить экзепшн
         new_post = NewsPosts.objects.create(
             channel=ch_obj,
             text=post_text,
