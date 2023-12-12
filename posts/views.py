@@ -33,7 +33,7 @@ class RawChannelPost(APIView):
             PostFilters.check_advertising_in_post(validated_data)
             # Вызываем таск селери для обработки поста и даём ответ на запрос
             raw_post_processing.delay(
-                ch_pk=validated_data.get('ch_pk'),
+                channel_id=validated_data.get('channel_id'),
                 new_post_text=validated_data.get('text'),
                 post_link=validated_data.get('post_link')
             )

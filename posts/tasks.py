@@ -9,7 +9,7 @@ from posts.services.post_service import PostService
 
 
 @shared_task
-def raw_post_processing(ch_pk: int, new_post_text: str, post_link: str):
+def raw_post_processing(channel_id: int, new_post_text: str, post_link: str):
     """
     Таск селери для обработки сырого поста, который прилетел из какого-либо канала.
     """
@@ -18,12 +18,12 @@ def raw_post_processing(ch_pk: int, new_post_text: str, post_link: str):
     # Обработка поста из кастомных каналов пользователей
     PostService.suitable_post_processing_from_users_list(
         post_text=new_post_text,
-        ch_pk=ch_pk,
+        channel_id=channel_id,
         post_link=post_link,
     )
 
     # Достать посты из БД с общей категорией для нового поста
-    similar_posts = PostService.get_posts_with_similar_category(ch_pk)
+    similar_posts = PostService.get_posts_with_similar_category(channel_id)
     if similar_posts is None:
         MY_LOGGER.warning('Неудачная обработка поста!')    # TODO: поправить лог
         return False
@@ -32,7 +32,7 @@ def raw_post_processing(ch_pk: int, new_post_text: str, post_link: str):
     if len(similar_posts) == 0:
         MY_LOGGER.debug('Нет постов для сравнения, сходимся на том, что новый пост уникален.')
         new_post_embedding = PostFilters.make_embedding(text=new_post_text)
-        PostService.suitable_post_processing(ch_pk=ch_pk, embedding=new_post_embedding, post_link=post_link,
+        PostService.suitable_post_processing(ch_pk=channel_id, embedding=new_post_embedding, post_link=post_link,
                                              post_text=new_post_text)
         return True
 
@@ -43,7 +43,7 @@ def raw_post_processing(ch_pk: int, new_post_text: str, post_link: str):
     # Проверяем результаты фильтров
     if all(filtration_rslt):
         MY_LOGGER.debug('Пост прошёл фильтры!')
-        PostService.suitable_post_processing(ch_pk=ch_pk, embedding=post_filters_obj.new_post_embedding,
+        PostService.suitable_post_processing(ch_pk=channel_id, embedding=post_filters_obj.new_post_embedding,
                                              post_link=post_link, post_text=new_post_text)
         return True
     else:

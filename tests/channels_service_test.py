@@ -56,7 +56,7 @@ class ChannelsServiceTest(TestCase):
 
     def test_get_channel_by_pk(self):
         # Test the get_channel_by_pk method
-        result = ChannelsService.get_channel_by_pk(self.test_channel.pk)
+        result = ChannelsService.get_channel_by_channel_id(self.test_channel.pk)
         self.assertEqual(result, self.test_channel)
 
     # этот метод пока нигде не используется
