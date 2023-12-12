@@ -39,10 +39,11 @@ class ChannelsService:
             return []
 
     @staticmethod
-    def get_channel_by_pk(pk: int) -> Channels | None:
+    def get_channel_by_channel_id(channel_id: int) -> Channels | None:
         try:
-            return Channels.objects.get(pk=pk)
+            return Channels.objects.get(channel_id=channel_id)
         except ObjectDoesNotExist:
+            MY_LOGGER.debug(f'Не найден объект Channel с channel_id == {channel_id}')
             return None
 
     @staticmethod

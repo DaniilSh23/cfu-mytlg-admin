@@ -9,7 +9,7 @@ class RawChannelPostSerializer(serializers.Serializer):
     Сериалайзер для новых постов из каналов.
     """
     token = serializers.CharField()
-    ch_pk = serializers.IntegerField()
+    channel_id = serializers.IntegerField()
     text = serializers.CharField()
     post_link = serializers.URLField()
 
