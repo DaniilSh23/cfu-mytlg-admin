@@ -41,7 +41,7 @@ class BotUsersService:
         Фильтрация пользователей, у которых не установлен флаг получения постов из своих каналов.
         """
         if not bot_usr:
-            users_qset = BotUsersService.objects.filter(only_custom_channels=False).only("id")
+            users_qset = BotUser.objects.filter(only_custom_channels=False).only("id")
         else:
             users_qset = (bot_usr,)  # Сделал из одного элемента кортеж, чтобы можно было итерироваться
         return users_qset
