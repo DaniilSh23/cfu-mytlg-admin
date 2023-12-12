@@ -19,14 +19,13 @@ class PostService:
     Сервис для обработки постов.
     """
     @staticmethod
-    def get_posts_with_similar_category(ch_pk: int):
+    def get_posts_with_similar_category(channel_id: int):
         """
         Метод для получения из БД постов с одинаковой категорией того канала, в котором вышел новый пост.
         """
         MY_LOGGER.debug('ВЫЗВАН сервис для получения постов с общей категорией')
-        ch_obj = ChannelsService.get_channel_by_channel_id(ch_pk)
+        ch_obj = ChannelsService.get_channel_by_channel_id(channel_id)
         if not ch_obj:
-            MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
             return
 
         # Достаём все id каналов по теме
@@ -58,7 +57,7 @@ class PostService:
         short_post = text_processor.gpt_text_reduction(prompt=prompt, text=post_text)
 
         # Создаём новый пост в БД
-        ch_obj = ChannelsService.get_channel_by_channel_id(ch_pk)
+        ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
         new_post = NewsPosts.objects.create(
             channel=ch_obj,
             text=post_text,
@@ -81,6 +80,8 @@ class PostService:
         MY_LOGGER.debug('ВЫЗВАН сервис обработки подходящего поста из списка кастомных каналов пользователей.')
 
         ch_obj = ChannelsService.get_channel_by_channel_id(channel_id)
+        if not ch_obj:
+            return
         # TODO: написать новый сервис для получения пользователей, у которых добавлен этот канал в список кастомных и
         #  стоит галка получать только со своих каналов - ВРОДЕ СДЕЛАЛ, НО НЕ ТЕСТИЛ.
         bot_users_qset = BotUsersService.filter_bot_users_by_channel_pk(channel_pk=ch_obj.pk)
@@ -89,7 +90,7 @@ class PostService:
             return
 
         # Пилим посту сокращённый варианта через ChatGPT
-        embedding = PostFilters.make_embedding(text=post_text)
+        embedding = TextProcessService.make_embeddings(text=post_text)
         text_processor = TextProcessService()
         prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
         short_post = text_processor.gpt_text_reduction(prompt=prompt, text=post_text)

@@ -399,7 +399,7 @@ class RelatedNewsView(APIView):
             MY_LOGGER.warning(f'ch_pk невалидный или отсутствует. Значение параметра ch_pk={ch_pk}')
             return Response(status=status.HTTP_400_BAD_REQUEST, data='invalid channel pk')
 
-        ch_obj = ChannelsService.get_channel_by_channel_id(ch_pk)
+        ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
         if not ch_obj:
             MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
             return Response(status=status.HTTP_404_NOT_FOUND, data='channel not found')
@@ -432,7 +432,7 @@ class RelatedNewsView(APIView):
                 MY_LOGGER.debug(TOKEN_CHECK_OK)
 
                 ch_pk = ser.data.get("ch_pk")
-                ch_obj = ChannelsService.get_channel_by_channel_id(ch_pk)
+                ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
                 if not ch_obj:
                     MY_LOGGER.warning(f'Не найден объект Channels по PK=={ch_pk}')
                     return Response(data={'result': f'channel object does not exist{ch_pk}'})
