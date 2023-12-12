@@ -35,7 +35,7 @@ def raw_post_processing(channel_id: int, new_post_text: str, post_link: str):
         new_post_embedding = TextProcessService.make_embeddings(text=new_post_text)
         if not new_post_embedding:
             return False
-        PostService.suitable_post_processing(ch_pk=channel_id, embedding=new_post_embedding, post_link=post_link,
+        PostService.suitable_post_processing(channel_id=channel_id, embedding=new_post_embedding, post_link=post_link,
                                              post_text=new_post_text)
         return True
 
@@ -46,7 +46,7 @@ def raw_post_processing(channel_id: int, new_post_text: str, post_link: str):
     # Проверяем результаты фильтров
     if all(filtration_rslt):
         MY_LOGGER.debug('Пост прошёл фильтры!')
-        PostService.suitable_post_processing(ch_pk=channel_id, embedding=post_filters_obj.new_post_embedding,
+        PostService.suitable_post_processing(channel_id=channel_id, embedding=post_filters_obj.new_post_embedding,
                                              post_link=post_link, post_text=new_post_text)
         return True
     else:

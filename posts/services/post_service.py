@@ -45,7 +45,7 @@ class PostService:
         return all_posts_lst
 
     @staticmethod
-    def suitable_post_processing(post_text: str, ch_pk: int, post_link: str, embedding: List[float]):
+    def suitable_post_processing(post_text: str, channel_id: int, post_link: str, embedding: List[float]):
         """
         Метод для обработки подходящего поста
         """
@@ -57,7 +57,7 @@ class PostService:
         short_post = text_processor.gpt_text_reduction(prompt=prompt, text=post_text)
 
         # Создаём новый пост в БД
-        ch_obj = ChannelsService.get_channel_by_pk(ch_pk)
+        ch_obj = ChannelsService.get_channel_by_channel_id(channel_id)
         new_post = NewsPosts.objects.create(
             channel=ch_obj,
             text=post_text,
