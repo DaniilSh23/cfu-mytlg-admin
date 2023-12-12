@@ -85,6 +85,7 @@ class ScheduledPostsService:
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} не указаны интересы')
                 continue
 
+            MY_LOGGER.debug(f'Хуйня с проверкой наличия релевантного интереса у юзера НАЧАЛАСЬ...')
             # Делаем список из кортежей с формулировками интересов и эмбеддингов
             interest_lst_for_gpt_processing = InterestsService.create_interests_list_for_gpt_processing(interests)
             # Пилим индексную базу из эмбеддингов для интересов
@@ -93,6 +94,7 @@ class ScheduledPostsService:
             relevant_pieces = text_processor.get_relevant_pieces_by_embeddings(index_db, post)
             # Фильтруем по векторному расстоянию подходящие интересы
             filtered_rel_interests = text_processor.filter_relevant_pieces_by_vector_distance(relevant_pieces)
+            MY_LOGGER.debug(f'Хуйня с проверкой наличия релевантного интереса у юзера ЗАКОНЧИЛАСЬ...')
 
             if len(filtered_rel_interests) < 1:  # Выходим, если куски очень далеки от схожести
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} нет релевантных интересов для поста с PK=={post.pk}')
