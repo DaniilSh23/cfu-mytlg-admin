@@ -84,8 +84,7 @@ class PostService:
         ch_obj = ChannelsService.get_channel_by_channel_id(channel_id)
         if not ch_obj:
             return
-        # TODO: написать новый сервис для получения пользователей, у которых добавлен этот канал в список кастомных и
-        #  стоит галка получать только со своих каналов - ВРОДЕ СДЕЛАЛ, НО НЕ ТЕСТИЛ.
+
         bot_users_qset = BotUsersService.filter_bot_users_by_channel_pk(channel_pk=ch_obj.pk)
         if len(bot_users_qset) < 1:
             MY_LOGGER.debug(f'НЕТ пользоваталей, у которых канал, где вышел пост, добавлен в список кастомных!')

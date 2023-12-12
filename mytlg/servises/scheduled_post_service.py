@@ -69,8 +69,6 @@ class ScheduledPostsService:
         Отбор пользователей для поста и планирование поста к отправке.
         """
         MY_LOGGER.debug('Планируем пост к отправке.')
-        # TODO: добавить в этот сервис логику, чтобы доставать только тех юзеров, у которых не установлен флаг
-        #  получения постов со своих каналов - ВРОДЕ ГОТОВО, НО НЕ ПРОВЕРЕНО
         users_qset = BotUsersService.filter_users_queryset_without_custom_channels_flag(bot_usr)
 
         for i_user in users_qset:
@@ -83,7 +81,6 @@ class ScheduledPostsService:
                     continue
 
             interests = InterestsService.filter_interest_for_scheduling_posts(i_user, interest, post)
-            MY_LOGGER.debug(f'ЭТО ИНТЕРЕСЫ ДЛЯ ЮЗЕРА PK == {i_user.pk} | {interests}')
             if len(interests) < 1:
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} не указаны интересы')
                 continue
@@ -100,6 +97,7 @@ class ScheduledPostsService:
             if len(filtered_rel_interests) < 1:  # Выходим, если куски очень далеки от схожести
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} нет релевантных интересов для поста с PK=={post.pk}')
                 continue
+            MY_LOGGER.success(f'У юзера PK=={i_user.pk} НАЙДЕН релевантный интерес для поста с PK=={post.pk}')
 
             # Определяем когда в следующий раз нужно отправить пользователю посты для данного интереса
             user_interest, sending_datetime = InterestsService.calculate_sending_time_for_interest(
