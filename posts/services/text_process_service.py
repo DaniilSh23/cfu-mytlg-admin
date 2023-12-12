@@ -41,10 +41,12 @@ class TextProcessService:
                                  json=data,
                                  headers=TextProcessService.headers_for_gpt)
         if response.status_code == 200 and response.json().get('success'):
-            return response.json().get('answer')
+            return response.json().get('embeddings')
         else:
             MY_LOGGER.warning(
-                f'Ошибка при запросе к приложению для опен аи при формировании эбедингов {response.status_code}, {response.text}')
+                f'Ошибка при запросе к приложению для опен аи для формирования эмбеддингов: {response.status_code} | '
+                f'{response.text}')
+            raise   # TODO: убрать
             return False
 
     def make_index_db_from_embeddings(self, interest_lst):
