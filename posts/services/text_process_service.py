@@ -11,7 +11,7 @@ class TextProcessService:
     similarity_index_for_interests = float(
         BotSettingsService.get_bot_settings_by_key(key='similarity_index_for_interests'))
     headers_for_gpt = {
-        'Authorization': OPEN_AI_APP_TOKEN
+        'Authorization': f"Bearer {OPEN_AI_APP_TOKEN}"
     }
     embeddings = OpenAIEmbeddings()
 
