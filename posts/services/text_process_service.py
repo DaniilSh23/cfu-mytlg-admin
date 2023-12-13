@@ -32,7 +32,8 @@ class TextProcessService:
             return response.json().get('answer')
         else:
             MY_LOGGER.warning(f'Ошибка при запросе к приложению для опен аи {response.status_code}, {response}')
-            return False
+            raise OpenaiException(message=f'Неудачный запрос к языковой модели GPT! '
+                                          f'STATUS_CODE == {response.status_code} | DESCRIPTION == {response.text}')
 
     @staticmethod
     def make_embeddings(text: str):
