@@ -3,10 +3,10 @@
 """
 from langchain import FAISS
 from langchain.embeddings import OpenAIEmbeddings
-import openai
 from openai.error import RateLimitError
 from cfu_mytlg_admin.settings import MY_LOGGER
 from rest_framework.response import Response
+
 from posts.services.text_process_service import TextProcessService
 
 

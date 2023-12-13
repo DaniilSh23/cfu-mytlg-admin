@@ -2,6 +2,8 @@ from langchain import FAISS
 from langchain.embeddings import OpenAIEmbeddings
 import requests
 from langchain.text_splitter import CharacterTextSplitter
+
+from mytlg.exceptions.custom_exceptions import OpenaiException
 from mytlg.servises.bot_settings_service import BotSettingsService
 
 from cfu_mytlg_admin.settings import MY_LOGGER, OPEN_AI_SERVICE_HOST, OPEN_AI_APP_TOKEN
@@ -46,7 +48,8 @@ class TextProcessService:
             MY_LOGGER.warning(
                 f'Ошибка при запросе к приложению для опен аи для формирования эмбеддингов: {response.status_code} | '
                 f'{response.text}')
-            return False
+            raise OpenaiException(message=f'Неудачный запрос при формировании эмбеддингов! '
+                                          f'STATUS_CODE == {response.status_code} | DESCRIPTION == {response.text}')
 
     def make_index_db_from_embeddings(self, interest_lst):
         index_db = FAISS.from_embeddings(text_embeddings=interest_lst, embedding=self.embeddings)
