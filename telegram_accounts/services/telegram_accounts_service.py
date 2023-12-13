@@ -16,7 +16,7 @@ class TelegramAccountService:
         Метод для получения аккаунтов, которые должны быть запущены
         """
         MY_LOGGER.debug('Запущен сервис с бизнес-логикой для получения аккаунтов, которые должны быть запущены')
-        accounts = (TlgAccounts.objects.filter(is_run=True, for_search=True).only('id', 'acc_tlg_id').prefetch_related(
+        accounts = (TlgAccounts.objects.filter(is_run=True).only('id', 'acc_tlg_id').prefetch_related(
             'proxy').
                     prefetch_related('channels'))
         result = []
