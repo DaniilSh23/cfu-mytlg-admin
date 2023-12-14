@@ -49,7 +49,11 @@ class ChannelsService:
     @staticmethod
     def get_channel_by_channel_id(channel_id: int) -> Channels | None:
         try:
-            return Channels.objects.get(channel_id=channel_id)
+            channel = Channels.objects.get(channel_id=channel_id)
+            if channel.is_bloked:
+                return None
+            else:
+                return channel
         except ObjectDoesNotExist:
             MY_LOGGER.debug(f'Не найден объект Channel с channel_id == {channel_id}')
             return None
