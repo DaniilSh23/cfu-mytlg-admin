@@ -50,7 +50,8 @@ class ChannelsService:
     def get_channel_by_channel_id(channel_id: int) -> Channels | None:
         try:
             channel = Channels.objects.get(channel_id=channel_id)
-            if channel.is_bloked:
+            if channel.is_blocked:
+                MY_LOGGER.debug(f'Канал с channel_id == {channel_id} заблокирован')
                 return None
             else:
                 return channel
