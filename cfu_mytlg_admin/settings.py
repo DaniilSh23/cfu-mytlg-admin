@@ -16,6 +16,7 @@ import environ
 import asyncio
 
 import loguru
+from celery.schedules import crontab
 
 # Это отсюда https://django-environ.readthedocs.io/en/latest/quickstart.html
 env = environ.Env(
@@ -37,6 +38,9 @@ env = environ.Env(
     SEND_NEWS_TIMEOUT=int,
     SHOW_SQL_LOG=bool,
     SENTRY_DSN=str,
+    ACCOUNT_SERVICE_HOST=str,
+    OPEN_AI_APP_TOKEN=str,
+    OPEN_AI_SERVICE_HOST=str,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -70,6 +74,8 @@ INSTALLED_APPS = [
 
     # Созданные приложения
     'mytlg.apps.MytlgConfig',
+    'posts.apps.PostsConfig',
+    'telegram_accounts.apps.TelegramAccountsConfig',
 
     # сторонние приложения
     'rest_framework',
@@ -192,12 +198,21 @@ CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"  # Это адрес б
 CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}"  # Это адрес бэкэнда результатов (тоже у нас Redis)
 CELERY_TIMEZONE = "Europe/Moscow"  # Временная зона для Celery
 CELERY_BEAT_SCHEDULE = {  # Настройки шедуля
-    'send_posts_to_users_task': {
-        'task': 'mytlg.tasks.scheduled_task_for_send_post_to_users',
+    # 'send_posts_to_users_task': {
+    #     'task': 'mytlg.tasks.scheduled_task_for_send_post_to_users',
+    #     'schedule': 120,
+    #     # 'schedule': env('SEND_NEWS_TIMEOUT'),
+    #     # 'schedule': 10,
+    # },
+    'sending_post_selections': {
+        'task': 'mytlg.tasks.sending_post_selections',
         'schedule': 120,
-        # 'schedule': env('SEND_NEWS_TIMEOUT'),
-        # 'schedule': 10,
     },
+    'what_was_interesting': {
+        'task': 'mytlg.tasks.what_was_interesting',
+        'schedule': crontab(hour=11, minute=30, day_of_week=1),  # Запуск в понедельник в 11:30
+        # 'schedule': 10,  # Каждые 10 сек
+    }
     # 'test_task': {
     #     'task': 'mytlg.tasks.scheduled_task_example',
     #     'schedule': 10
@@ -220,6 +235,13 @@ MY_LOGGER.add(  # системные логи в файл
 
 # Настройки для Telegram
 BOT_TOKEN = env('BOT_TOKEN')
+
+# Сервис управления аккаунтами
+ACCOUNT_SERVICE_HOST = env('ACCOUNT_SERVICE_HOST')
+DEL_ACCOUNT_URL = f"{ACCOUNT_SERVICE_HOST}del_acc/"
+START_SUBSCRIPTION_ULR = f"{ACCOUNT_SERVICE_HOST}subs_accs_to_channels/"
+START_ACCOUNT_ULR = f"{ACCOUNT_SERVICE_HOST}start_acc/"
+STOP_ACCOUNT_ULR = f"{ACCOUNT_SERVICE_HOST}stop_acc/"
 
 # OpenAI Token
 OPENAI_API_KEY = env('OPENAI_API_KEY')
@@ -274,3 +296,18 @@ sentry_sdk.init(
     # We recommend adjusting this value in production.
     profiles_sample_rate=1.0,
 )
+
+# Настройка Redis cache
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://localhost:6379',  # Ваша конфигурация Redis
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+CHANNELS_BLACK_LIST = []
+OPEN_AI_APP_TOKEN = env('OPEN_AI_APP_TOKEN')
+OPEN_AI_SERVICE_HOST = env('OPEN_AI_SERVICE_HOST')

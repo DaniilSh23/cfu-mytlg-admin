@@ -1,3 +1,4 @@
+import base64
 import datetime
 from socket import socket
 from typing import List
@@ -5,6 +6,8 @@ from typing import List
 import pytz
 import requests
 import socks
+import json
+from io import TextIOWrapper
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
 
@@ -80,7 +83,7 @@ def send_message_by_bot(chat_id, text, disable_notification=False) -> bool | Non
     MY_LOGGER.info(f'Вызвана функция для отправки от лица бота сообщений в телегу юзеру {chat_id!r}')
     url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
     data = {'chat_id': chat_id, 'text': text, 'disable_notification': disable_notification,
-            'disable_web_page_preview': True}
+            'disable_web_page_preview': True, 'parse_mode': 'HTML'}
     MY_LOGGER.debug(f'Выполняем запрос на отправку сообщения от лица бота, данные запроса: {data}')
     response = requests.post(url=url, data=data)  # Выполняем запрос на отправку сообщения
 
@@ -123,7 +126,7 @@ def bot_command_for_start_or_stop_account(instance, bot_admin, bot_command: str 
     command_msg = f'/{bot_command} {instance.pk} {file_name}'
     if bot_command == 'start_acc':
         proxy_str = (f"{instance.proxy.protocol}:{instance.proxy.host}:{instance.proxy.port}:{instance.proxy.username}"
-                     f":{instance.proxy.password}")
+                     f":{instance.proxy.password}:{instance.proxy.protocol_type}")
         command_msg = f"{command_msg} {proxy_str}"
 
     send_command_to_bot(
@@ -213,3 +216,32 @@ def calculate_sending_datetime(last_send: datetime, when_send: datetime.time = N
         if sending_dt.day < now_dt.day or sending_dt.month < now_dt.month or sending_dt.year < now_dt.year:
             sending_dt.replace(day=now_dt.day, month=now_dt.month, year=now_dt.year)
         return sending_dt
+
+
+def process_json_file(encoding, file):
+    json_file = TextIOWrapper(
+        file,
+        encoding=encoding,
+    )
+    json_data = json.loads(json_file.read())
+    return json_data
+
+
+def encoding_file_to_base64(file_path: str) -> str | None:
+    """
+    Функция для кодирования файла в base64
+    :param file_path: str - путь к файлу
+    """
+    MY_LOGGER.debug('Вызвана функция для преобразования файла в base64 строку.')
+
+    try:
+        # Открываем файл и преобразовываем его в base64 строку
+        with open(file_path, 'rb') as file:
+            file_content = file.read()
+        base64_string = base64.b64encode(file_content).decode('utf-8')
+    except Exception as err:
+        MY_LOGGER.warning(f'Произошла ошибка при преобразовании файла в base64 строку. | {err}')
+        return
+
+    MY_LOGGER.success(f"Файл {file_path!r} успешно преобразован в base64 строку.")
+    return base64_string

@@ -5,11 +5,15 @@ from django.urls import path
 
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.admin_mixins import ExportAsJSONMixin
-from mytlg.common import save_json_channels
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
-    AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists
+    AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists, Reactions
 from mytlg.tasks import subscription_to_new_channels
+from mytlg.servises.channels_service import ChannelsService
+from mytlg.common import save_json_channels
+
+
+admin.site.site_header = 'Администрирование YOUR TELEGRAM PROJECT'
 
 
 @admin.register(BotUser)
@@ -19,6 +23,7 @@ class BotUserAdmin(admin.ModelAdmin):
         "tlg_id",
         "tlg_username",
         "start_bot_at",
+        "only_custom_channels",
     )
     list_display_links = (
         "pk",
@@ -56,11 +61,20 @@ class CategoriesAdmin(admin.ModelAdmin):
     )
 
 
+@admin.action(description='Отметить как не готов')
+def mark_channel_is_ready_param(modeladmin, request, queryset):
+    """
+    Отметить канал как неготовый (is_ready=False)
+    """
+    queryset.update(is_ready=False)
+
+
 @admin.register(Channels)
 class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
     change_list_template = 'admin/channels_change_list.html'  # Шаблон для страницы со списком сущностей
     actions = [  # Список доп. действий в админке для записей данной модели
         'export_json',  # export_csv - имя метода в миксине ExportAsCSVMixin
+        mark_channel_is_ready_param,  # отметить канал, как ноготовый
     ]
     list_display = (
         "pk",
@@ -77,6 +91,10 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "channel_name",
         "channel_link",
         "created_at",
+        "category",
+        "is_ready",
+    )
+    list_filter = (
         "category",
         "is_ready",
     )
@@ -166,12 +184,14 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
 class ProxysAdmin(admin.ModelAdmin):
     list_display = (
         "pk",
+        "description",
         "display_proxy_data_together",
         "is_checked",
         "last_check",
     )
     list_display_links = (
         "pk",
+        "description",
         "display_proxy_data_together",
         "is_checked",
         "last_check",
@@ -334,6 +354,7 @@ class ScheduledPostsAdmin(admin.ModelAdmin):
         'news_post',
         'when_send',
         'is_sent',
+        'selection_hash',
     )
     list_display_links = (
         'pk',
@@ -341,6 +362,7 @@ class ScheduledPostsAdmin(admin.ModelAdmin):
         'news_post',
         'when_send',
         'is_sent',
+        'selection_hash',
     )
 
 
@@ -364,3 +386,23 @@ class BlackListsAdmin(admin.ModelAdmin):
         if len(obj.keywords) < 48:
             return obj.keywords
         return obj.keywords[:48]
+
+
+@admin.register(Reactions)
+class ReactionsAdmin(admin.ModelAdmin):
+    list_display = (
+        'pk',
+        'bot_user',
+        'news_post',
+        'reaction',
+        'created_at',
+        'updated_at',
+    )
+    list_display_links = (
+        'pk',
+        'bot_user',
+        'news_post',
+        'reaction',
+        'created_at',
+        'updated_at',
+    )

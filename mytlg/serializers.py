@@ -1,6 +1,14 @@
 from rest_framework import serializers
 
 
+class SwitchOnlyCustomChannelsSerializer(serializers.Serializer):
+    """
+    Сериалайзер для запроса изменения параметра BotUser.only_custom_channels
+    """
+    token = serializers.CharField(max_length=50)
+    tlg_id = serializers.CharField()
+
+
 class SetAccDataSerializer(serializers.Serializer):
     """
     Сериалайзер для установки данных модели TlgAccounts
@@ -70,6 +78,7 @@ class WriteSubsResultSerializer(serializers.Serializer):
     fail_subs = serializers.IntegerField()
     status = serializers.CharField(max_length=10)
     end_flag = serializers.BooleanField()
+    channel_link = serializers.URLField()
 
 
 class UpdateChannelsSerializer(serializers.Serializer):
@@ -89,3 +98,12 @@ class AccountErrorSerializer(serializers.Serializer):
     error_type = serializers.CharField(max_length=40)
     error_description = serializers.CharField()
     account = serializers.IntegerField()
+
+
+class ReactionsSerializer(serializers.Serializer):
+    """
+    Сериалайзер для POST запроса с реакцией юзера.
+    """
+    bot_usr = serializers.IntegerField()
+    reaction = serializers.IntegerField()
+    post_id = serializers.IntegerField()

@@ -6,6 +6,7 @@ from django.db.models.signals import pre_delete, pre_save, m2m_changed
 from django.dispatch import receiver
 
 from cfu_mytlg_admin.settings import MY_LOGGER
+from mytlg.api_requests import AccountsServiceRequests
 
 from mytlg.utils import bot_command_for_start_or_stop_account
 
@@ -17,10 +18,16 @@ class BotUser(models.Model):
     tlg_id = models.CharField(verbose_name='tlg_id', max_length=30, db_index=True)
     tlg_username = models.CharField(verbose_name='username', max_length=100, blank=False, null=True)
     language_code = models.CharField(verbose_name='language_code', default='RU', max_length=5)
-    start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
     category = models.ManyToManyField(verbose_name='категории', related_name='bot_user', to='Categories', blank=True)
     channels = models.ManyToManyField(verbose_name='каналы', related_name='bot_user', to='Channels', blank=True)
+    only_custom_channels = models.BooleanField(verbose_name='только со своих каналов', default=False)
+    # TODO: поле custom_channels нигде не используется
+    custom_channels = models.JSONField(verbose_name='Добавленные пользователем каналы', blank=True, default=list)
     when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
+    source_tag = models.CharField(verbose_name='Тег источника', max_length=50, blank=True)
+
+    start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name='Дата изменения пользователя', auto_now=True)
 
     def __str__(self):
         return f'User TG_ID {self.tlg_id}'
@@ -70,8 +77,10 @@ class Channels(models.Model):
     description = models.TextField(verbose_name='описание', max_length=500, blank=True, null=False)
     subscribers_numb = models.IntegerField(verbose_name='кол-во подписчиков', default=0)
     created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
-    category = models.ForeignKey(verbose_name='категория канала', to=Categories, on_delete=models.CASCADE, blank=True, null=True)
+    category = models.ForeignKey(verbose_name='категория канала', to=Categories, on_delete=models.CASCADE, blank=True,
+                                 null=True)
     is_ready = models.BooleanField(verbose_name='готов', default=False)
+    is_blocked = models.BooleanField(verbose_name='Канал заблокирован', default=False)
 
     def __str__(self):
         return self.channel_link
@@ -92,6 +101,8 @@ class Proxys(models.Model):
         ('https', 'https'),
         ('socks4', 'socks4'),
     )
+    description = models.TextField(verbose_name='описание', blank=True)
+    protocol_type = models.BooleanField(verbose_name='IPv6', default=False)
     protocol = models.CharField(verbose_name='протокол', choices=protocols, max_length=6)
     host = models.CharField(verbose_name='хост', max_length=200)
     port = models.IntegerField(verbose_name='порт', default=65565)
@@ -101,8 +112,11 @@ class Proxys(models.Model):
     last_check = models.DateTimeField(verbose_name='крайняя проверка', blank=True, null=True)
 
     def __str__(self):
+        return self.description
+
+    def make_proxy_string(self):
         return (f'{self.protocol}:{self.host}:{self.port}:{self.username if self.username else ""}'
-                f':{self.password if self.password else ""}')
+                f':{self.password if self.password else ""}:{self.protocol_type}')
 
     class Meta:
         ordering = ['-id']
@@ -126,6 +140,7 @@ class TlgAccounts(models.Model):
     created_at = models.DateTimeField(verbose_name='дата и время добавления акка', auto_now_add=True)
     channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='tlg_accounts', blank=True)
     subscribed_numb_of_channels = models.IntegerField(verbose_name='кол-во подписок на каналы', default=0)
+    for_search = models.BooleanField(verbose_name='Аккаунт используется для поиска каналов', default=False)
 
     def __str__(self):
         return f'TLG Account ID=={self.acc_tlg_id}'
@@ -156,6 +171,9 @@ def delete_session_file(sender, instance, **kwargs):
     if os.path.exists(instance.session_file.path):
         MY_LOGGER.debug(f'Удаляем файл сессии {instance.session_file.path!r}')
         os.remove(instance.session_file.path)
+
+    # Кидаем запрос к сервису аккаунтов для удаления аккаунта (остановка акка и удаление файла сессии)
+    AccountsServiceRequests.post_req_for_del_account(acc_pk=instance.pk)
     return
 
 
@@ -164,7 +182,7 @@ def send_bot_command(sender, instance, **kwargs):
     """
     Сигнал для отправки боту команды на старт или стоп аккаунта
     """
-    MY_LOGGER.info(f'Получен сигнал post_save от модели TlgAccounts.')
+    MY_LOGGER.info(f'Получен сигнал pre_save от модели TlgAccounts.')
 
     try:
         old_instance = TlgAccounts.objects.get(pk=instance.pk)
@@ -172,12 +190,21 @@ def send_bot_command(sender, instance, **kwargs):
         return
 
     if old_instance.is_run != instance.is_run:
-        # TODO: разделить функционал отправки команды на старт и стоп аккаунта
-        bot_command = 'start_acc' if instance.is_run else 'stop_acc'
-        MY_LOGGER.info(f'Выполним отправку боту команды: {bot_command!r}')
-        bot_admin = BotSettings.objects.get(key='bot_admins').value.split()[0]
-        # Функция для отправки боту команды на старт или стоп аккаунта
-        bot_command_for_start_or_stop_account(instance=instance, bot_command=bot_command, bot_admin=bot_admin)
+
+        # Логика для старта аккаунта
+        if instance.is_run:
+            MY_LOGGER.debug(f'Отправляем запрос для СТАРТА аккаунта с PK == {instance.pk}')
+            AccountsServiceRequests.post_req_for_start_account(
+                acc_pk=instance.pk,
+                tlg_id=instance.acc_tlg_id,
+                proxy=instance.proxy.make_proxy_string(),
+                channel_ids=[i_ch.channel_id for i_ch in instance.channels.all()]
+            )
+            return
+
+        # Логика для остановки аккаунта
+        MY_LOGGER.debug(f'Отправляем запрос для ОСТАНОВКИ аккаунта с PK == {instance.pk}')
+        AccountsServiceRequests.post_req_for_stop_account(acc_pk=instance.pk)
 
 
 class AccountsErrors(models.Model):
@@ -209,6 +236,15 @@ class NewsPosts(models.Model):
     embedding = models.TextField(verbose_name='эмбеддинг', blank=True, null=False)
     created_at = models.DateTimeField(verbose_name='дата и время', auto_now_add=True)
     is_sent = models.BooleanField(verbose_name='отправлен пользователям', default=False)
+    from_custom_channel = models.BooleanField(verbose_name='из кастомного канала юзера', default=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'text': self.text,
+            'short_text': self.short_text,
+            'post_link': self.post_link
+        }
 
     class Meta:
         ordering = ['-id']
@@ -235,7 +271,9 @@ class AccountsSubscriptionTasks(models.Model):
     ends_at = models.DateTimeField(verbose_name='окончание', blank=True, null=True)
     tlg_acc = models.ForeignKey(verbose_name='аккаунт', to=TlgAccounts, on_delete=models.CASCADE)
     initial_data = models.TextField(verbose_name='исходные данные', max_length=5000)
-    channels = models.ManyToManyField(verbose_name='каналы', to=Channels,  related_name='subs_task', blank=True)
+    channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='subs_task', blank=True)
+    assigned_user = models.ForeignKey(verbose_name='Привязана к пользователю', to=BotUser, on_delete=models.CASCADE,
+                                      blank=True, null=True)
 
     def __str__(self):
         return f'задача на подписку для аккаунта: {self.tlg_acc!r}'
@@ -258,6 +296,7 @@ class Interests(models.Model):
     interest_types_tpl = (
         ('main', 'основной'),
         ('networking', 'нетворкинг'),
+        ('whats_new', 'что нового'),
     )
 
     interest = models.CharField(verbose_name='интерес', max_length=200)
@@ -284,6 +323,22 @@ class Interests(models.Model):
         return self.interest
 
 
+# TODO: эту штуку надо дописать, чтобы при изменении или создании записи в т. Интересов автоматом
+#  генерировались эмбеддинги
+@receiver(pre_save, sender=Interests)
+def start_or_stop_account(sender, instance, **kwargs):
+    """
+    Обработка сигнала перед сохранением интереса пользователя
+    """
+    MY_LOGGER.info(f'Получен сигнал pre_save от модели Interests.')
+
+    # Попробуем достать из БД такой интерес и сравнить его текст (поле interest)
+    try:
+        old_instance = Interests.objects.get(pk=instance.pk)
+    except ObjectDoesNotExist:
+        pass
+
+
 class ScheduledPosts(models.Model):
     """
     Посты, планируемые к отправке.
@@ -293,6 +348,7 @@ class ScheduledPosts(models.Model):
     interest = models.ForeignKey(verbose_name='интерес', to=Interests, on_delete=models.CASCADE, blank=True, null=True)
     when_send = models.DateTimeField(verbose_name='когда отправить', auto_now=False, auto_now_add=False)
     is_sent = models.BooleanField(verbose_name='отправлено', default=False)
+    selection_hash = models.CharField(verbose_name='хэш подборки', max_length=200, blank=True, null=True)
 
     class Meta:
         ordering = ['-id']
@@ -311,3 +367,19 @@ class BlackLists(models.Model):
         ordering = ['-id']
         verbose_name = 'черный список'
         verbose_name_plural = 'черные списки'
+
+
+class Reactions(models.Model):
+    """
+    Модель для реакций пользователя.
+    """
+    bot_user = models.ForeignKey(verbose_name='юзер', to=BotUser, on_delete=models.CASCADE)
+    news_post = models.ForeignKey(verbose_name='пост', to=NewsPosts, on_delete=models.CASCADE)
+    reaction = models.IntegerField(verbose_name='реакция', default=0)
+    created_at = models.DateTimeField(verbose_name='создана', auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name='изменена', blank=True, null=True, auto_now_add=False, auto_now=True)
+
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'реакция'
+        verbose_name_plural = 'реакции'

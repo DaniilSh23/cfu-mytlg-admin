@@ -1,13 +1,13 @@
 from django.urls import path
 
-from mytlg.views import StartSettingsView, WriteUsrView, WriteInterestsView, test_view, \
+from mytlg.views import WriteUsrView, WriteInterestsView, \
     GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, GetActiveAccounts, \
-    AccountError, SetAccFlags, BlackListView
+    AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler, \
+    SearchCustomChannels, SubscribeCustomChannels, InterestsSetting, SwitchOnlyCustomChannels
 
 app_name = 'mytlg'
 
 urlpatterns = [
-    path('start_settings/', StartSettingsView.as_view(), name='start_settings'),
     path('write_usr/', WriteUsrView.as_view(), name='write_usr'),
     path('write_interests/', WriteInterestsView.as_view(), name='write_interests'),
     # path('set_acc_run_flag/', SetAccRunFlag.as_view(), name='set_acc_run_flag'),
@@ -20,7 +20,12 @@ urlpatterns = [
     path('get_active_accounts/', GetActiveAccounts.as_view(), name='get_active_accounts'),
     path('account_error/', AccountError.as_view(), name='account_error'),
     path('black_list/', BlackListView.as_view(), name='black_list'),
-
-    path('test/', test_view, name='test'),
+    path('what_was_interesting/', WhatWasInteresting.as_view(), name='what_was_interesting'),
+    path('show_scheduled_posts/', ShowScheduledPosts.as_view(), name='show_scheduled_posts'),
+    path('sent_reaction/', SentReactionHandler.as_view(), name='sent_reaction'),
+    path('search_custom_channels/', SearchCustomChannels.as_view(), name='search_custom_channels'),
+    path('subscribe_custom_channels/', SubscribeCustomChannels.as_view(), name='subscribe_custom_channels'),
+    path('interests_setting/', InterestsSetting.as_view(), name='interests_setting'),
+    path('get_news_from_only_my_channels/', SwitchOnlyCustomChannels.as_view(), name='get_news_from_only_my_channels'),
 ]
 
