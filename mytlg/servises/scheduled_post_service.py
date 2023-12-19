@@ -44,7 +44,7 @@ class ScheduledPostsService:
         for post in scheduled_posts:
             new_post = post.news_post.to_dict()
             if post.from_custom_channel:
-                new_post['interest'] = post.channel.channel_name
+                new_post['interest'] = post.news_post.channel.channel_name
             new_post['interest'] = post.interest.interest
             posts.append(new_post)
         return posts, tlg_id
