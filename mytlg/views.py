@@ -514,7 +514,7 @@ class WriteSubsResults(APIView):
                 AccountsSubscriptionTasksService.update_task_obj_data(ser, task_obj)
 
                 # Условие, необходимое для отправки уведомления юзеру, если подписка была по его заказу
-                if task_obj.assigned_user.id:
+                if task_obj.assigned_user:
                     success_subscription = True if int(ser.validated_data.get("success_subs")) > 0 else False
                     # Отправка уведомления юзеру
                     AccountsSubscriptionTasksService.send_subscription_notification(
