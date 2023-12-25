@@ -9,7 +9,6 @@ from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
     AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists, Reactions
 from mytlg.tasks import subscription_to_new_channels
-from mytlg.servises.channels_service import ChannelsService
 from mytlg.common import save_json_channels
 
 
@@ -98,6 +97,13 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "category",
         "is_ready",
     )
+    search_fields = (
+        "pk",
+        "channel_id",
+        "channel_name",
+        "channel_link",
+    )
+    search_help_text = "Поиск по полям: PK, ID КАНАЛА, НАЗВАНИЕ КАНАЛА, ССЫЛКА НА КАНАЛ"
 
     def import_json(self, request: HttpRequest) -> HttpResponse:
         """
@@ -207,35 +213,30 @@ class ProxysAdmin(admin.ModelAdmin):
 
 @admin.register(TlgAccounts)
 class TlgAccountsAdmin(admin.ModelAdmin):
-    # inlines = [
-    #     ChannelsInline,
-    # ]
     list_display = (
         'pk',
-        # "session_file",
         "acc_tlg_id",
-        "tlg_first_name",
-        "tlg_last_name",
-        # "proxy",
+        "description",
         "is_run",
         'waiting',
         'banned',
-        # "created_at",
         "subscribed_numb_of_channels",
     )
     list_display_links = (
         "pk",
-        # "session_file",
         "acc_tlg_id",
-        "tlg_first_name",
-        "tlg_last_name",
-        # "proxy",
-        # "created_at",
+        "description",
         "subscribed_numb_of_channels",
     )
     list_editable = (
         'is_run',
     )
+    search_fields = (
+        'pk',
+        "acc_tlg_id",
+        "description",
+    )
+    search_help_text = "Поиск по полям: PK, TLG_ID АККАУНТА, ОПИСАНИЕ"
 
 
 @admin.register(NewsPosts)
@@ -264,7 +265,6 @@ class AccountsSubscriptionTasksAdmin(admin.ModelAdmin):
         'total_channels',
         'successful_subs',
         'failed_subs',
-        # 'short_action_story',
         'started_at',
         'ends_at',
     )
@@ -275,7 +275,6 @@ class AccountsSubscriptionTasksAdmin(admin.ModelAdmin):
         'total_channels',
         'successful_subs',
         'failed_subs',
-        # 'short_action_story',
         'started_at',
         'ends_at',
     )

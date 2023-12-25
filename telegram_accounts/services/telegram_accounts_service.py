@@ -3,6 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.models import TlgAccounts
 from mytlg.utils import encoding_file_to_base64
+from telegram_accounts.utils import account_json_data_formatter
 
 
 class TelegramAccountService:
@@ -16,14 +17,14 @@ class TelegramAccountService:
         Метод для получения аккаунтов, которые должны быть запущены
         """
         MY_LOGGER.debug('Запущен сервис с бизнес-логикой для получения аккаунтов, которые должны быть запущены')
-        accounts = (TlgAccounts.objects.filter(is_run=True).only('id', 'acc_tlg_id').prefetch_related(
-            'proxy').
+        accounts = (TlgAccounts.objects.filter(is_run=True).only('id', 'json_data').
+                    prefetch_related('proxy').
                     prefetch_related('channels'))
         result = []
         for i_acc in accounts:
             result.append({
-                'pk': i_acc.pk,
-                'tlg_id': i_acc.acc_tlg_id,
+                'acc_pk': i_acc.pk,
+                'acc_json_data': account_json_data_formatter(i_acc.json_data),
                 'proxy': i_acc.proxy.make_proxy_string(),
                 'channels_ids': [str(i_ch.channel_id) for i_ch in i_acc.channels.all()]
             })
