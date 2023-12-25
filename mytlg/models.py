@@ -129,6 +129,8 @@ class TlgAccounts(models.Model):
     TG аккаунты для работы.
     """
     session_file = models.FileField(verbose_name='файл сессии', upload_to='sessions/', blank=False, null=True)
+    json_data = models.JSONField(verbose_name='json данные аккаунта', blank=True, null=True)
+    description = models.CharField(verbose_name='описание', blank=True, null=True)
     acc_tlg_id = models.CharField(verbose_name='tlg_id аккаунта', max_length=50, blank=True, null=False)
     tlg_first_name = models.CharField(verbose_name='tlg_first_name', max_length=50, blank=True, null=False)
     tlg_last_name = models.CharField(verbose_name='tlg_last_name', max_length=50, blank=True, null=False)
@@ -139,7 +141,7 @@ class TlgAccounts(models.Model):
     banned = models.BooleanField(verbose_name='забанен', default=False)
     created_at = models.DateTimeField(verbose_name='дата и время добавления акка', auto_now_add=True)
     channels = models.ManyToManyField(verbose_name='каналы', to=Channels, related_name='tlg_accounts', blank=True)
-    subscribed_numb_of_channels = models.IntegerField(verbose_name='кол-во подписок на каналы', default=0)
+    subscribed_numb_of_channels = models.IntegerField(verbose_name='кол-во подписок', default=0)
     for_search = models.BooleanField(verbose_name='Аккаунт используется для поиска каналов', default=False)
 
     def __str__(self):

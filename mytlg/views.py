@@ -578,26 +578,26 @@ class UpdateChannelsView(APIView):
             return Response(data='Invalid request data', status=status.HTTP_400_BAD_REQUEST)
 
 
-class GetActiveAccounts(APIView):
-    """
-    Вьюшка для запроса активных аккаунтов из БД.
-    """
-
-    def get(self, request):
-        """
-        Обрабатываем GET запрос и отправляем боту команды на старт нужных аккаунтов.
-        """
-        MY_LOGGER.info('Получен GET запрос на вьюшку для получения активных аккаунтов')
-        token = request.query_params.get("token")
-
-        # Проверки запросов
-        bad_response = CheckRequestService.check_bot_token(token, api_request=True)
-        if bad_response:
-            return bad_response
-
-        # Запускаем функцию отправки боту команд для старта аккаунтов
-        start_or_stop_accounts.delay()
-        return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
+# class GetActiveAccounts(APIView):
+#     """
+#     Вьюшка для запроса активных аккаунтов из БД.
+#     """
+#
+#     def get(self, request):
+#         """
+#         Обрабатываем GET запрос и отправляем боту команды на старт нужных аккаунтов.
+#         """
+#         MY_LOGGER.info('Получен GET запрос на вьюшку для получения активных аккаунтов')
+#         token = request.query_params.get("token")
+#
+#         # Проверки запросов
+#         bad_response = CheckRequestService.check_bot_token(token, api_request=True)
+#         if bad_response:
+#             return bad_response
+#
+#         # Запускаем функцию отправки боту команд для старта аккаунтов
+#         start_or_stop_accounts.delay()
+#         return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
 
 
 class AccountError(APIView):

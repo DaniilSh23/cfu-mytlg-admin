@@ -1,7 +1,7 @@
 from django.urls import path
 
 from mytlg.views import WriteUsrView, WriteInterestsView, \
-    GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, GetActiveAccounts, \
+    GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, \
     AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler, \
     SearchCustomChannels, SubscribeCustomChannels, InterestsSetting, SwitchOnlyCustomChannels
 
@@ -17,7 +17,7 @@ urlpatterns = [
     path('upload_new_channels/', UploadNewChannels.as_view(), name='upload_new_channels'),
     path('write_subs_rslt/', WriteSubsResults.as_view(), name='write_subs_rslt'),
     path('update_channels/', UpdateChannelsView.as_view(), name='update_channels'),
-    path('get_active_accounts/', GetActiveAccounts.as_view(), name='get_active_accounts'),
+    # path('get_active_accounts/', GetActiveAccounts.as_view(), name='get_active_accounts'),
     path('account_error/', AccountError.as_view(), name='account_error'),
     path('black_list/', BlackListView.as_view(), name='black_list'),
     path('what_was_interesting/', WhatWasInteresting.as_view(), name='what_was_interesting'),
