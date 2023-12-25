@@ -829,3 +829,13 @@ class SubscribeCustomChannels(View):
             MY_LOGGER.warning(f'Ошибка при создании задачу на подписку на собственные каналы {e}')
             return HttpResponse(
                 '<p>Что-то пошло не так. Мы уже работаем на устранением проблемы. Попробуйте пожалуйста позже.</p>')
+
+
+class ShowAcceptance(View):
+    """
+    Вьюшки для показа текста пользовательского соглашения.
+    """
+
+    def get(self, request):
+        MY_LOGGER.info('GET запрос на вьюшку Показа соглашения')
+        return render(request, template_name='mytlg/show_acceptance.html')
