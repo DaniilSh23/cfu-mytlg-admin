@@ -7,58 +7,53 @@
 {% block 'body' %}
 
 <div class="row">
+    <h4 class="fw-bold py-3 mb-1">Добавление собственных каналов</h4>
     <div class="col-xl-6 my-form-border">
-        <div class="card mb-1 my-form-area pb-1">
-            <h5 id="cardHeader" class="mb-0 pb-1">Введите название канала который хотите добавить или
-                ключевое слово для
-                поиска</h5>
-            <div class="pb-1">
-                <div class="row gy-3">
-                    <div class="col-md">
-                        <div class="demo-inline-spacing mt-1">
+      <div class="card mb-1 my-form-area">
+        <h5 class="card-header mb-0 pb-0">Для поиска канала введите ключевые слова или название канала</h5>
+        <div class="card-body">
+          <div class="row gy-3">
+            <div class="col-md">
+              <div class="demo-inline-spacing mt-1">
+                <form id="searchChannelForm" action="{% url 'mytlg:search_custom_channels' %}"
+                method="post">
+              {% csrf_token %}
+              {% if messages %}
+              <ul class="messages">
+                  {% for message in messages %}
+                  <li
+                          {% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}
+                  </li>
+                  {% endfor %}
+              </ul>
+              {% endif %}
+              <input class="my-filling-fields" type="text" id="tg-id-input" value="" name="tlg_id">
 
-                            <form id="searchChannelForm" action="{% url 'mytlg:search_custom_channels' %}"
-                                  method="post">
-                                {% csrf_token %}
-                                {% if messages %}
-                                <ul class="messages">
-                                    {% for message in messages %}
-                                    <li
-                                            {% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                                {% endif %}
-                                <input class="my-filling-fields" type="text" id="tg-id-input" value="" name="tlg_id">
-
-                                <div class="row mb-3">
-                                    <div class="col-sm-10">
-                                        <div class="input-group input-group-merge">
-                                            <textarea id="basic-icon-default-message" name="search_keywords"
-                                                      class="form-control my-filling-fields" rows="2" maxlength="300"
-                                                      placeholder="" aria-label=""
-                                                      aria-describedby="basic-icon-default-message2"></textarea>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mb-1 mt-3">
-                                    <button id="searchChannelBtn" type="submit" class="btn btn-info my-btn-clr"
-                                            style="width:100%">Найти
-                                        канал
-                                    </button>
-                                </div>
-                            </form>
-
-                        </div>
-
-                        <div id="ajaxResult" style="margin-top:20px"></div>
-
-                    </div>
-                </div>
+              <div class="row mb-3">
+                  <div class="col-sm-10">
+                      <div class="input-group input-group-merge">
+                          <textarea id="basic-icon-default-message" name="search_keywords"
+                                    class="form-control my-filling-fields" rows="2" maxlength="300"
+                                    placeholder="" aria-label=""
+                                    aria-describedby="basic-icon-default-message2"></textarea>
+                      </div>
+                  </div>
+              </div>
+              <div class="mb-1 mt-3">
+                  <button id="searchChannelBtn" type="submit" class="btn btn-info my-btn-clr"
+                          style="width:100%">Найти канал
+                  </button>
+              </div>
+          </form>
+              </div>
+              <div id="ajaxResult">
+              </div>
             </div>
+          </div>
         </div>
+      </div>
     </div>
-</div>
+  </div>
 
 <!--СКРИПТ ДЛЯ ОТПРАВКИ ДАННЫХ О ВЫБРАННЫХ ТЕМАТИКАХ И ОБНОВЛЕНИЕ ФОРМЫ КАНАЛАМИ ДЛЯ ЭТИХ ТЕМАТИК-->
 <script>
@@ -74,7 +69,7 @@
           dataType: 'html', // указываем, что ожидаем ответ в виде HTML
           success: function(data) {
             $('#ajaxResult').html(data); // обновляем содержимое элемента с id="ajaxResult"
-            $('#searchChannelForm').hide();   // Скрываем форму с интересами
+            $('#searchChannelForm').hide();   // Скрываем форму поиска
             $('#cardHeader').hide();
           },
           error: function() {
