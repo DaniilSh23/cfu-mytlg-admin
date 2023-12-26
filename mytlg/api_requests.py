@@ -45,18 +45,13 @@ class AccountsServiceRequests:
         return True, response.text
 
     @staticmethod
-    def post_req_for_start_account(acc_pk: int, tlg_id: int, proxy: str, channel_ids: List[str]):
+    def post_req_for_start_account(start_acc_data: dict):
         """
         POST запрос для старта аккаунта.
         """
         req_data = {
             "token": BOT_TOKEN,
-            "start_acc_data": {
-                "acc_pk": acc_pk,
-                "tlg_id": tlg_id,
-                "proxy": proxy,
-                "channels_ids": channel_ids,
-            }
+            "start_acc_data": start_acc_data
         }
         MY_LOGGER.debug(f'Выполняем POST запрос для старта аккаунта. | Данные запроса: {req_data}')
         response = requests.post(url=START_ACCOUNT_ULR, json=req_data)

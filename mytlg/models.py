@@ -9,6 +9,7 @@ from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.api_requests import AccountsServiceRequests
 
 from mytlg.utils import bot_command_for_start_or_stop_account
+from telegram_accounts.utils import account_json_data_formatter
 
 
 class BotUser(models.Model):
@@ -196,12 +197,13 @@ def send_bot_command(sender, instance, **kwargs):
         # Логика для старта аккаунта
         if instance.is_run:
             MY_LOGGER.debug(f'Отправляем запрос для СТАРТА аккаунта с PK == {instance.pk}')
-            AccountsServiceRequests.post_req_for_start_account(
-                acc_pk=instance.pk,
-                tlg_id=instance.acc_tlg_id,
-                proxy=instance.proxy.make_proxy_string(),
-                channel_ids=[i_ch.channel_id for i_ch in instance.channels.all()]
-            )
+            start_acc_data = {
+                'acc_pk': instance.pk,
+                'acc_json_data': account_json_data_formatter(instance.json_data),
+                'proxy': instance.proxy.make_proxy_string(),
+                'channels_ids': [str(i_ch.channel_id) for i_ch in instance.channels.all()]
+            }
+            AccountsServiceRequests.post_req_for_start_account(start_acc_data=start_acc_data)
             return
 
         # Логика для остановки аккаунта
