@@ -2,14 +2,16 @@ from abc import ABC, abstractmethod
 import requests
 
 from mytlg.servises.bot_settings_service import BotSettingsService
+from mytlg.servises.proxys_service import ProxysService
+
 from cfu_mytlg_admin.settings import MY_LOGGER
 
 
-class ProxyService(ABC):
+class ProxyProviderService(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_new_proxy():
+    def get_new_proxy(country_code):
         pass
 
     @staticmethod
@@ -18,7 +20,7 @@ class ProxyService(ABC):
         pass
 
 
-class AsocksProxyService(ProxyService):
+class AsocksProxyService(ProxyProviderService):
 
     service_name = 'Asocks'
     api_key = BotSettingsService.get_bot_settings_by_key('asocks_api_key')
@@ -68,6 +70,7 @@ class AsocksProxyService(ProxyService):
             }
 
         return proxy_dict
+
 
 
 print(AsocksProxyService.get_new_proxy(country_code='CU'))
