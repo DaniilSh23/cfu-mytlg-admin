@@ -17,7 +17,7 @@ from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer, \
-    SwitchOnlyCustomChannelsSerializer
+    SwitchOnlyCustomChannelsSerializer, GetProxySerializer
 from mytlg.servises.check_request_services import CheckRequestService
 from mytlg.servises.reactions_service import ReactionsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
@@ -839,3 +839,24 @@ class ShowAcceptance(View):
     def get(self, request):
         MY_LOGGER.info('GET запрос на вьюшку Показа соглашения')
         return render(request, template_name='mytlg/show_acceptance.html')
+
+
+class GetNewProxy(APIView):
+    """
+    Вьюшки для получения нового прокси для телеграм аккаунта.
+    """
+
+    def post(self, request):
+        MY_LOGGER.info(f'{request.POST} Поступил POST запрос на вьюшку для получения нового прокси для телеграм аккаунта')
+        ser = GetProxySerializer(data=request.data)
+        if not ser.is_valid():
+            MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
+            return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
+
+        token = ser.validated_data.get("token")
+        # Проверки запросов
+        CheckRequestService.check_bot_token(token, api_request=True)
+        # Создаем новый прокси
+        # Привязываем прокси к телеграм аккаунту
+        # Рестартим телеграм аккаунт
+        return Response(data=f'ok', status=status.HTTP_200_OK)
