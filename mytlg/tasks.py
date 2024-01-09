@@ -54,12 +54,10 @@ def gpt_interests_processing(interests, tlg_id):
     for i_interest in interests:
         # Пилим эмбеддинги для интереса
         MY_LOGGER.debug(f'Пилим эмбеддинги для интереса: {i_interest.get("interest")}')
-        # TODO: эту хуйню надо в try-except, но я не вьехал че там экзептиться может, потому что я уже заебался и выпил
-        embeddings = OpenAIEmbeddings(max_retries=2)
 
         # Cклеиваем эмбеддинги через пробел (методу join нужна str, а не float, поэтому тут map)
         i_interest["embedding"] = ' '.join(
-            map(lambda elem: str(elem), embeddings.embed_query(text=i_interest.get("interest")))
+            map(lambda elem: str(elem), text_processor.make_embeddings(text=i_interest.get("interest")))
         )
 
         MY_LOGGER.debug(f'Шлём запрос к gpt для определения категории интереса: {i_interest.get("interest")!r}')
