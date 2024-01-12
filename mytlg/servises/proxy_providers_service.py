@@ -38,7 +38,7 @@ class AsocksProxyService(ProxyProviderService):
     @staticmethod
     def _create_proxy_port(country_code, connection_type_id=3, auth_type_id=3, proxy_type_id=3):
         """
-        Метод для создания прокси на сервисе asocks.com
+        Приватный Метод для создания прокси на сервисе asocks.com
         :param country_code: символьный код страны
         :param connection_type_id: тип соединения для мобильных прокси - 3
         :param auth_type_id: тип авторизации для мобильных прокси - 3

@@ -34,3 +34,4 @@ class ProxysService:
             Proxys.objects.get(id=proxy_id).delete()
         except Exception as e:
             MY_LOGGER.warning(f'Не удалось удалить прокси с id: {proxy_id}. Ошибка: {e}')
+

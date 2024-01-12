@@ -31,7 +31,10 @@ from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.servises.account_errors_service import TlgAccountErrorService
 from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
+from mytlg.servises.proxys_service import ProxysService
+from mytlg.servises.proxy_providers_service import AsocksProxyService
 from posts.services.text_process_service import TextProcessService
+
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
     search_content_by_new_interest
 
@@ -50,6 +53,7 @@ class SwitchOnlyCustomChannels(APIView):
     """
     Вьюшка для логики переключения в боте кнопки 'Посты только из моих каналов'
     """
+
     @extend_schema(request=SwitchOnlyCustomChannelsSerializer, responses=Dict[str, bool], methods=['post'])
     def post(self, request):
         MY_LOGGER.info(f'Получен POST запрос на вьюшку InterestsSetting')
@@ -78,6 +82,7 @@ class InterestsSetting(View):
     """
     Вьюшка для страницы, где мы настраиваем интересы.
     """
+
     def get(self, request: HttpRequest) -> HttpResponse:
         MY_LOGGER.info(f'Получен GET запрос на вьюшку InterestsSetting')
         token = request.GET.get("token")
@@ -847,7 +852,8 @@ class GetNewProxy(APIView):
     """
 
     def post(self, request):
-        MY_LOGGER.info(f'{request.POST} Поступил POST запрос на вьюшку для получения нового прокси для телеграм аккаунта')
+        MY_LOGGER.info(
+            f'{request.POST} Поступил POST запрос на вьюшку для получения нового прокси для телеграм аккаунта')
         ser = GetProxySerializer(data=request.data)
         if not ser.is_valid():
             MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
@@ -856,7 +862,20 @@ class GetNewProxy(APIView):
         token = ser.validated_data.get("token")
         # Проверки запросов
         CheckRequestService.check_bot_token(token, api_request=True)
+        # Разбираем данные запроса
+        old_proxy_id = ser.validated_data.get('old_proxy_id')
+        tlg_account_id = ser.validated_data.get('tlg_account_id')
+        old_proxy_country_code = ser.validated_data.get('proxy_country_code')
+        # old_proxy_type = ser.validated_data.get('proxy_type')
+
         # Создаем новый прокси
+        new_proxy_data = AsocksProxyService.get_new_proxy_by_country_code(
+            country_code=old_proxy_country_code
+        )
+        proxy = ProxysService.create_proxy(proxy_data=new_proxy_data)
         # Привязываем прокси к телеграм аккаунту
+        tlg_account = TlgAccountsService.get_tlg_account_by_tlg_id(tlg_account_id)
+        tlg_account.proxy = proxy
         # Рестартим телеграм аккаунт
+
         return Response(data=f'ok', status=status.HTTP_200_OK)

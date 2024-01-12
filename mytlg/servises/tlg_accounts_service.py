@@ -15,7 +15,15 @@ class TlgAccountsService:
         try:
             return TlgAccounts.objects.get(pk=int(acc_pk))
         except ObjectDoesNotExist:
-            MY_LOGGER.warning(f'Запрошены для несуществующий аккаунт (PK аккаунта == {acc_pk!r}')
+            MY_LOGGER.warning(f'Запрошен для несуществующий аккаунт (PK аккаунта == {acc_pk!r}')
+            return None
+
+    @staticmethod
+    def get_tlg_account_by_tlg_id(tlg_id):
+        try:
+            return TlgAccounts.objects.get(acc_tlg_id=tlg_id)
+        except ObjectDoesNotExist:
+            MY_LOGGER.warning(f'Запрошен для несуществующий аккаунт (tlg_id аккаунта == {tlg_id!r}')
             return None
 
     @staticmethod
