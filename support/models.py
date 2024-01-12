@@ -9,3 +9,6 @@ class SupportMessages(models.Model):
 
     created_at = models.DateTimeField(verbose_name='Дата и время создания', auto_now_add=True)
 
+    class Meta:
+        verbose_name = 'Сообщение в техподдержку'
+        verbose_name_plural = 'Сообщения в техподдержку'

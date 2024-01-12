@@ -9,6 +9,7 @@ class SupportMessagesService:
 
     @staticmethod
     def create_message(message_data: dict):
+        MY_LOGGER.info(message_data)
         message = SupportMessages(
             bot_user=message_data.get('bot_user'),
             message=message_data.get('message')

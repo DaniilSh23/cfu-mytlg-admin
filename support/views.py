@@ -19,18 +19,16 @@ class SupportMessages(View):
 
     def post(self, request):
         MY_LOGGER.info('Получен запрос на вьюшку приёма сообщений в саппорт.')
-        form = SupportMessageForm(request.data)
+        form = SupportMessageForm(request.POST)
 
-        # Проверка токена
-        CheckRequestService.check_bot_token(token=request.data.get("token"))
         if not form.is_valid():
             MY_LOGGER.warning(f'Форма невалидна. Ошибка: {form.errors}')
             err_msgs.error(request, 'Ошибка: Вы уверены, что открыли форму из Telegram?')
             return redirect(to=reverse_lazy('support_message'))
-        if form.is_valid():
-            tlg_id = form.cleaned_data.get('tlg_id')
-            message = form.cleaned_data.get('message')
-            bot_user = BotUsersService.get_bot_user_by_tg_id(tlg_id=tlg_id)
-            SupportMessagesService.create_message(message_data={'bot_user': bot_user, 'message': message})
 
-            return HttpResponse('<p>Ваше сообщение успешно отправлено.</p>')
+        tlg_id = form.cleaned_data.get('tlg_id')
+        message = form.cleaned_data.get('message')
+        bot_user = BotUsersService.get_bot_user_by_tg_id(tlg_id=tlg_id)
+        SupportMessagesService.create_message(message_data={'bot_user': bot_user, 'message': message})
+
+        return HttpResponse('<p>Ваше сообщение успешно отправлено.</p>')

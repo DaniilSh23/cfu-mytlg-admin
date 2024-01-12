@@ -6,7 +6,7 @@ class SupportMessageForm(forms.Form):
     """
     Форма для ввода ключевых слов для поиска своих каналов.
     """
-    message = forms.Textarea()
+    message = forms.CharField()
     tlg_id = forms.CharField(validators=[RegexValidator(
         regex=r'^\d+$',  # Регулярное выражение для цифр
         message='запрос не из телеграмма',
