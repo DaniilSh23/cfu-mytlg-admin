@@ -2,7 +2,7 @@ from support.models import SupportMessages
 from django.core.exceptions import ObjectDoesNotExist
 
 from mytlg.servises.bot_users_service import BotUsersService
-from cfu_mytlg_admin.settings import MY_LOGGER
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 
 
 class SupportMessagesService:
@@ -16,4 +16,7 @@ class SupportMessagesService:
         message.save()
         return message
 
+    @staticmethod
+    def notify_admins(admins_list, message):
+        pass
 
