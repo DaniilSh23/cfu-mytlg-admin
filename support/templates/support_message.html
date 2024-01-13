@@ -1,0 +1,81 @@
+{% extends 'mytlg/base.html' %}
+
+{% block 'title' %}
+Написать в поддержку
+{% endblock %}
+
+{% block 'body' %}
+
+<div class="row">
+    <h4 class="fw-bold py-3 mb-1"></h4>
+    <div class="col-xl-6 my-form-border">
+      <div class="card mb-1 my-form-area">
+        <h5 class="card-header mb-0 pb-0">Оставьте ваше сообщение</h5>
+        <div class="card-body">
+          <div class="row gy-3">
+            <div class="col-md">
+              <div class="demo-inline-spacing mt-1">
+                <form id="support_message" action="{% url 'support:give_support_message' %}" method="post">
+                  {% csrf_token %}
+                  {% if messages %}
+                  <ul class="messages">
+                      {% for message in messages %}
+                      <li
+                              {% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}
+                      </li>
+                      {% endfor %}
+                  </ul>
+                  {% endif %}
+                  <input class="my-filling-fields" type="text" id="tg-id-input" value="" name="tlg_id">
+
+                  <div class="row mb-3">
+                      <div class="col-sm-10">
+                          <div class="input-group input-group-merge">
+                              <textarea id="basic-icon-default-message" name="message"
+                                        class="form-control my-filling-fields" rows="3" maxlength="300"
+                                        placeholder="" aria-label=""
+                                        aria-describedby="basic-icon-default-message2"></textarea>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="mb-1 mt-3">
+                      <button id="send_message" type="submit" class="btn btn-info my-btn-clr"
+                              style="width:100%">Отправить
+                      </button>
+                  </div>
+                </form>
+              </div>
+              <div id="ajaxResult">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+    $(document).ready(function() {
+      $('#support_message').submit(function(event) {
+        event.preventDefault(); // предотвращаем стандартное поведение формы
+        var formData = $(this).serialize();
+
+        $.ajax({
+          url: '{% url 'support:give_support_message' %}', // путь к обработчику на сервере
+          type: 'POST',
+          data: formData,
+          dataType: 'html', // указываем, что ожидаем ответ в виде HTML
+          success: function(data) {
+            $('#ajaxResult').html(data); // обновляем содержимое элемента с id="ajaxResult"
+            $('#support_message').hide();   // Скрываем форму
+            $('#cardHeader').hide();
+          },
+          error: function() {
+            alert('Произошла ошибка');
+          }
+        });
+      });
+    });
+</script>
+
+{% endblock %}

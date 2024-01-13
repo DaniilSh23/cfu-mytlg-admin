@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html
+  lang="ru"
+  class="light-style layout-menu-fixed"
+  dir="ltr"
+  data-theme="theme-default"
+  data-assets-path="/static/mytlg/site_donor/assets/"
+  data-template="vertical-menu-template-free"
+>
+<head>
+    <meta charset="UTF-8">
+    <title>{% block 'title' %}Base template{% endblock %}</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <meta name="description" content="" />
+
+    <!--скрипт telegram-->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/mytlg/site_donor/assets/img/favicon/favicon.ico" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Icons. Uncomment required icon fonts -->
+    <link rel="stylesheet" href="/static/mytlg/site_donor/assets/vendor/fonts/boxicons.css" />
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="/static/mytlg/site_donor/assets/vendor/css/core.css" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="/static/mytlg/site_donor/assets/vendor/css/theme-default.css" class="template-customizer-theme-css" />
+    <link rel="stylesheet" href="/static/mytlg/site_donor/assets/css/demo.css" />
+
+    <!-- Vendors CSS -->
+    <link rel="stylesheet" href="/static/mytlg/site_donor/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+    <!-- Page CSS -->
+    <link rel="stylesheet" href="/static/mytlg/site_donor/assets/vendor/css/pages/page-misc.css" />
+    <!-- Helpers -->
+    <script src="/static/mytlg/site_donor/assets/vendor/js/helpers.js"></script>
+    <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
+    <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
+    <script src="/static/mytlg/site_donor/assets/js/config.js"></script>
+
+<!--    Стили формы от телеграмма-->
+    <style>
+        body{
+            color: var(--tg-theme-text-color);
+            background: var(--tg-theme-secondary-bg-color);
+        }
+        .my-accordion-button:active {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+        .accordion-button.collapsed {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+        .my-background{
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+        .my-filling-fields{
+            background-color: var(--tg-theme-secondary-bg-color);
+            border-color: var(--tg-theme-secondary-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+        .my-filling-fields:focus {
+          color: var(--tg-theme-text-color);
+          background-color: var(--tg-theme-secondary-bg-color);
+          border-color: var(--tg-theme-button-color);
+          outline: 0;
+          box-shadow: 0 0 0.25rem 0.05rem rgba(105, 108, 255, 0.1);
+        }
+        .my-filling-fields::-webkit-file-upload-button {
+          padding: 0.4375rem 0.875rem;
+          margin: -0.4375rem -0.875rem;
+          -webkit-margin-end: 0.875rem;
+          margin-inline-end: 0.875rem;
+          color: var(--tg-theme-text-color);
+          background-color: var(--tg-theme-secondary-bg-color);
+          pointer-events: none;
+          border-color: var(--tg-theme-secondary-bg-color);
+          border-style: solid;
+          border-width: 0;
+          border-inline-end-width: 1px;
+          border-radius: 0;
+          -webkit-transition: all 0.2s ease-in-out;
+          transition: all 0.2s ease-in-out;
+        }
+        .my-form-border{
+            color: var(--tg-theme-text-color);
+        }
+        .my-form-area{
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+        }
+        .my-btn-clr{
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+        }
+        .my-label{
+            color: var(--tg-theme-text-color);
+        }
+        input[type="file"]:focus::file-selector-button {
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+        }
+        #spinner {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          display: none;
+        }
+        .overlay-square {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--tg-theme-bg-color);
+            z-index: 9999;
+            display: flex;
+            border-radius: 0;
+            text-align: center;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .overlay-square.active {
+            display: flex;
+        }
+        .spinner-message {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          display: none;
+        }
+        .spinner-border {
+            width: 6rem;
+            height: 6rem;
+            font-size: 1.5rem;
+        }
+    </style>
+
+<!--    Стили формы для проверки при разработке-->
+<!--    <style>-->
+<!--        body{-->
+<!--            color: blue;-->
+<!--            background: green;-->
+<!--        }-->
+<!--        .my-background{-->
+<!--            color: blue;-->
+<!--            background: green;-->
+<!--        }-->
+<!--        .my-accordion-button:active {-->
+<!--          background-color: blue;-->
+<!--          color: white;-->
+<!--        }-->
+<!--        .accordion-button.collapsed {-->
+<!--          background-color: brown;-->
+<!--          color: white;-->
+<!--        }-->
+<!--        .accordion-button:not(.collapsed) {-->
+<!--          background-color: purple;-->
+<!--          color: white;-->
+<!--        }-->
+<!--        .my-form-border{-->
+<!--            background-color: green;-->
+<!--        }-->
+<!--        .my-form-area{-->
+<!--            background-color: pink;-->
+<!--        }-->
+<!--        .my-filling-fields{-->
+<!--            background-color: red;-->
+<!--            color: green;-->
+<!--        }-->
+<!--        .my-filling-fields:focus {-->
+<!--          color: orange;-->
+<!--          background-color: yellow;-->
+<!--          border-color: rgba(249, 249, 255, 0.54);-->
+<!--          outline: 0;-->
+<!--          box-shadow: 0 0 0.25rem 0.05rem rgba(105, 108, 255, 0.1);-->
+<!--        }-->
+<!--        .my-filling-fields::-webkit-file-upload-button {-->
+<!--          padding: 0.4375rem 0.875rem;-->
+<!--          margin: -0.4375rem -0.875rem;-->
+<!--          -webkit-margin-end: 0.875rem;-->
+<!--              margin-inline-end: 0.875rem;-->
+<!--          color: black;-->
+<!--          background-color: violet;-->
+<!--          pointer-events: none;-->
+<!--          border-color: inherit;-->
+<!--          border-style: solid;-->
+<!--          border-width: 0;-->
+<!--          border-inline-end-width: 1px;-->
+<!--          border-radius: 0;-->
+<!--          -webkit-transition: all 0.2s ease-in-out;-->
+<!--          transition: all 0.2s ease-in-out;-->
+<!--        }-->
+
+<!--        #spinner {-->
+<!--          position: fixed;-->
+<!--          top: 50%;-->
+<!--          left: 50%;-->
+<!--          display: none;-->
+<!--        }-->
+<!--        .overlay-square {-->
+<!--            position: fixed;-->
+<!--            top: 0;-->
+<!--            left: 0;-->
+<!--            width: 100%;-->
+<!--            height: 100%;-->
+<!--            background-color: var(&#45;&#45;tg-theme-bg-color);-->
+<!--            z-index: 9999;-->
+<!--            display: flex;-->
+<!--            border-radius: 0;-->
+<!--            text-align: center;-->
+<!--            display: none;-->
+<!--            justify-content: center;-->
+<!--            align-items: center;-->
+<!--        }-->
+<!--        .overlay-square.active {-->
+<!--            display: flex;-->
+<!--        }-->
+<!--        .spinner-message {-->
+<!--          position: fixed;-->
+<!--          top: 50%;-->
+<!--          left: 50%;-->
+<!--          display: none;-->
+<!--        }-->
+<!--        .spinner-border {-->
+<!--            width: 6rem;-->
+<!--            height: 6rem;-->
+<!--            font-size: 1.5rem;-->
+<!--        }-->
+<!--    </style>-->
+
+    <!--Подключаем JQUERY-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+
+    <div class="layout-wrapper layout-content-navbar">
+        <div class="layout-container">
+            <div class="layout-page">
+                <div class="content-wrapper">
+                    <div class="container-xxl flex-grow-1 container-p-y">
+
+                        {% block 'body' %}
+                            <h4 class="fw-bold py-3 mb-4"><span class="text-muted fw-light">Base /</span> Template</h4>
+                            <div class="row">
+                                <h1>Its base template</h1>
+                            </div>
+                        {% endblock %}
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--Спиннер-->
+    <div class="overlay-square">
+        <div id="spinner" class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <div class="spinner-message"></div>
+    </div>
+
+
+    <!-- Core JS -->
+    <!-- build:js assets/vendor/js/core.js -->
+    <script src="/static/mytlg/site_donor/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="/static/mytlg/site_donor/assets/vendor/libs/popper/popper.js"></script>
+    <script src="/static/mytlg/site_donor/assets/vendor/js/bootstrap.js"></script>
+    <script src="/static/mytlg/site_donor/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+
+    <script src="/static/mytlg/site_donor/assets/vendor/js/menu.js"></script>
+    <!-- endbuild -->
+    <!-- Vendors JS -->
+    <!-- Main JS -->
+    <script src="/static/mytlg/site_donor/assets/js/main.js"></script>
+    <!-- Page JS -->
+    <script src="/static/mytlg/site_donor/assets/js/form-basic-inputs.js"></script>
+    <!-- Place this tag in your head or just before your close body tag. -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+
+    <!-- скрипт для работы с данными от телеги-->
+    <script>
+      var tgObject = window.Telegram.WebApp;
+      tgObject.expand() // расширяем окно на весь экран
+      tgObject.ready() // убираем индикатор загрузки вверху окна
+      const tlgIdElements = document.querySelectorAll('[name="tlg_id"]');
+      tlgIdElements.forEach(function (elem) {
+        // Выполнение действий с каждым элементом, устанавливаем TG ID от скрипта телеги
+        elem.value = tgObject.initDataUnsafe.user.id;
+        elem.type = "hidden";
+      });
+    </script>
+
+    <!--Функция для отображения спиннера при отправке формы-->
+    <script>
+        function showSpinner() {
+          var spinner = document.getElementById("spinner");
+          var overlay = document.querySelector(".overlay-square");
+          var spinnerMsg = document.querySelector(".spinner-message");
+          spinner.style.display = "block";
+          spinnerMsg.style.display = "block";
+          overlay.classList.add("active");
+        }
+    </script>
+
+    {% block 'page_scripts' %}
+    {% endblock %}
+
+</body>
+</html>

@@ -1,3 +1,4 @@
+from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.models import BotUser
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -102,3 +103,15 @@ class BotUsersService:
 
         return {"only_custom_channels": bot_user.only_custom_channels,
                 "custom_channels_is_empty": custom_channels_is_empty}
+
+    @staticmethod
+    def get_bot_bot_admins_tlg_ids() -> tuple:
+        """
+        Получение кортежа tlg_id пользователей, которые являются админами бота.
+        """
+        MY_LOGGER.debug(f'Вызван сервис для получения списка tlg_id админов бота')
+        try:
+            bot_users = BotUser.objects.filter(is_admin=True).only("tlg_id")
+        except ObjectDoesNotExist:
+            return None
+        return tuple(i_usr.tlg_id for i_usr in bot_users)

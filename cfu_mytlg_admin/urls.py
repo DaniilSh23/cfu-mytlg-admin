@@ -28,6 +28,7 @@ urlpatterns = [
     path('mytlg/', include('mytlg.urls')),
     path('telegram_accounts/', include('telegram_accounts.urls')),
     path('posts/', include('posts.urls')),
+    path('support/', include('support.urls')),
 
     # Урлы для страниц документации API (сделано через drf_spectacular)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

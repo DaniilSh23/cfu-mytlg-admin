@@ -7,8 +7,6 @@ from django.dispatch import receiver
 
 from cfu_mytlg_admin.settings import MY_LOGGER
 from mytlg.api_requests import AccountsServiceRequests
-
-from mytlg.utils import bot_command_for_start_or_stop_account
 from telegram_accounts.utils import account_json_data_formatter
 
 
@@ -26,9 +24,9 @@ class BotUser(models.Model):
     custom_channels = models.JSONField(verbose_name='Добавленные пользователем каналы', blank=True, default=list)
     when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
     source_tag = models.CharField(verbose_name='Тег источника', max_length=50, blank=True)
-
     start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name='Дата изменения пользователя', auto_now=True)
+    is_admin = models.BooleanField(verbose_name='админ', default=False)
 
     def __str__(self):
         return f'User TG_ID {self.tlg_id}'
