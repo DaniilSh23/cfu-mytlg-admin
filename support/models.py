@@ -3,12 +3,13 @@ from mytlg.models import BotUser
 
 
 class SupportMessages(models.Model):
-
-    bot_user = models.ForeignKey(verbose_name='Пользователь бота', to=BotUser, on_delete=models.CASCADE)
-    message = models.TextField(verbose_name='Сообщение', blank=True, null=False)
-
-    created_at = models.DateTimeField(verbose_name='Дата и время создания', auto_now_add=True)
+    """
+    Модель для сообщений обратной связи.
+    """
+    bot_user = models.ForeignKey(verbose_name='пользователь бота', to=BotUser, on_delete=models.CASCADE)
+    message = models.TextField(verbose_name='сообщение', blank=True, null=False)
+    created_at = models.DateTimeField(verbose_name='дата и время создания', auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Сообщение в техподдержку'
-        verbose_name_plural = 'Сообщения в техподдержку'
+        verbose_name = 'сообщение ОС'
+        verbose_name_plural = 'сообщения ОС'

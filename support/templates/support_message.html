@@ -15,36 +15,35 @@
           <div class="row gy-3">
             <div class="col-md">
               <div class="demo-inline-spacing mt-1">
-                <form id="support_message" action="{% url 'support:give_support_message' %}"
-                method="post">
-              {% csrf_token %}
-              {% if messages %}
-              <ul class="messages">
-                  {% for message in messages %}
-                  <li
-                          {% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}
-                  </li>
-                  {% endfor %}
-              </ul>
-              {% endif %}
-              <input class="my-filling-fields" type="text" id="tg-id-input" value="" name="tlg_id">
+                <form id="support_message" action="{% url 'support:give_support_message' %}" method="post">
+                  {% csrf_token %}
+                  {% if messages %}
+                  <ul class="messages">
+                      {% for message in messages %}
+                      <li
+                              {% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message }}
+                      </li>
+                      {% endfor %}
+                  </ul>
+                  {% endif %}
+                  <input class="my-filling-fields" type="text" id="tg-id-input" value="" name="tlg_id">
 
-              <div class="row mb-3">
-                  <div class="col-sm-10">
-                      <div class="input-group input-group-merge">
-                          <textarea id="basic-icon-default-message" name="message"
-                                    class="form-control my-filling-fields" rows="3" maxlength="300"
-                                    placeholder="" aria-label=""
-                                    aria-describedby="basic-icon-default-message2"></textarea>
+                  <div class="row mb-3">
+                      <div class="col-sm-10">
+                          <div class="input-group input-group-merge">
+                              <textarea id="basic-icon-default-message" name="message"
+                                        class="form-control my-filling-fields" rows="3" maxlength="300"
+                                        placeholder="" aria-label=""
+                                        aria-describedby="basic-icon-default-message2"></textarea>
+                          </div>
                       </div>
                   </div>
-              </div>
-              <div class="mb-1 mt-3">
-                  <button id="send_message" type="submit" class="btn btn-info my-btn-clr"
-                          style="width:100%">Отправить
-                  </button>
-              </div>
-          </form>
+                  <div class="mb-1 mt-3">
+                      <button id="send_message" type="submit" class="btn btn-info my-btn-clr"
+                              style="width:100%">Отправить
+                      </button>
+                  </div>
+                </form>
               </div>
               <div id="ajaxResult">
               </div>
@@ -55,7 +54,6 @@
     </div>
   </div>
 
-<!--СКРИПТ ДЛЯ ОТПРАВКИ ДАННЫХ О ВЫБРАННЫХ ТЕМАТИКАХ И ОБНОВЛЕНИЕ ФОРМЫ КАНАЛАМИ ДЛЯ ЭТИХ ТЕМАТИК-->
 <script>
     $(document).ready(function() {
       $('#support_message').submit(function(event) {
@@ -69,7 +67,7 @@
           dataType: 'html', // указываем, что ожидаем ответ в виде HTML
           success: function(data) {
             $('#ajaxResult').html(data); // обновляем содержимое элемента с id="ajaxResult"
-            $('#support_message').hide();   // Скрываем форму поиска
+            $('#support_message').hide();   // Скрываем форму
             $('#cardHeader').hide();
           },
           error: function() {
