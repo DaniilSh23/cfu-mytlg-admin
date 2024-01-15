@@ -102,6 +102,7 @@ class Proxys(models.Model):
         ('https', 'https'),
         ('socks4', 'socks4'),
     )
+    country_code = models.CharField(verbose_name='код страны', max_length=2, blank=True, null=True)
     description = models.TextField(verbose_name='описание', blank=True)
     protocol_type = models.BooleanField(verbose_name='IPv6', default=False)
     protocol = models.CharField(verbose_name='протокол', choices=protocols, max_length=6)
