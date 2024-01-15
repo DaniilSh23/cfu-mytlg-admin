@@ -19,9 +19,11 @@ class BotUser(models.Model):
     language_code = models.CharField(verbose_name='language_code', default='RU', max_length=5)
     category = models.ManyToManyField(verbose_name='категории', related_name='bot_user', to='Categories', blank=True)
     channels = models.ManyToManyField(verbose_name='каналы', related_name='bot_user', to='Channels', blank=True)
+    # TODO: only_custom_channels можно будет перенести в модель CustomChannelsSettings и исправить код,
+    #  чтобы доставать это значение из той модели.
     only_custom_channels = models.BooleanField(verbose_name='только со своих каналов', default=False)
-    # TODO: поле custom_channels нигде не используется
     custom_channels = models.JSONField(verbose_name='Добавленные пользователем каналы', blank=True, default=list)
+    # TODO: when_send_news кажется нигде не используется
     when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
     source_tag = models.CharField(verbose_name='Тег источника', max_length=50, blank=True)
     start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
@@ -35,6 +37,38 @@ class BotUser(models.Model):
         ordering = ['-start_bot_at']
         verbose_name = 'юзер бота'
         verbose_name_plural = 'юзеры бота'
+
+
+class CustomChannelsSettings(models.Model):
+    """
+    Настройки для получения новостей из кастомных каналов пользователя.
+    """
+    # TODO: эта модель имеет много общего с моделью Interests. В момент реализации было проще дописать ее,
+    #  чем перепиливать много логики, связанной с интересами. В ходе рефакторинга стоит рассмотреть и обдумать
+    #  вариант - выделения логики получения постов из кастомных каналов в отдельный интерес и взаимодействия только
+    #  с моделью Interests.
+    periods = (
+        ('now', '⚡ сразу'),
+        ('fixed_time', '🕒 фиксированное время'),
+        ('every_time_period', '🔄 каждый N промежуток времени'),
+    )
+    interest_types_tpl = (
+        ('main', 'основной'),
+        ('networking', 'нетворкинг'),
+        ('whats_new', 'что нового'),
+    )
+    bot_user = models.ForeignKey(verbose_name='юзер бота', to=BotUser, on_delete=models.CASCADE)
+    when_send = models.TimeField(verbose_name='когда присылать посты', blank=True, null=True)
+    send_period = models.CharField(verbose_name='период отправки', choices=periods, blank=True, null=True)
+    last_send = models.DateTimeField(verbose_name='крайняя отправка', auto_now_add=True)
+
+    def __str__(self):
+        return f"Настройки кастомных каналов: {self.bot_user}"
+
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'настройка кастомных каналов'
+        verbose_name_plural = 'настройки кастомных каналов'
 
 
 class BotSettings(models.Model):

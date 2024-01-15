@@ -1,9 +1,12 @@
 import datetime
 import pytz
-from mytlg.models import ScheduledPosts, BotUser, Interests, NewsPosts
+from django.core.exceptions import ObjectDoesNotExist
+
+from mytlg.models import ScheduledPosts, BotUser, Interests, NewsPosts, CustomChannelsSettings
 from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.interests_service import InterestsService
+from mytlg.utils import calculate_sending_datetime
 from posts.services.text_process_service import TextProcessService
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE
 
@@ -23,11 +26,30 @@ class ScheduledPostsService:
         """
         MY_LOGGER.debug(f'Планируем к отправке пост из кастомного канала юзеров.')
         # TODO: Встречайте! Вашему вниманию представляется охуенное место для оптимизации запросов к БД. Апплодисменты!
+        #  1) Объекты CustomChannelsSettings можно получить одним запросом сразу для всех юзеров.
+        #  2) Создание записей с запланированными к отправке постами можно выполнить одним запросом, методом
+        #  bulk_create(), но для этого надо допилить метод в ScheduledPostsService.
         for i_user in bot_users_qset:
+            # Получаем настройки для кастомных каналов пользователя
+            try:
+                custom_channels_settings = CustomChannelsSettings.objects.get(bot_user=i_user)
+            except ObjectDoesNotExist() as err:
+                MY_LOGGER.warning(f'У юзера {i_user} отсутствуют настройки CustomChannelsSettings. Пост из кастомного '
+                                  f'канала отправлен не будет! | Ошибка: {err}')
+                continue
+
+            # Рассчитываем время предстоящей отправки
+            sending_datetime = calculate_sending_datetime(
+                last_send=custom_channels_settings.last_send,
+                send_period=custom_channels_settings.send_period,
+                when_send=custom_channels_settings.when_send,
+            )
+
+            # Планируем пост к отправке
             ScheduledPostsService.create_scheduled_post(
                 i_user=i_user,
                 user_interest=None,
-                sending_datetime=datetime.datetime.now(tz=pytz.timezone(TIME_ZONE)),
+                sending_datetime=sending_datetime,
                 post=post
             )
 
@@ -88,7 +110,6 @@ class ScheduledPostsService:
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} не указаны интересы')
                 continue
 
-            MY_LOGGER.debug(f'Хуйня с проверкой наличия релевантного интереса у юзера НАЧАЛАСЬ...')
             # Делаем список из кортежей с формулировками интересов и эмбеддингов
             interest_lst_for_gpt_processing = InterestsService.create_interests_list_for_gpt_processing(interests)
             # Пилим индексную базу из эмбеддингов для интересов
@@ -97,7 +118,6 @@ class ScheduledPostsService:
             relevant_pieces = text_processor.get_relevant_pieces_by_embeddings(index_db, post)
             # Фильтруем по векторному расстоянию подходящие интересы
             filtered_rel_interests = text_processor.filter_relevant_pieces_by_vector_distance(relevant_pieces)
-            MY_LOGGER.debug(f'Хуйня с проверкой наличия релевантного интереса у юзера ЗАКОНЧИЛАСЬ...')
 
             if len(filtered_rel_interests) < 1:  # Выходим, если куски очень далеки от схожести
                 MY_LOGGER.warning(f'У юзера PK=={i_user.pk} нет релевантных интересов для поста с PK=={post.pk}')

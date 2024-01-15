@@ -66,3 +66,16 @@ class SubscribeChannelForm(forms.Form):
             'type': 'hidden'
         })
     )
+
+
+class CustomChannelsSettingsForm(forms.Form):
+    """
+    Форма для настроек получения новостей из кастомных каналов пользователя.
+    """
+    tlg_id = forms.CharField(validators=[RegexValidator(
+        regex=r'^\d+$',  # Регулярное выражение для цифр
+        message='запрос не из телеграмма',
+        code='invalid_tlg_id'
+    )])
+    when_send = forms.TimeField()
+    send_period = forms.CharField()
