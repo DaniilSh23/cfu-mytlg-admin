@@ -82,3 +82,20 @@ class TlgAccountsService:
                 return account
             else:
                 MY_LOGGER.info('Не найден аккаунт для подписки на кастомные каналы')
+
+    @staticmethod
+    def stop_tlg_account(tlg_account_pk):
+        tlg_account = TlgAccountsService.get_tlg_account_by_pk(tlg_account_pk)
+        tlg_account.is_run = False
+        tlg_account.save()
+
+    @staticmethod
+    def start_tlg_account(tlg_account_pk):
+        tlg_account = TlgAccountsService.get_tlg_account_by_pk(tlg_account_pk)
+        tlg_account.is_run = True
+        tlg_account.save()
+
+    @staticmethod
+    def change_account_proxy(tlg_account, new_proxy):
+        tlg_account.proxy = new_proxy
+        tlg_account.save()

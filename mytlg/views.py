@@ -859,23 +859,32 @@ class GetNewProxy(APIView):
             MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
             return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
 
+        # Проверка токена
         token = ser.validated_data.get("token")
-        # Проверки запросов
         CheckRequestService.check_bot_token(token, api_request=True)
-        # Разбираем данные запроса
-        old_proxy_id = ser.validated_data.get('old_proxy_id')
-        tlg_account_id = ser.validated_data.get('tlg_account_id')
-        old_proxy_country_code = ser.validated_data.get('proxy_country_code')
-        # old_proxy_type = ser.validated_data.get('proxy_type')
 
+        tlg_account_pk = ser.validated_data.get('tlg_account_pk')
+        tlg_account = TlgAccountsService.get_tlg_account_by_pk(tlg_account_pk)
+        old_proxy = tlg_account.proxy
+        old_proxy_country_code = old_proxy.country_code
         # Создаем новый прокси
         new_proxy_data = AsocksProxyService.get_new_proxy_by_country_code(
             country_code=old_proxy_country_code
         )
-        proxy = ProxysService.create_proxy(proxy_data=new_proxy_data)
-        # Привязываем прокси к телеграм аккаунту
-        tlg_account = TlgAccountsService.get_tlg_account_by_tlg_id(tlg_account_id)
-        tlg_account.proxy = proxy
-        # Рестартим телеграм аккаунт
 
-        return Response(data=f'ok', status=status.HTTP_200_OK)
+        new_proxy = ProxysService.create_proxy(proxy_data=new_proxy_data)
+
+        if new_proxy:
+            # Привязываем прокси к телеграм аккаунту
+            TlgAccountsService.change_account_proxy(tlg_account, new_proxy)
+            # Рестартим телеграм аккаунт
+            TlgAccountsService.stop_tlg_account(tlg_account_pk)
+            TlgAccountsService.start_tlg_account(tlg_account_pk)
+
+            # Удаляем старый прокси порт у провайдера
+            AsocksProxyService.delete_proxy(old_proxy.external_proxy_id)
+
+            # удаляем старую не работающую прокси из нашей базы данных
+            ProxysService.delete_proxy(old_proxy.pk)
+
+        return Response(data='ok', status=status.HTTP_200_OK)

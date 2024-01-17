@@ -114,7 +114,4 @@ class GetProxySerializer(serializers.Serializer):
     Сериалайзер для запроса на получение новой прокси.
     """
     token = serializers.CharField(max_length=50)
-    old_proxy_id = serializers.IntegerField()
-    tlg_account_id = serializers.IntegerField()
-    proxy_country_code = serializers.CharField()
-    proxy_type = serializers.CharField()
+    tlg_account_pk = serializers.IntegerField()

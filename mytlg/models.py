@@ -104,6 +104,7 @@ class Proxys(models.Model):
     )
     country_code = models.CharField(verbose_name='код страны', max_length=2, blank=True, null=True)
     description = models.TextField(verbose_name='описание', blank=True)
+    external_proxy_id = models.CharField(verbose_name='Внешний прокси ID', max_length=50, blank=True, null=True)
     protocol_type = models.BooleanField(verbose_name='IPv6', default=False)
     protocol = models.CharField(verbose_name='протокол', choices=protocols, max_length=6)
     host = models.CharField(verbose_name='хост', max_length=200)
