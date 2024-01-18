@@ -17,7 +17,7 @@ from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer, \
-    SwitchOnlyCustomChannelsSerializer
+    SwitchOnlyCustomChannelsSerializer, GetProxySerializer
 from mytlg.servises.check_request_services import CheckRequestService
 from mytlg.servises.reactions_service import ReactionsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
@@ -31,9 +31,12 @@ from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.servises.account_errors_service import TlgAccountErrorService
 from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.account_subscription_tasks_service import AccountsSubscriptionTasksService
+from mytlg.servises.proxys_service import ProxysService
+from mytlg.servises.proxy_providers_service import AsocksProxyService
 from posts.services.text_process_service import TextProcessService
+
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
-    search_content_by_new_interest
+    search_content_by_new_interest, fill_proxys_reserve
 
 INVALID_TOKEN_TEXT = 'invalid token'
 SUCCESS_TEMPLATE_PATH = 'mytlg/success.html'
@@ -50,6 +53,7 @@ class SwitchOnlyCustomChannels(APIView):
     """
     Вьюшка для логики переключения в боте кнопки 'Посты только из моих каналов'
     """
+
     @extend_schema(request=SwitchOnlyCustomChannelsSerializer, responses=Dict[str, bool], methods=['post'])
     def post(self, request):
         MY_LOGGER.info(f'Получен POST запрос на вьюшку InterestsSetting')
@@ -78,6 +82,7 @@ class InterestsSetting(View):
     """
     Вьюшка для страницы, где мы настраиваем интересы.
     """
+
     def get(self, request: HttpRequest) -> HttpResponse:
         MY_LOGGER.info(f'Получен GET запрос на вьюшку InterestsSetting')
         token = request.GET.get("token")
@@ -839,3 +844,43 @@ class ShowAcceptance(View):
     def get(self, request):
         MY_LOGGER.info('GET запрос на вьюшку Показа соглашения')
         return render(request, template_name='mytlg/show_acceptance.html')
+
+
+class GetNewProxy(APIView):
+    """
+    Вьюшки для получения нового прокси для телеграм аккаунта.
+    """
+
+    def post(self, request):
+        MY_LOGGER.info(
+            f'{request.POST} Поступил POST запрос на вьюшку для получения нового прокси для телеграм аккаунта')
+        ser = GetProxySerializer(data=request.data)
+        if not ser.is_valid():
+            MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
+            return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
+
+        # Проверка токена
+        CheckRequestService.check_bot_token(ser.validated_data.get("token"), api_request=True)
+
+        tlg_account_pk = ser.validated_data.get('tlg_account_pk')
+        tlg_account = TlgAccountsService.get_tlg_account_by_pk(tlg_account_pk)
+        old_proxy = tlg_account.proxy
+        old_proxy_country_code = old_proxy.country_code
+        # Получаем новый прокси
+        new_proxy = ProxysService.get_free_proxy_by_country_code(country_code=old_proxy_country_code)
+        if not new_proxy:
+            # Получаем новую прокси у провайдера для текущего действия
+            new_proxy = ProxysService.create_proxy(
+                AsocksProxyService.get_new_proxy_by_country_code(old_proxy_country_code)
+            )
+            # Ставим задачу на пополнение резерва прокси
+            fill_proxys_reserve()
+        if new_proxy:
+            TlgAccountsService.change_account_proxy(tlg_account, new_proxy)
+            TlgAccountsService.restart_tlg_account(tlg_account_pk)
+            # Удаляем старый прокси порт у провайдера
+            AsocksProxyService.delete_proxy(old_proxy.external_proxy_id)
+            # удаляем старую не работающую прокси из нашей базы данных
+            ProxysService.delete_proxy(old_proxy.pk)
+
+        return Response(data='ok', status=status.HTTP_200_OK)
