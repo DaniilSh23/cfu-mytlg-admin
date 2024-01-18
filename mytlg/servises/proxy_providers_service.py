@@ -1,9 +1,8 @@
+import time
 from abc import ABC, abstractmethod
 import requests
 
 from mytlg.servises.bot_settings_service import BotSettingsService
-from mytlg.servises.proxys_service import ProxysService
-
 from cfu_mytlg_admin.settings import MY_LOGGER
 
 
@@ -69,10 +68,10 @@ class AsocksProxyService(ProxyProviderService):
                 'host': data.get('server'),
                 'port': data.get('port'),
                 'protocol': data.get('protocol', 'socks5'),
-                'description': f"Прокси {data.get('country_code')}",
+                'description': f"Прокси-{data.get('country_code')}-{data.get('id')}",
                 'external_proxy_id': data.get('id'),
             }
-
+        time.sleep(5)
         return proxy_dict
 
     @staticmethod

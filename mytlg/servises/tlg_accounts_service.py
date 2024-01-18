@@ -99,3 +99,13 @@ class TlgAccountsService:
     def change_account_proxy(tlg_account, new_proxy):
         tlg_account.proxy = new_proxy
         tlg_account.save()
+
+    @staticmethod
+    def restart_tlg_account(tlg_account_pk):
+        TlgAccountsService.stop_tlg_account(tlg_account_pk)
+        TlgAccountsService.start_tlg_account(tlg_account_pk)
+
+    @staticmethod
+    def get_running_accounts():
+        accounts = TlgAccounts.objects.filter(is_run=True)
+        return accounts

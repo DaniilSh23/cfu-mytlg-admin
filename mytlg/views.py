@@ -36,7 +36,7 @@ from mytlg.servises.proxy_providers_service import AsocksProxyService
 from posts.services.text_process_service import TextProcessService
 
 from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
-    search_content_by_new_interest
+    search_content_by_new_interest, fill_proxys_reserve
 
 INVALID_TOKEN_TEXT = 'invalid token'
 SUCCESS_TEMPLATE_PATH = 'mytlg/success.html'
@@ -860,30 +860,26 @@ class GetNewProxy(APIView):
             return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
 
         # Проверка токена
-        token = ser.validated_data.get("token")
-        CheckRequestService.check_bot_token(token, api_request=True)
+        CheckRequestService.check_bot_token(ser.validated_data.get("token"), api_request=True)
 
         tlg_account_pk = ser.validated_data.get('tlg_account_pk')
         tlg_account = TlgAccountsService.get_tlg_account_by_pk(tlg_account_pk)
         old_proxy = tlg_account.proxy
         old_proxy_country_code = old_proxy.country_code
-        # Создаем новый прокси
-        new_proxy_data = AsocksProxyService.get_new_proxy_by_country_code(
-            country_code=old_proxy_country_code
-        )
-
-        new_proxy = ProxysService.create_proxy(proxy_data=new_proxy_data)
-
+        # Получаем новый прокси
+        new_proxy = ProxysService.get_free_proxy_by_country_code(country_code=old_proxy_country_code)
+        if not new_proxy:
+            # Получаем новую прокси у провайдера для текущего действия
+            new_proxy = ProxysService.create_proxy(
+                AsocksProxyService.get_new_proxy_by_country_code(old_proxy_country_code)
+            )
+            # Ставим задачу на пополнение резерва прокси
+            fill_proxys_reserve()
         if new_proxy:
-            # Привязываем прокси к телеграм аккаунту
             TlgAccountsService.change_account_proxy(tlg_account, new_proxy)
-            # Рестартим телеграм аккаунт
-            TlgAccountsService.stop_tlg_account(tlg_account_pk)
-            TlgAccountsService.start_tlg_account(tlg_account_pk)
-
+            TlgAccountsService.restart_tlg_account(tlg_account_pk)
             # Удаляем старый прокси порт у провайдера
             AsocksProxyService.delete_proxy(old_proxy.external_proxy_id)
-
             # удаляем старую не работающую прокси из нашей базы данных
             ProxysService.delete_proxy(old_proxy.pk)
 

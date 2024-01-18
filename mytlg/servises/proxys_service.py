@@ -1,6 +1,10 @@
 from mytlg.models import Proxys
 from django.core.exceptions import ObjectDoesNotExist
 from cfu_mytlg_admin.settings import MY_LOGGER
+from mytlg.servises.tlg_accounts_service import TlgAccountsService
+from mytlg.servises.bot_settings_service import BotSettingsService
+from mytlg.servises.proxy_providers_service import AsocksProxyService
+import time
 
 
 class ProxysService:
@@ -41,3 +45,30 @@ class ProxysService:
         except Exception as e:
             MY_LOGGER.warning(f'Не удалось удалить прокси с id: {proxy_pk}. Ошибка: {e}')
 
+    @staticmethod
+    def get_all_free_proxys():
+        free_proxys = Proxys.objects.exclude(tlgaccounts__isnull=False)
+        return free_proxys
+
+    @staticmethod
+    def get_free_proxy_by_country_code(country_code):
+        free_proxy = Proxys.objects.filter(tlgaccounts__isnull=True, country_code=country_code).first()
+        return free_proxy
+
+    @staticmethod
+    def fill_proxys_reserve():
+        reserve_proxy_quantity_per_account = int(
+            BotSettingsService.get_bot_settings_by_key('rezerv_proxy_quantity_per_account'))
+        free_proxy = ProxysService.get_all_free_proxys().count()
+        tlg_accounts = TlgAccountsService.get_running_accounts()
+        required_proxy_quantity = tlg_accounts.counts() * reserve_proxy_quantity_per_account
+        if free_proxy < required_proxy_quantity:
+            ProxysService.create_reserve_proxys(free_proxy, required_proxy_quantity)
+
+    @staticmethod
+    def create_reserve_proxys(free_proxy, required_proxy_quantity):
+        count_proxy_to_create = required_proxy_quantity - free_proxy
+        for _ in range(count_proxy_to_create):
+            proxy_data = AsocksProxyService.get_new_proxy_by_country_code(country_code='CU')
+            ProxysService.create_proxy(proxy_data)
+            time.sleep(5)
