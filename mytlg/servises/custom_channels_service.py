@@ -17,7 +17,7 @@ class CustomChannelsService:
         Обновляем или создаем настройки для постов из кастомных каналов пользователей.
         """
         try:
-            bot_user = BotUser.objects.get(tlg_id=int(tlg_id))
+            bot_user = BotUser.objects.get(tlg_id=tlg_id)
         except ObjectDoesNotExist as err:
             MY_LOGGER.warning(f'Не найден объъект BotUser с tlg_id=={tlg_id} | Ошибка: {err}')
             return
