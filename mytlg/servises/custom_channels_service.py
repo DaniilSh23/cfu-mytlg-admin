@@ -25,6 +25,7 @@ class CustomChannelsService:
         obj, created = CustomChannelsSettings.objects.update_or_create(
             bot_user=bot_user,
             defaults={
+                "bot_user": bot_user,
                 "when_send": when_send,
                 "send_period": send_period,
                 "last_send": datetime.datetime.now(),

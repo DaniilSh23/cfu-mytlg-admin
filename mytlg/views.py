@@ -858,7 +858,7 @@ class CustomChannelsSettingsView(View):
         MY_LOGGER.info(f'POST запрос на вьюшку CustomChannelsSettingsView | {request.POST}')
         form = CustomChannelsSettingsForm(request.POST)
         if form.is_valid():
-            MY_LOGGER.warning(f'Форма валидна. Выполняем бизнес-логику')
+            MY_LOGGER.info(f'Форма валидна. Выполняем бизнес-логику')
             CustomChannelsService.update_or_create_custom_channels_settings(
                 tlg_id=form.cleaned_data.get("tlg_id"),
                 when_send=form.cleaned_data.get("when_send"),
