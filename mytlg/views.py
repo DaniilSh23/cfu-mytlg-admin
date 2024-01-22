@@ -862,7 +862,8 @@ class CustomChannelsSettingsView(View):
             CustomChannelsService.update_or_create_custom_channels_settings(
                 tlg_id=form.cleaned_data.get("tlg_id"),
                 when_send=form.cleaned_data.get("when_send"),
-                send_period=form.cleaned_data.get("send_period")
+                send_period=form.cleaned_data.get("send_period"),
+                only_custom_channels=form.cleaned_data.get("only_custom_channels"),
             )
             return HttpResponse(content='Настройки сохранены.')
 

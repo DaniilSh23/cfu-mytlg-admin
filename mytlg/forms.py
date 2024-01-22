@@ -78,5 +78,5 @@ class CustomChannelsSettingsForm(forms.Form):
         code='invalid_tlg_id'
     )])
     when_send = forms.TimeField(required=False)
-    send_period = forms.CharField()
-    only_custom_channels = forms.BooleanField()
+    send_period = forms.CharField(required=False)
+    only_custom_channels = forms.BooleanField(required=False)
