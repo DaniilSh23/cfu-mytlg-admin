@@ -860,9 +860,9 @@ class CustomChannelsSettingsView(View):
         if form.is_valid():
             MY_LOGGER.warning(f'Форма валидна. Выполняем бизнес-логику')
             CustomChannelsService.update_or_create_custom_channels_settings(
-                tlg_id=form.tlg_id,
-                when_send=form.when_send,
-                send_period=form.send_period
+                tlg_id=form.cleaned_data.tlg_id,
+                when_send=form.cleaned_data.when_send,
+                send_period=form.cleaned_data.send_period
             )
             return HttpResponse(content='Настройки сохранены.')
 
