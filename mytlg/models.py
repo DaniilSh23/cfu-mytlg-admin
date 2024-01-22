@@ -52,11 +52,6 @@ class CustomChannelsSettings(models.Model):
         ('fixed_time', '🕒 фиксированное время'),
         ('every_time_period', '🔄 каждый N промежуток времени'),
     )
-    interest_types_tpl = (
-        ('main', 'основной'),
-        ('networking', 'нетворкинг'),
-        ('whats_new', 'что нового'),
-    )
     bot_user = models.ForeignKey(verbose_name='юзер бота', to=BotUser, on_delete=models.CASCADE)
     when_send = models.TimeField(verbose_name='когда присылать посты', blank=True, null=True)
     send_period = models.CharField(verbose_name='период отправки', choices=periods, blank=True, null=True)

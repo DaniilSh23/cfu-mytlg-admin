@@ -16,6 +16,7 @@ from django.core.cache import cache
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm, \
     CustomChannelsSettingsForm
+from mytlg.models import CustomChannelsSettings, BotUser
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer, \
     SwitchOnlyCustomChannelsSerializer
@@ -842,8 +843,13 @@ class CustomChannelsSettingsView(View):
 
     def get(self, request):
         MY_LOGGER.info(f'GET запрос на вьюшку CustomChannelsSettingsView | {request.GET}')
-        # TODO: тут просто пока что черновик, нужно изменить страницу для рендера и прописать сам контекст для рендера
-        return render(request, template_name='mytlg/channels_search_results.html')
+        tlg_id = request.GET.get("tlg_id")
+        bot_user = BotUser.objects.get(tlg_id=tlg_id)
+        context = {
+            "send_periods": CustomChannelsSettings.periods,
+            "only_custom_channels": bot_user.only_custom_channels
+        }
+        return render(request, template_name='mytlg/custom_channels_settings.html', context=context)
 
     def post(self, request):
         MY_LOGGER.info(f'POST запрос на вьюшку CustomChannelsSettingsView | {request.POST}')

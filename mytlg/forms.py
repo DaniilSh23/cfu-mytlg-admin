@@ -79,3 +79,4 @@ class CustomChannelsSettingsForm(forms.Form):
     )])
     when_send = forms.TimeField()
     send_period = forms.CharField()
+    only_custom_channels = forms.BooleanField()
