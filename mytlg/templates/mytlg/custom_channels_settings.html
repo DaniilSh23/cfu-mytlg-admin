@@ -1,0 +1,101 @@
+{% extends 'mytlg/base.html' %}
+
+{% block 'title' %}
+  Настройки кастомных каналов
+{% endblock %}
+
+{% block 'body' %}
+
+  <div class="row">
+<!--    <h4 class="fw-bold py-3 mb-1"><span class="text-muted fw-light">Настройки /</span> Интересы и время новостей</h4>-->
+    <div class="col-xl-6 my-form-border">
+      <div class="card mb-1 my-form-area">
+        <h5 class="card-header mb-0 pb-0">Настройка получения постов со своих каналов</h5>
+        <div class="card-body">
+          <div class="row gy-3">
+            <div class="col-md">
+              <div class="demo-inline-spacing mt-1">
+
+                <form id="customChannelsSettingsForm" action="{% url 'mytlg:custom_channels_settings' %}" method="post">
+                  {% csrf_token %}
+                  {% if messages %}
+                      <ul class="messages">
+                          {% for message in messages %}
+                              <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                          {% endfor %}
+                      </ul>
+                  {% endif %}
+                    <input class="my-filling-fields" type="text" id="tg-id-input" value="" name="tlg_id">
+
+                    <div class="row mb-3">
+                        <small class="text-light fw-semibold">Настройка получения постов со своих каналов:</small>
+                        <div class="col-sm-10">
+                            <div class="mt-2 mb-2">
+                                <div class="col-sm-3">
+                                    <div class="form-check form-switch mb-2">
+                                        <input name="only_custom_channels" class="form-check-input" type="checkbox" id="onlyCustomChannels" {% if only_custom_channels %} checked {% endif %}>
+                                        <label class="form-check-label" for="onlyCustomChannels">Получать посты только со своих каналов</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 mb-2">
+                                <small class="text-light fw-semibold">Когда присылать посты?</small>
+                                <select id="selectPeriod" class="form-select my-filling-fields" name="send_period">
+                                    <option value="not_select">➖➖➖➖➖</option>
+                                    {% for i_period in send_periods %}
+                                        <option value="{{ i_period.0 }}" selected>{{ i_period.1 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mt-2 mb-2">
+                                <div class="col-sm-3">
+                                    <input id="timePeriod" class="form-control my-filling-fields" name="when_send" type="time" value="12:30:00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+
+                  <div class="mb-1 mt-3">
+                    <button id="writeInterestsBtn" type="submit" class="btn btn-info my-btn-clr">Отправить</button>
+                  </div>
+                </form>
+
+              </div>
+
+              <div id="ajaxResult">
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!--СКРИПТ ДЛЯ ОТКЛЮЧЕНИЯ ВОЗМОЖНОСТИ ВВОДА ВРЕМЕНИ В ПОЛЕ input ПРИ ЗНАЧЕНИИ "сразу" ТЕГА select-->
+    <script>
+        // Получаем ссылки на элементы select и input
+        var selectPeriodElement = document.getElementById("selectPeriod");
+        var inputTimeElement = document.getElementById("timePeriod");
+
+        // Добавляем обработчик события change для select
+        selectPeriodElement.addEventListener("change", function() {
+            // Проверьте, выбрано ли определенное значение
+            if (selectPeriodElement.value === "fixed_time" || selectPeriodElement.value === "every_time_period") {
+                // Сделаем поле ввода времени только для чтения
+                inputTimeElement.readOnly = false;
+                inputTimeElement.style.display = "block";
+                inputTimeElement.setAttribute("required", "required");
+            } else {
+                console.log('показываем время для элемента timePeriod | selectPeriodElement.value ===', selectPeriodElement.value);
+                // В противном случае, сделаем его доступным для редактирования
+                inputTimeElement.readOnly = true;
+                inputTimeElement.setAttribute("value", "");
+                inputTimeElement.style.display = "none";
+                inputTimeElement.removeAttribute("required");
+            }
+        });
+    </script>
+
+{% endblock %}

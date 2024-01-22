@@ -107,3 +107,11 @@ class ReactionsSerializer(serializers.Serializer):
     bot_usr = serializers.IntegerField()
     reaction = serializers.IntegerField()
     post_id = serializers.IntegerField()
+
+
+class GetProxySerializer(serializers.Serializer):
+    """
+    Сериалайзер для запроса на получение новой прокси.
+    """
+    token = serializers.CharField(max_length=50)
+    tlg_account_pk = serializers.IntegerField()

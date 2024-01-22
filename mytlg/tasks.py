@@ -18,6 +18,7 @@ from mytlg.servises.account_subscription_tasks_service import AccountsSubscripti
 from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.servises.interests_service import InterestsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
+from mytlg.servises.proxys_service import ProxysService
 from mytlg.models import Channels, AccountsSubscriptionTasks, BotSettings
 from mytlg.utils import send_gpt_interests_proc_rslt_to_tlg, send_err_msg_for_user_to_telegram, send_message_by_bot, \
     bot_command_for_start_or_stop_account
@@ -371,3 +372,14 @@ def sending_post_selections():
     # Обновляем дату и время крайней отправки у интересов
     InterestsService.update_date_and_time_interests_last_sending_time(interests_ids)
     MY_LOGGER.info('Конец задачи по формированию подборки постов для пользователей и отправки уведомления в ТГ')
+
+
+@shared_task
+def fill_proxys_reserve():
+    """
+    Пополняем резерв свободных прокси.
+    :return:
+    """
+    MY_LOGGER.info('Запущена задача по заполнению резерва свободных прокси.')
+    ProxysService.fill_proxys_reserve()
+    MY_LOGGER.info('Конец задачи по заполнению резерва свободных прокси')

@@ -10,6 +10,8 @@ from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts
     AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists, Reactions
 from mytlg.tasks import subscription_to_new_channels
 from mytlg.common import save_json_channels
+from mytlg.servises.proxys_service import ProxysService
+from mytlg.servises.proxy_providers_service import AsocksProxyService
 
 
 admin.site.site_header = 'Администрирование YOUR TELEGRAM PROJECT'
@@ -189,6 +191,7 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
 
 @admin.register(Proxys)
 class ProxysAdmin(admin.ModelAdmin):
+    change_list_template = "admin/proxys_change_list.html"
     list_display = (
         "pk",
         "description",
@@ -204,12 +207,43 @@ class ProxysAdmin(admin.ModelAdmin):
         "last_check",
     )
 
+    def get_urls(self):
+        """
+        Переопределяем метод класса для того, чтобы расширить урлы для базовой страницы в админке кнопкой
+        для формы загрузки данных из CSV
+        :return:
+        """
+        urls = super().get_urls()  # Достаём дефолтные урлы класса
+        new_urls = [  # Создаём свой список урлов с путём к форме
+            path(
+                "create_asocks_proxy",  # Указываем путь
+                self.create_asocks_proxy,  # Указываем вьюшку
+                name="create_asocks_proxy",
+            ),
+        ]
+        return new_urls + urls  # Обязательно новые урлы раньше дефолтных
+
     def display_proxy_data_together(self, obj: Proxys):
         """
         Функция для отображения данных прокси вместе, через двоеточие
         """
         return (f'{obj.protocol}:{obj.host}:{obj.port}:{obj.username if obj.username else ""}'
                 f':{obj.password if obj.password else ""}')
+
+    def create_asocks_proxy(self, request: HttpRequest) -> HttpResponse:
+        """
+        Функция для создания прокси на сервисе Asocks
+        """
+        try:
+            MY_LOGGER.info('Пробуем через админку создать прокси на сервисе Asocks')
+            proxy = ProxysService.create_proxy(
+                proxy_data=AsocksProxyService.get_new_proxy_by_country_code(country_code='CU')
+            )
+            if proxy:
+                MY_LOGGER.info(f'Прокси успешно создана {proxy}')
+        except Exception as e:
+            MY_LOGGER.warning(f'Ошибка при попытке создать через админку прокси на сервисе Asocks {e}')
+        return redirect(to='../proxys/')
 
 
 @admin.register(TlgAccounts)

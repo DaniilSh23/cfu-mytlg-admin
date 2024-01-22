@@ -15,7 +15,15 @@ class TlgAccountsService:
         try:
             return TlgAccounts.objects.get(pk=int(acc_pk))
         except ObjectDoesNotExist:
-            MY_LOGGER.warning(f'Запрошены для несуществующий аккаунт (PK аккаунта == {acc_pk!r}')
+            MY_LOGGER.warning(f'Запрошен для несуществующий аккаунт (PK аккаунта == {acc_pk!r}')
+            return None
+
+    @staticmethod
+    def get_tlg_account_by_tlg_id(tlg_id):
+        try:
+            return TlgAccounts.objects.get(acc_tlg_id=tlg_id)
+        except ObjectDoesNotExist:
+            MY_LOGGER.warning(f'Запрошен для несуществующий аккаунт (tlg_id аккаунта == {tlg_id!r}')
             return None
 
     @staticmethod
@@ -74,3 +82,30 @@ class TlgAccountsService:
                 return account
             else:
                 MY_LOGGER.info('Не найден аккаунт для подписки на кастомные каналы')
+
+    @staticmethod
+    def stop_tlg_account(tlg_account_pk):
+        tlg_account = TlgAccountsService.get_tlg_account_by_pk(tlg_account_pk)
+        tlg_account.is_run = False
+        tlg_account.save()
+
+    @staticmethod
+    def start_tlg_account(tlg_account_pk):
+        tlg_account = TlgAccountsService.get_tlg_account_by_pk(tlg_account_pk)
+        tlg_account.is_run = True
+        tlg_account.save()
+
+    @staticmethod
+    def change_account_proxy(tlg_account, new_proxy):
+        tlg_account.proxy = new_proxy
+        tlg_account.save()
+
+    @staticmethod
+    def restart_tlg_account(tlg_account_pk):
+        TlgAccountsService.stop_tlg_account(tlg_account_pk)
+        TlgAccountsService.start_tlg_account(tlg_account_pk)
+
+    @staticmethod
+    def get_running_accounts():
+        accounts = TlgAccounts.objects.filter(is_run=True)
+        return accounts
