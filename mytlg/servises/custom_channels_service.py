@@ -27,6 +27,7 @@ class CustomChannelsService:
             defaults={
                 "when_send": when_send,
                 "send_period": send_period,
+                "last_send": datetime.datetime.now(),
             }
         )
         MY_LOGGER.debug(f'Запись CustomChannelsSettings для юзера tlg_id=={tlg_id} успешно '
