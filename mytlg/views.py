@@ -38,8 +38,8 @@ from mytlg.servises.proxys_service import ProxysService
 from mytlg.servises.proxy_providers_service import AsocksProxyService
 from posts.services.text_process_service import TextProcessService
 
-from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, start_or_stop_accounts, \
-    search_content_by_new_interest, fill_proxys_reserve
+from mytlg.tasks import gpt_interests_processing, subscription_to_new_channels, search_content_by_new_interest, \
+    fill_proxys_reserve
 
 INVALID_TOKEN_TEXT = 'invalid token'
 SUCCESS_TEMPLATE_PATH = 'mytlg/success.html'
