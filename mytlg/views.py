@@ -14,11 +14,14 @@ from rest_framework import status
 from django.contrib import messages as err_msgs
 from django.core.cache import cache
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
-from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm
+from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm, \
+    CustomChannelsSettingsForm
+from mytlg.models import CustomChannelsSettings, BotUser
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer, \
     SwitchOnlyCustomChannelsSerializer, GetProxySerializer
 from mytlg.servises.check_request_services import CheckRequestService
+from mytlg.servises.custom_channels_service import CustomChannelsService
 from mytlg.servises.reactions_service import ReactionsService
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
 from mytlg.servises.bot_users_service import BotUsersService
@@ -834,6 +837,39 @@ class SubscribeCustomChannels(View):
             MY_LOGGER.warning(f'Ошибка при создании задачу на подписку на собственные каналы {e}')
             return HttpResponse(
                 '<p>Что-то пошло не так. Мы уже работаем на устранением проблемы. Попробуйте пожалуйста позже.</p>')
+
+
+class CustomChannelsSettingsView(View):
+    """
+    Вьюхи для настроек получения постов из кастомных каналов пользователя.
+    """
+
+    def get(self, request):
+        MY_LOGGER.info(f'GET запрос на вьюшку CustomChannelsSettingsView | {request.GET}')
+        tlg_id = request.GET.get("tlg_id")
+        bot_user = BotUser.objects.get(tlg_id=tlg_id)
+        context = {
+            "send_periods": CustomChannelsSettings.periods,
+            "only_custom_channels": bot_user.only_custom_channels
+        }
+        return render(request, template_name='mytlg/custom_channels_settings.html', context=context)
+
+    def post(self, request):
+        MY_LOGGER.info(f'POST запрос на вьюшку CustomChannelsSettingsView | {request.POST}')
+        form = CustomChannelsSettingsForm(request.POST)
+        if form.is_valid():
+            MY_LOGGER.warning(f'Форма валидна. Выполняем бизнес-логику')
+            CustomChannelsService.update_or_create_custom_channels_settings(
+                tlg_id=form.tlg_id,
+                when_send=form.when_send,
+                send_period=form.send_period
+            )
+            return HttpResponse(content='Настройки сохранены.')
+
+        else:
+            MY_LOGGER.warning(f'Данные формы невалидны | {form.errors}')
+            err_msgs.error(request, f'Данные формы невалидны | {form.errors}')
+            return redirect(to=reverse_lazy('mytlg:custom_channels_settings'))
 
 
 class ShowAcceptance(View):
