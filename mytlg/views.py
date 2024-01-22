@@ -869,7 +869,7 @@ class CustomChannelsSettingsView(View):
         else:
             MY_LOGGER.warning(f'Данные формы невалидны | {form.errors}')
             err_msgs.error(request, f'Данные формы невалидны | {form.errors}')
-            return redirect(to=reverse_lazy('mytlg:custom_channels_settings'))
+            return redirect(to=f"{reverse_lazy('mytlg:custom_channels_settings')}?tlg_id={request.POST.get('tlg_id')}")
 
 
 class ShowAcceptance(View):

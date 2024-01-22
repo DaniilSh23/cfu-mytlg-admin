@@ -77,6 +77,6 @@ class CustomChannelsSettingsForm(forms.Form):
         message='запрос не из телеграмма',
         code='invalid_tlg_id'
     )])
-    when_send = forms.TimeField()
+    when_send = forms.TimeField(required=False)
     send_period = forms.CharField()
     only_custom_channels = forms.BooleanField()
