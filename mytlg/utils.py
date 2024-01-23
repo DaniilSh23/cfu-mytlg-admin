@@ -12,13 +12,14 @@ from io import TextIOWrapper
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
 
 
-def send_gpt_interests_proc_rslt_to_tlg(gpt_rslts: List, tlg_id):
+def send_gpt_interests_proc_rslt_to_tlg(interests: List, tlg_id):
     """
-    Отправка результатов обработки интересов через модель GPT юзеру в телеграм
+    Отправка результатов обработки интересов юзеру в телеграм
     """
-    msg_txt = '📌 Вот, какие темы мне удалось подобрать по Вашим интересам:\n\n'
-    for i_theme in gpt_rslts:
-        msg_txt = ''.join([msg_txt, f'🔹 {i_theme}\n'])
+    msg_txt = '✅ Принято:\n\n'
+    for i_interest in interests:
+        msg_txt = ''.join([msg_txt, f'🔹 {i_interest.get("interest")} | {i_interest.get("send_period")} '
+                                    f'{i_interest.get("when_send") if i_interest.get("when_send") else ""}\n'])
 
     MY_LOGGER.info(f'Запущена функция для отправки в телеграм подобранных тем пользователя.')
     send_rslt = requests.post(
@@ -29,9 +30,10 @@ def send_gpt_interests_proc_rslt_to_tlg(gpt_rslts: List, tlg_id):
         }
     )
     if send_rslt.status_code == 200:
-        MY_LOGGER.success('Успешная отправка подобранных тем пользователю в телеграм')
+        MY_LOGGER.success('Успешная отправка пользователю в телеграм подтверждения обработки интересов')
     else:
-        MY_LOGGER.warning(f'Не удалось отправить пользователю в телеграм подобранные темы: {send_rslt.text}')
+        MY_LOGGER.warning(f'Не удалось отправить пользователю в телеграм подтверждения обработки интересов | '
+                          f'Результат запроса: {send_rslt.text}')
 
 
 def send_err_msg_for_user_to_telegram(err_msg, tlg_id):

@@ -86,7 +86,7 @@ def gpt_interests_processing(interests, tlg_id):
     InterestsService.bulk_create_interests(bot_usr, interests)
 
     MY_LOGGER.debug('Отправка в телеграм подобранных тем.')
-    send_gpt_interests_proc_rslt_to_tlg(gpt_rslts=themes_rslt, tlg_id=tlg_id)
+    send_gpt_interests_proc_rslt_to_tlg(interests=interests, tlg_id=tlg_id)
 
     MY_LOGGER.info('Окончание работы задачи celery по обработке интересов пользователя.')
 
