@@ -10,15 +10,19 @@ import json
 from io import TextIOWrapper
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
+from mytlg.models import CustomChannelsSettings
 
 
 def send_gpt_interests_proc_rslt_to_tlg(interests: List, tlg_id):
     """
     Отправка результатов обработки интересов юзеру в телеграм
     """
+    # Из модели берем периоды и упаковываем словарь, в котором значением будет человекочитаемая запись периода
+    periods = dict(CustomChannelsSettings.periods)
     msg_txt = '✅ Принято:\n\n'
     for i_interest in interests:
-        msg_txt = ''.join([msg_txt, f'🔹 {i_interest.get("interest")} | {i_interest.get("send_period")} '
+        send_period = periods.get(i_interest.get("send_period"))
+        msg_txt = ''.join([msg_txt, f'🔹 {i_interest.get("interest")} | {send_period} '
                                     f'{i_interest.get("when_send") if i_interest.get("when_send") else ""}\n'])
 
     MY_LOGGER.info(f'Запущена функция для отправки в телеграм подобранных тем пользователя.')
