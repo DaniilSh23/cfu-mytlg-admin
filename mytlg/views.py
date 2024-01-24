@@ -907,17 +907,19 @@ class GetNewProxy(APIView):
         new_proxy = ProxysService.get_free_proxy_by_country_code(country_code=old_proxy_country_code)
         if not new_proxy:
             # Получаем новую прокси у провайдера для текущего действия
-            new_proxy = ProxysService.create_proxy(
-                AsocksProxyService.get_new_proxy_by_country_code(old_proxy_country_code)
-            )
+            asocks_proxy = AsocksProxyService.get_new_proxy_by_country_code(old_proxy_country_code)
+            new_proxy = ProxysService.create_proxy(asocks_proxy)
             # Ставим задачу на пополнение резерва прокси
             fill_proxys_reserve()
         if new_proxy:
             TlgAccountsService.change_account_proxy(tlg_account, new_proxy)
-            TlgAccountsService.restart_tlg_account(tlg_account_pk)
+            #  TlgAccountsService.restart_tlg_account(tlg_account_pk)
             # Удаляем старый прокси порт у провайдера
             AsocksProxyService.delete_proxy(old_proxy.external_proxy_id)
             # удаляем старую не работающую прокси из нашей базы данных
             ProxysService.delete_proxy(old_proxy.pk)
 
-        return Response(data='ok', status=status.HTTP_200_OK)
+            proxy_string = new_proxy.make_proxy_string()
+
+            return Response(data={"proxy_str": proxy_string}, status=status.HTTP_200_OK)
+        return Response(data="no new proxy", status=status.HTTP_400_BAD_REQUEST)
