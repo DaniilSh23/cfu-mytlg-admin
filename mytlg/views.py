@@ -908,6 +908,8 @@ class GetNewProxy(APIView):
         if not new_proxy:
             # Получаем новую прокси у провайдера для текущего действия
             asocks_proxy = AsocksProxyService.get_new_proxy_by_country_code(old_proxy_country_code)
+            if not asocks_proxy:
+                return Response(data="no new proxy", status=status.HTTP_400_BAD_REQUEST)
             new_proxy = ProxysService.create_proxy(asocks_proxy)
             # Ставим задачу на пополнение резерва прокси
             fill_proxys_reserve()
