@@ -200,9 +200,15 @@ def delete_session_file(sender, instance, **kwargs):
     """
     Функция, которая получает сигнал при удалении модели TlgAccounts и удаляет файл сессии телеграм
     """
+    MY_LOGGER.debug(f'Выполняем действия перед удаление TlgAccounts PK=={instance.pk}')
+
     if os.path.exists(instance.session_file.path):
         MY_LOGGER.debug(f'Удаляем файл сессии {instance.session_file.path!r}')
         os.remove(instance.session_file.path)
+
+        MY_LOGGER.debug(f'Устанавливаем связанным Channels флаг is_ready=False')
+        related_channels = instance.channels.all()
+        related_channels.update(is_ready=False)
 
     # Кидаем запрос к сервису аккаунтов для удаления аккаунта (остановка акка и удаление файла сессии)
     AccountsServiceRequests.post_req_for_del_account(acc_pk=instance.pk)
