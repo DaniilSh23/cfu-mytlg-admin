@@ -59,9 +59,9 @@ class ProxysService:
     def fill_proxys_reserve():
         reserve_proxy_quantity_per_account = int(
             BotSettingsService.get_bot_settings_by_key('rezerv_proxy_quantity_per_account'))
-        free_proxy = ProxysService.get_all_free_proxys().count()
+        free_proxy = len(ProxysService.get_all_free_proxys())
         tlg_accounts = TlgAccountsService.get_running_accounts()
-        required_proxy_quantity = tlg_accounts.counts() * reserve_proxy_quantity_per_account
+        required_proxy_quantity = len(tlg_accounts) * reserve_proxy_quantity_per_account
         if free_proxy < required_proxy_quantity:
             ProxysService.create_reserve_proxys(free_proxy, required_proxy_quantity)
 
