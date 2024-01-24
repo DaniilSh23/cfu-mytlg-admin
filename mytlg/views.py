@@ -912,7 +912,7 @@ class GetNewProxy(APIView):
                 return Response(data="no new proxy", status=status.HTTP_400_BAD_REQUEST)
             new_proxy = ProxysService.create_proxy(asocks_proxy)
             # Ставим задачу на пополнение резерва прокси
-            fill_proxys_reserve()
+            fill_proxys_reserve.delay()
         if new_proxy:
             TlgAccountsService.change_account_proxy(tlg_account, new_proxy)
             #  TlgAccountsService.restart_tlg_account(tlg_account_pk)
