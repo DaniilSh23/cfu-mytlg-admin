@@ -209,9 +209,6 @@ def delete_session_file(sender, instance, **kwargs):
         MY_LOGGER.debug(f'Устанавливаем связанным каналам флаг is_ready=False')
         related_channels = instance.channels.all()
         related_channels.update(is_ready=False)
-        for i_rel_ch in related_channels:
-            MY_LOGGER.debug(f'Канал {i_rel_ch} | is_ready == {i_rel_ch.is_ready}')
-        # related_channels.save()
 
     # Кидаем запрос к сервису аккаунтов для удаления аккаунта (остановка акка и удаление файла сессии)
     AccountsServiceRequests.post_req_for_del_account(acc_pk=instance.pk)
