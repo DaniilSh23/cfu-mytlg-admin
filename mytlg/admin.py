@@ -256,6 +256,7 @@ class TlgAccountsAdmin(admin.ModelAdmin):
         'waiting',
         'banned',
         "subscribed_numb_of_channels",
+        "proxy",
     )
     list_display_links = (
         "pk",
