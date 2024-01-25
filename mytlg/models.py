@@ -175,7 +175,7 @@ class TlgAccounts(models.Model):
     for_search = models.BooleanField(verbose_name='Аккаунт используется для поиска каналов', default=False)
 
     def __str__(self):
-        return f'TLG Account ID=={self.acc_tlg_id}'
+        return f'Аккаунт PK=={self.pk}'
 
     class Meta:
         ordering = ['-id']
