@@ -155,8 +155,8 @@ class PostFilters:
             return filtration_rslt, post_filters_obj
         except RateLimitError as err:
             MY_LOGGER.warning(f'Проблема с запросами к OpenAI, откидываем пост. Ошибка: {err.error}')
-            return False
+            return False, err
         except Exception as err:
             MY_LOGGER.error(f'Необрабатываемая проблема на этапе фильтрации поста и запросов к OpenAI. '
                             f'Пост будет отброшен. Ошибка: {err} | Текст поста: {new_post_text[:30]!r}...')
-            return False
+            return False, err
