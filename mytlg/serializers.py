@@ -115,3 +115,11 @@ class GetProxySerializer(serializers.Serializer):
     """
     token = serializers.CharField(max_length=50)
     tlg_account_pk = serializers.IntegerField()
+
+
+class GetShareLinkSerializer(serializers.Serializer):
+    """
+    Сериалайзер для обновления в БД данных о каналах
+    """
+    token = serializers.CharField(max_length=50)
+    tlg_id = serializers.CharField(max_length=30)
