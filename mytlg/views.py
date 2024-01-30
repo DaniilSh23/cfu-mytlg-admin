@@ -189,16 +189,19 @@ class WriteUsrView(APIView):
             return bad_response
 
         MY_LOGGER.debug('Записываем/обновляем данные о юзере в БД')
-
+        source_tag = request.data.get("source_tag")
         bot_usr_obj, created = BotUsersService.update_or_create_bot_user(
             tlg_id=request.data.get("tlg_id"),
             defaults_dict={
                 "tlg_id": request.data.get("tlg_id"),
                 "tlg_username": request.data.get("tlg_username"),
                 "language_code": request.data.get("language_code", 'ru'),
-                "source_tag": request.data.get("source_tag")
             }
         )
+        if created and source_tag:
+            BotUsersService.update_bot_user_source_tag(source_tag, bot_usr_obj)
+            BotUsersService.increase_attracted_users_counter(source_tag)
+
         MY_LOGGER.success(f'Данные о юзере успешно {"созданы" if created else "обновлены"} даём ответ на запрос.')
         return Response(data=f'success {"write" if created else "update"} object of bot user!',
                         status=status.HTTP_200_OK)
@@ -944,8 +947,8 @@ class GetShareLink(APIView):
         CheckRequestService.check_bot_token(ser.validated_data.get("token"), api_request=True)
 
         tlg_id = ser.validated_data.get('tlg_id')
-        bot_user = BotUsersService.get_bot_user_by_tg_id(tlg_id)
-        shared_link = bot_user.shared_link
+        shared_link = BotUsersService.get_shared_link(tlg_id)
+        print(shared_link)
         if shared_link:
             return Response(data={"shared_link": shared_link}, status=status.HTTP_200_OK)
         return Response(data="no shared link", status=status.HTTP_400_BAD_REQUEST)

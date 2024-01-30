@@ -1,8 +1,7 @@
-from cfu_mytlg_admin.settings import MY_LOGGER
+from cfu_mytlg_admin.settings import MY_LOGGER, BOT_LINK
 from mytlg.models import BotUser
 from django.core.exceptions import ObjectDoesNotExist
-
-from mytlg.servises.channels_service import ChannelsService
+import hashlib
 
 
 class BotUsersService:
@@ -16,6 +15,8 @@ class BotUsersService:
 
     @staticmethod
     def update_or_create_bot_user(tlg_id: str, defaults_dict: dict) -> tuple:
+        unique_link_part = hashlib.md5(tlg_id.encode()).hexdigest()
+        defaults_dict['shared_link'] = unique_link_part
         bot_usr_obj, created = BotUser.objects.update_or_create(tlg_id=tlg_id, defaults=defaults_dict)
         return bot_usr_obj, created
 
@@ -109,9 +110,36 @@ class BotUsersService:
         """
         Получение кортежа tlg_id пользователей, которые являются админами бота.
         """
-        MY_LOGGER.debug(f'Вызван сервис для получения списка tlg_id админов бота')
+        MY_LOGGER.debug('Вызван сервис для получения списка tlg_id админов бота')
         try:
             bot_users = BotUser.objects.filter(is_admin=True).only("tlg_id")
         except ObjectDoesNotExist:
             return None
         return tuple(i_usr.tlg_id for i_usr in bot_users)
+
+    @staticmethod
+    def get_shared_link(tlg_id: str) -> str:
+        bot_user = BotUser.objects.get(tlg_id=tlg_id)
+        MY_LOGGER.info(f"Получаем уникальную ссылку для расшаривания бота lkz юзера с tlg_id = {tlg_id}")
+        return f'{BOT_LINK}?start={bot_user.shared_link}'
+
+    @staticmethod
+    def increase_attracted_users_counter(source_tag: str):
+        try:
+            bot_user = BotUser.objects.get(source_tag=source_tag)
+            bot_user.number_of_attracted_users += 1
+            bot_user.save()
+            MY_LOGGER.info(f'У юзера {bot_user} увеличен счетчик привлеченных пользователей, '
+                           f'текущеe количество привлеченных пользователей {bot_user.number_of_attracted_users}')
+        except ObjectDoesNotExist:
+            MY_LOGGER.warning(f'Не найден юзер по источнику {source_tag}')
+
+    @staticmethod
+    def update_bot_user_source_tag(source_tag: str, bot_user: BotUser) -> bool:
+        try:
+            bot_user.source_tag = source_tag
+            bot_user.save()
+            return True
+        except Exception as e:
+            MY_LOGGER.warning(f'Ошибка при обновлении source_tag у юзера {bot_user}\n Ошибка {e}')
+            return False
