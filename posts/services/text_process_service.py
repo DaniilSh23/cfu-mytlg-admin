@@ -18,7 +18,7 @@ class TextProcessService:
     embeddings = OpenAIEmbeddings()
 
     @staticmethod
-    def get_gpt_answer(prompt: str, query: str, base_text='', temp=0.0):
+    def get_gpt_answer(prompt: str, query: str, base_text='', temp=0.1):
         data = {
             "prompt": prompt,
             "query": query,
