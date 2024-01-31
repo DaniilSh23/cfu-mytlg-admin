@@ -948,7 +948,6 @@ class GetShareLink(APIView):
 
         tlg_id = ser.validated_data.get('tlg_id')
         shared_link = BotUsersService.get_shared_link(tlg_id)
-        print(shared_link)
         if shared_link:
             return Response(data={"shared_link": shared_link}, status=status.HTTP_200_OK)
         return Response(data="no shared link", status=status.HTTP_400_BAD_REQUEST)

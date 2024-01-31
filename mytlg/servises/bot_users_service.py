@@ -126,13 +126,13 @@ class BotUsersService:
     @staticmethod
     def increase_attracted_users_counter(source_tag: str):
         try:
-            bot_user = BotUser.objects.get(source_tag=source_tag)
+            bot_user = BotUser.objects.get(shared_link=source_tag)
             bot_user.number_of_attracted_users += 1
             bot_user.save()
             MY_LOGGER.info(f'У юзера {bot_user} увеличен счетчик привлеченных пользователей, '
                            f'текущеe количество привлеченных пользователей {bot_user.number_of_attracted_users}')
         except ObjectDoesNotExist:
-            MY_LOGGER.warning(f'Не найден юзер по источнику {source_tag}')
+            MY_LOGGER.warning(f'Не найден юзер c shared_link - {source_tag}')
 
     @staticmethod
     def update_bot_user_source_tag(source_tag: str, bot_user: BotUser) -> bool:
