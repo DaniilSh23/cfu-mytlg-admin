@@ -15,7 +15,7 @@ class BotUsersService:
 
     @staticmethod
     def update_or_create_bot_user(tlg_id: str, defaults_dict: dict) -> tuple:
-        unique_link_part = hashlib.md5(tlg_id.encode()).hexdigest()
+        unique_link_part = BotUsersService.create_unique_link_part(tlg_id)
         defaults_dict['shared_link'] = unique_link_part
         bot_usr_obj, created = BotUser.objects.update_or_create(tlg_id=tlg_id, defaults=defaults_dict)
         return bot_usr_obj, created
@@ -143,3 +143,14 @@ class BotUsersService:
         except Exception as e:
             MY_LOGGER.warning(f'Ошибка при обновлении source_tag у юзера {bot_user}\n Ошибка {e}')
             return False
+
+    @staticmethod
+    def bulk_update_bot_user_unique_link_part():
+        bot_users = BotUser.objects.all()
+        for bot_user in bot_users:
+            bot_user.shared_link = BotUsersService.create_unique_link_part(tlg_id=bot_user.tlg_id)
+            bot_user.save()
+
+    @staticmethod
+    def create_unique_link_part(tlg_id: str) -> str:
+        return hashlib.md5(tlg_id.encode()).hexdigest()
