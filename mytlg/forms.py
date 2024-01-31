@@ -1,14 +1,13 @@
 from django import forms
 from django.core.validators import RegexValidator
+from multiupload.fields import MultiFileField
 
 
 class JSONImportForm(forms.Form):
     """
     Форма для загрузки JSON файла в админке.
     """
-    json_files = forms.FileField(
-        widget=forms.FileInput(attrs={'multiple': True})
-    )
+    json_files = MultiFileField(min_num=1, max_num=20)
 
 
 class BlackListForm(forms.Form):
