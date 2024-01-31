@@ -147,9 +147,11 @@ class BotUsersService:
     @staticmethod
     def bulk_update_bot_user_unique_link_part():
         bot_users = BotUser.objects.all()
+        MY_LOGGER.info('Вызван сервис для обновления уникальных частей ссылок для пользователей')
         for bot_user in bot_users:
             bot_user.shared_link = BotUsersService.create_unique_link_part(tlg_id=bot_user.tlg_id)
             bot_user.save()
+        MY_LOGGER.info('Сервис для обновления уникальных частей ссылок для пользователей завершен')
 
     @staticmethod
     def create_unique_link_part(tlg_id: str) -> str:
