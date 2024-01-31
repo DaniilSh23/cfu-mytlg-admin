@@ -6,7 +6,9 @@ class JSONImportForm(forms.Form):
     """
     Форма для загрузки JSON файла в админке.
     """
-    json_file = forms.FileField()
+    json_files = forms.FileField(
+        widget=forms.ClearableFileInput(attrs={'multiple': True})
+    )
 
 
 class BlackListForm(forms.Form):

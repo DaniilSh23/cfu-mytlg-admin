@@ -133,13 +133,21 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
             return render(request, template_name='admin/json_form.html', context=context, status=400)
 
         # Обрабатываем загруженный json файл
-        save_json_channels(
-            file=form.files.get("json_file").file,
-            encoding=request.encoding,
-        )
+        files = request.FILES.getlist('json_files')
+        for uploaded_file in files:
+            save_json_channels(
+                file=uploaded_file.file,
+                encoding=request.encoding,
+            )
+
+        # Ниже старая обработка
+        # save_json_channels(
+        #     file=form.files.get("json_file").file,
+        #     encoding=request.encoding,
+        # )
 
         # Запускаем таск celery на старт подписки аккаунтов
-        subscription_to_new_channels.delay()
+        # subscription_to_new_channels.delay()
 
         # Это сообщение пользователю на странице в админке
         self.message_user(request, message='Data from JSON was imported')
