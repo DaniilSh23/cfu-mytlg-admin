@@ -41,6 +41,7 @@ env = environ.Env(
     ACCOUNT_SERVICE_HOST=str,
     OPEN_AI_APP_TOKEN=str,
     OPEN_AI_SERVICE_HOST=str,
+    BOT_LINK=str,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -302,3 +303,4 @@ CACHES = {
 CHANNELS_BLACK_LIST = []
 OPEN_AI_APP_TOKEN = env('OPEN_AI_APP_TOKEN')
 OPEN_AI_SERVICE_HOST = env('OPEN_AI_SERVICE_HOST')
+BOT_LINK = env('BOT_LINK')

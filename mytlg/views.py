@@ -19,7 +19,7 @@ from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewCh
 from mytlg.models import CustomChannelsSettings, BotUser
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer, \
-    SwitchOnlyCustomChannelsSerializer, GetProxySerializer
+    SwitchOnlyCustomChannelsSerializer, GetProxySerializer, GetShareLinkSerializer
 from mytlg.servises.check_request_services import CheckRequestService
 from mytlg.servises.custom_channels_service import CustomChannelsService
 from mytlg.servises.reactions_service import ReactionsService
@@ -189,16 +189,19 @@ class WriteUsrView(APIView):
             return bad_response
 
         MY_LOGGER.debug('Записываем/обновляем данные о юзере в БД')
-
+        source_tag = request.data.get("source_tag")
         bot_usr_obj, created = BotUsersService.update_or_create_bot_user(
             tlg_id=request.data.get("tlg_id"),
             defaults_dict={
                 "tlg_id": request.data.get("tlg_id"),
                 "tlg_username": request.data.get("tlg_username"),
                 "language_code": request.data.get("language_code", 'ru'),
-                "source_tag": request.data.get("source_tag")
             }
         )
+        if created and source_tag:
+            BotUsersService.update_bot_user_source_tag(source_tag, bot_usr_obj)
+            BotUsersService.increase_attracted_users_counter(source_tag)
+
         MY_LOGGER.success(f'Данные о юзере успешно {"созданы" if created else "обновлены"} даём ответ на запрос.')
         return Response(data=f'success {"write" if created else "update"} object of bot user!',
                         status=status.HTTP_200_OK)
@@ -925,3 +928,26 @@ class GetNewProxy(APIView):
 
             return Response(data={"proxy_str": proxy_string}, status=status.HTTP_200_OK)
         return Response(data="no new proxy", status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetShareLink(APIView):
+    """
+    Вьюшки для получения ссылки для расшаривания бота.
+    """
+
+    def post(self, request):
+        MY_LOGGER.info(
+            f'{request.POST} Поступил POST запрос на вьюшку для получения ссылки для расшаривания бота')
+        ser = GetShareLinkSerializer(data=request.data)
+        if not ser.is_valid():
+            MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
+            return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
+
+        # Проверка токена
+        CheckRequestService.check_bot_token(ser.validated_data.get("token"), api_request=True)
+
+        tlg_id = ser.validated_data.get('tlg_id')
+        shared_link = BotUsersService.get_shared_link(tlg_id)
+        if shared_link:
+            return Response(data={"shared_link": shared_link}, status=status.HTTP_200_OK)
+        return Response(data="no shared link", status=status.HTTP_400_BAD_REQUEST)

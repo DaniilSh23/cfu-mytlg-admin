@@ -26,6 +26,8 @@ class BotUser(models.Model):
     # TODO: when_send_news кажется нигде не используется
     when_send_news = models.TimeField(verbose_name='когда присылать новости', blank=False, null=True)
     source_tag = models.CharField(verbose_name='Тег источника', max_length=50, blank=True)
+    shared_link = models.CharField(verbose_name='Ссылка для поделиться', max_length=200, blank=True)
+    number_of_attracted_users = models.IntegerField(verbose_name='Количество привлеченных пользователей', default=0)
     start_bot_at = models.DateTimeField(verbose_name='первый старт', auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name='Дата изменения пользователя', auto_now=True)
     is_admin = models.BooleanField(verbose_name='админ', default=False)
