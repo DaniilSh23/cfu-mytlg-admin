@@ -138,3 +138,15 @@ class TextProcessService:
                                                    base_text='',
                                                    temp=temp)
         return answer  # возвращает ответ
+
+    @staticmethod
+    def check_post_text_sentence_quantity_and_reduce_if_need(post_text: str, prompt: str,
+                                                             sentence_quantity_limit: int) -> str:
+        """
+        Функция для проверки количества предложений в тексте поста.
+        """
+        post_sentence_quantity = len(post_text.split('.'))
+        if post_sentence_quantity <= sentence_quantity_limit:
+            return post_text
+        else:
+            return TextProcessService.gpt_text_reduction(prompt, text=post_text)

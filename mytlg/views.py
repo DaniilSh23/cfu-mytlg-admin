@@ -449,7 +449,14 @@ class RelatedNewsView(APIView):
                     return Response(data={'result': f'channel object does not exist{ch_pk}'})
 
                 prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
-                short_post = text_processor.gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
+
+                # short_post = text_processor.gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
+                short_post = text_processor.check_post_text_sentence_quantity_and_reduce_if_need(
+                    post_text=ser.validated_data.get("text"),
+                    prompt=prompt,
+                    sentence_quantity_limit=3
+                )
+
                 obj = NewsPostsService.create_news_post(ch_obj, ser, short_post)
                 MY_LOGGER.success(f'Новый пост успешно создан, его PK == {obj.pk!r}')
 
