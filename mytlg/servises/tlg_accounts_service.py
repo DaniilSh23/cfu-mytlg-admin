@@ -1,4 +1,4 @@
-from mytlg.models import TlgAccounts
+from mytlg.models import TlgAccounts, AccountsSubscriptionTasks, BotSettings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
 from cfu_mytlg_admin.settings import MY_LOGGER
@@ -35,14 +35,31 @@ class TlgAccountsService:
             return None
 
     @staticmethod
-    def get_tlgaccounts_that_dont_have_max_channels(max_ch_per_acc):
+    def tlg_accounts_for_channels_subscription(max_ch_per_acc):
+        """
+        Метод для получения аккаунтов, которые еще не достигли лимита по подпискам на каналы и не имеют активных
+        задач на подписку.
+        """
+        # Достаем PK аккаунтов, у которых уже есть таски на подписку со статусом at_work
+        accounts_with_active_tasks = [
+            i_task.tlg_acc.pk for i_task in (AccountsSubscriptionTasks.objects.filter(status='at_work')
+                                             .only("tlg_acc__id").prefetch_related("tlg_acc"))
+        ]
+        # Формируем QuerySet с аккаунтами, которые будут участвовать в подписке
         acc_qset = (
             TlgAccounts.objects.annotate(num_ch=Count('channels')).filter(num_ch__lt=max_ch_per_acc, is_run=True)
-            .only("channels", "acc_tlg_id").prefetch_related("channels"))
+            .exclude(id__in=accounts_with_active_tasks).only("channels", "acc_tlg_id").prefetch_related("channels")
+        )
         return acc_qset
 
     @staticmethod
-    def exclude_allready_subscripted_channels(excluded_ids):
+    def exclude_already_subscribed_channels(excluded_ids=None):
+        """
+        Метод для исключения каналов, на которые уже подписаны аккаунты.
+        Также метод может принимать список каналов для исключения и расширять его.
+        """
+        if excluded_ids is None:
+            excluded_ids = []
         accs = TlgAccounts.objects.filter(is_run=True).only('channels').prefetch_related('channels')
         for i_acc in accs:
             excluded_ids.extend([i_ch.id for i_ch in i_acc.channels.all()])
@@ -74,7 +91,7 @@ class TlgAccountsService:
     @staticmethod
     def get_tlg_account_for_subscribe_custom_channels(max_channels_per_acc, channels_count):
         # TODO написать правильную логику для отбора нужного аккаунта
-        accounts = TlgAccounts.objects.filter(is_run=True) #, for_search=False)
+        accounts = TlgAccounts.objects.filter(is_run=True)  # , for_search=False)
 
         for account in accounts:
             if account.subscribed_numb_of_channels - channels_count < max_channels_per_acc:

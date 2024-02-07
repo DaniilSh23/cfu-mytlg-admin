@@ -154,10 +154,11 @@ def subscription_to_new_channels():
     """
     MY_LOGGER.info('Запущен таск селери по подписке аккаунтов на новые каналы.')
 
+    # Получаем настройку с максимальным числом каналов для одного аккаунта
     max_ch_per_acc = int(BotSettings.objects.get(key='max_channels_per_acc').value)
 
-    # Берём аккаунты, у которых число каналов < чем переменная max_ch_per_acc
-    acc_qset = TlgAccountsService.get_tlgaccounts_that_dont_have_max_channels(max_ch_per_acc)
+    # Достаем аккаунты, которые могут подписаться на каналы
+    acc_qset = TlgAccountsService.tlg_accounts_for_channels_subscription(max_ch_per_acc)
 
     # Достаём таски на подписку, которые в работе и имеют связанные каналы
     subs_tasks_qset = AccountsSubscriptionTasksService.get_subscription_tasks_in_works()
@@ -166,29 +167,12 @@ def subscription_to_new_channels():
     # Тут исключаем каналы, на которые сейчас подписываются аккаунты.
     excluded_ids = [channel.id for task in subs_tasks_qset
                     for channel in task.channels.all()]
-    # Тут исключаем каналы по аккаунтам, которые уже на них подписаны.
-    excluded_ids = TlgAccountsService.exclude_allready_subscripted_channels(excluded_ids)
+    # Тут исключаем каналы на которые уже подписаны аккаунты (передаем ранее созданный excluded_ids и расширяем)
+    excluded_ids = TlgAccountsService.exclude_already_subscribed_channels(excluded_ids)
     # Достаём каналы и распределяем их по аккаунтам
     ch_lst = Channels.objects.filter(is_ready=False).exclude(id__in=excluded_ids).only("id", "channel_link")
 
-    ##########
-    # INFO: Ниже изменения:
-    #
-    # старый код отправляет от лица бота сообщение аккаунту с json файлом, в котором лежит
-    # информация на какие каналы должен подписаться аккаунт.
-    #
-    # Новый код отправляет немного другой json одним http
-    # запросом на адрес API веб-приложения, которое управляет аккаунтами.
-    #
-    # Для всего этого я просто закомментирую сам запрос к API Telegram для отправки сообщения аккаунту от лица бота и
-    # в цикле соберу данные для подписок всех аккаунтов в один словарь и затем кину одним запросом к веб-приложухе,
-    # которая управляет аккаунтами. Ранее же, через бота, каждому аккаунту данные отправлялись разными запросами к
-    # API Telegram (на каждой итерации цикла, теперь же после всех итераций будет лететь запрос к API веб-приложухи).
-    #
-    # Вроде как понятно расписал, но хз я чутка заебался уже.
-    ##########
-
-    # Это новый словарик, в который мы соберем данные для веб-приложения
+    # Это словарик, в который мы соберем данные для веб-приложения
     start_subscription_general_data = dict(
         token=BOT_TOKEN,
         subs_data=[],
