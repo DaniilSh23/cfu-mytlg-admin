@@ -929,7 +929,11 @@ class GetNewProxy(APIView):
             # Удаляем старый прокси порт у провайдера
             AsocksProxyService.delete_proxy(old_proxy.external_proxy_id)
             # удаляем старую не работающую прокси из нашей базы данных
-            ProxysService.delete_proxy(old_proxy.pk)
+            try:
+                MY_LOGGER.info(f'Удаляем старый прокси из нашей базы данных: {old_proxy}')
+                ProxysService.delete_proxy(old_proxy.pk)
+            except Exception as e:
+                MY_LOGGER.warning(f'Ошибка при удалении старого прокси из нашей базы данных: {e}')
 
             proxy_string = new_proxy.make_proxy_string()
 
