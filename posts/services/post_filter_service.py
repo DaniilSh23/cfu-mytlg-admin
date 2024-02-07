@@ -82,7 +82,7 @@ class PostFilters:
         MY_LOGGER.debug('Поиск релевантных кусков текста из уже имеющихся векторов')
         relevant_piece = index_db.similarity_search_with_score_by_vector(embedding=self.new_post_embedding, k=1)[0]
 
-        if relevant_piece[1] > 0.3:
+        if relevant_piece[1] > 0.1:
             MY_LOGGER.warning('Не найдено похожих новостных постов.')
             self.filtration_result.append(True)
             return True

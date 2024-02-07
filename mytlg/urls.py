@@ -1,9 +1,13 @@
 from django.urls import path
 
-from mytlg.views import WriteUsrView, WriteInterestsView, \
-    GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, \
-    AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts, SentReactionHandler, \
-    SearchCustomChannels, SubscribeCustomChannels, InterestsSetting, SwitchOnlyCustomChannels, ShowAcceptance, CustomChannelsSettingsView, SearchCustomChannels, SubscribeCustomChannels, InterestsSetting, SwitchOnlyCustomChannels, ShowAcceptance, GetNewProxy
+from mytlg.views import (WriteUsrView, WriteInterestsView, \
+                         GetChannelsListView, RelatedNewsView, UploadNewChannels, WriteSubsResults, UpdateChannelsView, \
+                         AccountError, SetAccFlags, BlackListView, WhatWasInteresting, ShowScheduledPosts,
+                         SentReactionHandler, \
+                         SearchCustomChannels, SubscribeCustomChannels, InterestsSetting, SwitchOnlyCustomChannels,
+                         ShowAcceptance,
+                         CustomChannelsSettingsView, SearchCustomChannels, SubscribeCustomChannels, InterestsSetting,
+                         SwitchOnlyCustomChannels, ShowAcceptance, GetNewProxy, GetShareLink)
 
 app_name = 'mytlg'
 
@@ -30,5 +34,5 @@ urlpatterns = [
     path('get_news_from_only_my_channels/', SwitchOnlyCustomChannels.as_view(), name='get_news_from_only_my_channels'),
     path('show_acceptance/', ShowAcceptance.as_view(), name='show_acceptance'),
     path('get_new_proxy/', GetNewProxy.as_view(), name='get_new_proxy'),
+    path('get_share_link/', GetShareLink.as_view(), name='get_share_link'),
 ]
-

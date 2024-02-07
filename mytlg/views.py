@@ -19,7 +19,7 @@ from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewCh
 from mytlg.models import CustomChannelsSettings, BotUser
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer, \
-    SwitchOnlyCustomChannelsSerializer, GetProxySerializer
+    SwitchOnlyCustomChannelsSerializer, GetProxySerializer, GetShareLinkSerializer
 from mytlg.servises.check_request_services import CheckRequestService
 from mytlg.servises.custom_channels_service import CustomChannelsService
 from mytlg.servises.reactions_service import ReactionsService
@@ -189,16 +189,19 @@ class WriteUsrView(APIView):
             return bad_response
 
         MY_LOGGER.debug('Записываем/обновляем данные о юзере в БД')
-
+        source_tag = request.data.get("source_tag")
         bot_usr_obj, created = BotUsersService.update_or_create_bot_user(
             tlg_id=request.data.get("tlg_id"),
             defaults_dict={
                 "tlg_id": request.data.get("tlg_id"),
                 "tlg_username": request.data.get("tlg_username"),
                 "language_code": request.data.get("language_code", 'ru'),
-                "source_tag": request.data.get("source_tag")
             }
         )
+        if created and source_tag:
+            BotUsersService.update_bot_user_source_tag(source_tag, bot_usr_obj)
+            BotUsersService.increase_attracted_users_counter(source_tag)
+
         MY_LOGGER.success(f'Данные о юзере успешно {"созданы" if created else "обновлены"} даём ответ на запрос.')
         return Response(data=f'success {"write" if created else "update"} object of bot user!',
                         status=status.HTTP_200_OK)
@@ -446,7 +449,14 @@ class RelatedNewsView(APIView):
                     return Response(data={'result': f'channel object does not exist{ch_pk}'})
 
                 prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
-                short_post = text_processor.gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
+
+                # short_post = text_processor.gpt_text_reduction(prompt=prompt, text=ser.validated_data.get("text"))
+                short_post = text_processor.check_post_text_sentence_quantity_and_reduce_if_need(
+                    post_text=ser.validated_data.get("text"),
+                    prompt=prompt,
+                    sentence_quantity_limit=3
+                )
+
                 obj = NewsPostsService.create_news_post(ch_obj, ser, short_post)
                 MY_LOGGER.success(f'Новый пост успешно создан, его PK == {obj.pk!r}')
 
@@ -919,9 +929,36 @@ class GetNewProxy(APIView):
             # Удаляем старый прокси порт у провайдера
             AsocksProxyService.delete_proxy(old_proxy.external_proxy_id)
             # удаляем старую не работающую прокси из нашей базы данных
-            ProxysService.delete_proxy(old_proxy.pk)
+            try:
+                MY_LOGGER.info(f'Удаляем старый прокси из нашей базы данных: {old_proxy}')
+                ProxysService.delete_proxy(old_proxy.pk)
+            except Exception as e:
+                MY_LOGGER.warning(f'Ошибка при удалении старого прокси из нашей базы данных: {e}')
 
             proxy_string = new_proxy.make_proxy_string()
 
             return Response(data={"proxy_str": proxy_string}, status=status.HTTP_200_OK)
         return Response(data="no new proxy", status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetShareLink(APIView):
+    """
+    Вьюшки для получения ссылки для расшаривания бота.
+    """
+
+    def post(self, request):
+        MY_LOGGER.info(
+            f'{request.POST} Поступил POST запрос на вьюшку для получения ссылки для расшаривания бота')
+        ser = GetShareLinkSerializer(data=request.data)
+        if not ser.is_valid():
+            MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
+            return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
+
+        # Проверка токена
+        CheckRequestService.check_bot_token(ser.validated_data.get("token"), api_request=True)
+
+        tlg_id = ser.validated_data.get('tlg_id')
+        shared_link = BotUsersService.get_shared_link(tlg_id)
+        if shared_link:
+            return Response(data={"shared_link": shared_link}, status=status.HTTP_200_OK)
+        return Response(data="no shared link", status=status.HTTP_400_BAD_REQUEST)
