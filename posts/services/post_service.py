@@ -54,7 +54,12 @@ class PostService:
         # Пилим посту сокращённый варианта через ChatGPT
         text_processor = TextProcessService()
         prompt = BotSettingsService.get_bot_settings_by_key(key='prompt_for_text_reducing')
-        short_post = text_processor.gpt_text_reduction(prompt=prompt, text=post_text)
+        # short_post = text_processor.gpt_text_reduction(prompt=prompt, text=post_text)
+        short_post = text_processor.check_post_text_sentence_quantity_and_reduce_if_need(
+                    post_text=post_text,
+                    prompt=prompt,
+                    sentence_quantity_limit=3
+                )
 
         # Создаём новый пост в БД
         ch_obj = ChannelsService.get_channel_by_channel_id(channel_id)
