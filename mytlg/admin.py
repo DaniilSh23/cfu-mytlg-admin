@@ -13,7 +13,6 @@ from mytlg.common import save_json_channels
 from mytlg.servises.proxys_service import ProxysService
 from mytlg.servises.proxy_providers_service import AsocksProxyService
 
-
 admin.site.site_header = 'Администрирование YOUR TELEGRAM PROJECT'
 
 
@@ -140,15 +139,6 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
                 encoding=request.encoding,
             )
 
-        # Ниже старая обработка
-        # save_json_channels(
-        #     file=form.files.get("json_file").file,
-        #     encoding=request.encoding,
-        # )
-
-        # Запускаем таск celery на старт подписки аккаунтов
-        # subscription_to_new_channels.delay()
-
         # Это сообщение пользователю на странице в админке
         self.message_user(request, message='Data from JSON was imported')
         return redirect("..")  # Редиректим на одну страницу выше
@@ -188,13 +178,6 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
             ),
         ]
         return new_urls + urls  # Обязательно новые урлы раньше дефолтных
-
-
-# class ChannelsInline(admin.TabularInline):
-#     """
-#     Отображение связанных объектов модели Channels в модели TlgAccounts
-#     """
-#     model = TlgAccounts.channels.through
 
 
 @admin.register(Proxys)
@@ -265,6 +248,7 @@ class TlgAccountsAdmin(admin.ModelAdmin):
         'banned',
         "subscribed_numb_of_channels",
         "proxy",
+        "for_search",
     )
     list_display_links = (
         "pk",
@@ -274,6 +258,12 @@ class TlgAccountsAdmin(admin.ModelAdmin):
     )
     list_editable = (
         'is_run',
+    )
+    list_filter = (
+        'is_run',
+        'waiting',
+        'banned',
+        'for_search',
     )
     search_fields = (
         'pk',
@@ -297,6 +287,15 @@ class NewsPostsAdmin(admin.ModelAdmin):
         'channel',
         'created_at',
     )
+    list_filter = (
+        "is_sent",
+    )
+    search_fields = (
+        "pk",
+        "channel__channel_link",
+        "created_at",
+    )
+    search_help_text = "Поиск по полям: PK, НАЗВАНИЕ КАНАЛА, ДАТА СОЗДАНИЯ ПОСТА"
 
 
 @admin.register(AccountsSubscriptionTasks)
