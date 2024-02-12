@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect
 from django.urls import path
 
 from cfu_mytlg_admin.settings import MY_LOGGER
+from mytlg.admin_actions import mark_channel_is_ready_param, switch_is_started_param
 from mytlg.admin_mixins import ExportAsJSONMixin
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
@@ -60,14 +61,6 @@ class CategoriesAdmin(admin.ModelAdmin):
         "category_name",
         "created_at",
     )
-
-
-@admin.action(description='Отметить как не готов')
-def mark_channel_is_ready_param(modeladmin, request, queryset):
-    """
-    Отметить канал как неготовый (is_ready=False)
-    """
-    queryset.update(is_ready=False)
 
 
 class TlgAccountsInline(admin.TabularInline):
@@ -249,6 +242,9 @@ class ProxysAdmin(admin.ModelAdmin):
 
 @admin.register(TlgAccounts)
 class TlgAccountsAdmin(admin.ModelAdmin):
+    actions = [
+        switch_is_started_param,
+    ]
     list_display = (
         'pk',
         "acc_tlg_id",
@@ -458,3 +454,6 @@ class ReactionsAdmin(admin.ModelAdmin):
         'created_at',
         'updated_at',
     )
+
+
+
