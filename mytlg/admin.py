@@ -70,8 +70,18 @@ def mark_channel_is_ready_param(modeladmin, request, queryset):
     queryset.update(is_ready=False)
 
 
+class TlgAccountsInline(admin.TabularInline):
+    """
+    Inline для отображения аккаунтов, которые подписаны на каналы
+    """
+    model = Channels.tlg_accounts.through
+
+
 @admin.register(Channels)
 class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
+    inlines = [
+        TlgAccountsInline,
+    ]
     change_list_template = 'admin/channels_change_list.html'  # Шаблон для страницы со списком сущностей
     actions = [  # Список доп. действий в админке для записей данной модели
         'export_json',  # export_csv - имя метода в миксине ExportAsCSVMixin
