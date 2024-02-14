@@ -209,6 +209,10 @@ CELERY_BEAT_SCHEDULE = {  # Настройки шедуля
         'task': 'mytlg.tasks.what_was_interesting',
         'schedule': crontab(hour=11, minute=30, day_of_week=1),  # Запуск в понедельник в 11:30
         # 'schedule': 10,  # Каждые 10 сек
+    },
+    'sending_channels_report': {
+        "task": "mytlg.tasks.sending_channels_report",
+        "schedule": crontab(hour="10, 14, 18", minute=0)
     }
 }
 

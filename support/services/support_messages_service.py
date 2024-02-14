@@ -27,7 +27,7 @@ class SupportMessagesService:
         Уведомление админов.
         """
         MY_LOGGER.info(f"Вызван сервис для уведомления админов бота. | message: {message!r}")
-        admins_tlg_ids_tpl = BotUsersService.get_bot_bot_admins_tlg_ids()
+        admins_tlg_ids_tpl = BotUsersService.get_bot_admins_tlg_ids()
         msg_for_send = (f"💬 Получено новое сообщение обратной связи!\n\n👤 Юзер: {message.bot_user.tlg_id}\n"
                         f"📝 Текст: {message.message}")
         [send_message_by_bot(chat_id=i_tlg_id, text=msg_for_send) for i_tlg_id in admins_tlg_ids_tpl]

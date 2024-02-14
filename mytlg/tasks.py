@@ -9,6 +9,7 @@ from langchain.embeddings import OpenAIEmbeddings
 
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE, BOT_TOKEN
 from mytlg.api_requests import AccountsServiceRequests
+from mytlg.servises.channels_service import ChannelsService
 from posts.services.text_process_service import TextProcessService
 from mytlg.servises.categories_service import CategoriesService
 from mytlg.servises.bot_users_service import BotUsersService
@@ -367,3 +368,32 @@ def fill_proxys_reserve():
     MY_LOGGER.info('Запущена задача по заполнению резерва свободных прокси.')
     ProxysService.fill_proxys_reserve()
     MY_LOGGER.info('Конец задачи по заполнению резерва свободных прокси')
+
+
+@shared_task
+def sending_channels_report():
+    """
+    Отправка админам бота отчета о каналах.
+    """
+    MY_LOGGER.info('Запущена задача по формированию отчета о каналах для админов.')
+
+    # Полуаем список категорий и каналов
+    categories = CategoriesService.get_all_categories_only(only_lst=["id", "category_name"])
+    channels = ChannelsService.filter_channels_by_is_ready_field(is_ready=True)
+
+    # Формируем текст отчета
+    report_text = (f"📑 <u><b>Отчет об активности каналов</b></u>\n\n"
+                   f"🔢 <b>Количество активных каналов:</b> {len(channels)}\n\n"
+                   f"📊 <b>Кол-во активных каналов по категориям:</b>\n")
+    for i_category in categories:
+        channels_numb = channels.filter(category=i_category.id).count()
+        label = "🛑" if channels_numb == 0 else "🔹"
+        report_text += f"{label} <i>{i_category.category_name}</i>: {channels_numb} \n"
+
+    # Достаем админов бота и отправляем им отчет
+    bot_admins = BotUsersService.get_bot_admins_tlg_ids()
+    [send_message_by_bot(chat_id=bot_admin_id, text=report_text) for bot_admin_id in bot_admins]
+
+    MY_LOGGER.info('Окончена задача по формированию отчета о каналах для админов.')
+    return True
+
