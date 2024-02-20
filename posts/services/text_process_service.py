@@ -15,6 +15,7 @@ class TextProcessService:
     headers_for_gpt = {
         'Authorization': f"Bearer {OPEN_AI_APP_TOKEN}"
     }
+    token_data = {"token": OPEN_AI_APP_TOKEN}
     embeddings = OpenAIEmbeddings()
 
     @staticmethod
@@ -26,7 +27,7 @@ class TextProcessService:
             "temp": temp
         }
         response = requests.post(url=f'{OPEN_AI_SERVICE_HOST}get-gpt-answer/',
-                                 json=data,
+                                 json=data | TextProcessService.token_data,     # Добавлен токен в тело запроса
                                  headers=TextProcessService.headers_for_gpt)
         if response.status_code == 200 and response.json().get('success'):
             return response.json().get('answer')
@@ -41,7 +42,7 @@ class TextProcessService:
             "text": text
         }
         response = requests.post(url=f'{OPEN_AI_SERVICE_HOST}make-embeddings/',
-                                 json=data,
+                                 json=data | TextProcessService.token_data,     # Добавлен токен в тело запроса
                                  headers=TextProcessService.headers_for_gpt)
         if response.status_code == 200 and response.json().get('success'):
             return response.json().get('embeddings')

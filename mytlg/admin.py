@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect
 from django.urls import path
 
 from cfu_mytlg_admin.settings import MY_LOGGER
+from mytlg.admin_actions import mark_channel_is_ready_param, switch_is_started_param
 from mytlg.admin_mixins import ExportAsJSONMixin
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
@@ -12,7 +13,6 @@ from mytlg.tasks import subscription_to_new_channels
 from mytlg.common import save_json_channels
 from mytlg.servises.proxys_service import ProxysService
 from mytlg.servises.proxy_providers_service import AsocksProxyService
-
 
 admin.site.site_header = 'Администрирование YOUR TELEGRAM PROJECT'
 
@@ -63,16 +63,18 @@ class CategoriesAdmin(admin.ModelAdmin):
     )
 
 
-@admin.action(description='Отметить как не готов')
-def mark_channel_is_ready_param(modeladmin, request, queryset):
+class TlgAccountsInline(admin.TabularInline):
     """
-    Отметить канал как неготовый (is_ready=False)
+    Inline для отображения аккаунтов, которые подписаны на каналы
     """
-    queryset.update(is_ready=False)
+    model = Channels.tlg_accounts.through
 
 
 @admin.register(Channels)
 class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
+    inlines = [
+        TlgAccountsInline,
+    ]
     change_list_template = 'admin/channels_change_list.html'  # Шаблон для страницы со списком сущностей
     actions = [  # Список доп. действий в админке для записей данной модели
         'export_json',  # export_csv - имя метода в миксине ExportAsCSVMixin
@@ -140,15 +142,6 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
                 encoding=request.encoding,
             )
 
-        # Ниже старая обработка
-        # save_json_channels(
-        #     file=form.files.get("json_file").file,
-        #     encoding=request.encoding,
-        # )
-
-        # Запускаем таск celery на старт подписки аккаунтов
-        # subscription_to_new_channels.delay()
-
         # Это сообщение пользователю на странице в админке
         self.message_user(request, message='Data from JSON was imported')
         return redirect("..")  # Редиректим на одну страницу выше
@@ -188,13 +181,6 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
             ),
         ]
         return new_urls + urls  # Обязательно новые урлы раньше дефолтных
-
-
-# class ChannelsInline(admin.TabularInline):
-#     """
-#     Отображение связанных объектов модели Channels в модели TlgAccounts
-#     """
-#     model = TlgAccounts.channels.through
 
 
 @admin.register(Proxys)
@@ -256,6 +242,9 @@ class ProxysAdmin(admin.ModelAdmin):
 
 @admin.register(TlgAccounts)
 class TlgAccountsAdmin(admin.ModelAdmin):
+    actions = [
+        switch_is_started_param,
+    ]
     list_display = (
         'pk',
         "acc_tlg_id",
@@ -265,6 +254,7 @@ class TlgAccountsAdmin(admin.ModelAdmin):
         'banned',
         "subscribed_numb_of_channels",
         "proxy",
+        "for_search",
     )
     list_display_links = (
         "pk",
@@ -274,6 +264,12 @@ class TlgAccountsAdmin(admin.ModelAdmin):
     )
     list_editable = (
         'is_run',
+    )
+    list_filter = (
+        'is_run',
+        'waiting',
+        'banned',
+        'for_search',
     )
     search_fields = (
         'pk',
@@ -297,6 +293,15 @@ class NewsPostsAdmin(admin.ModelAdmin):
         'channel',
         'created_at',
     )
+    list_filter = (
+        "is_sent",
+    )
+    search_fields = (
+        "pk",
+        "channel__channel_link",
+        "created_at",
+    )
+    search_help_text = "Поиск по полям: PK, НАЗВАНИЕ КАНАЛА, ДАТА СОЗДАНИЯ ПОСТА"
 
 
 @admin.register(AccountsSubscriptionTasks)
@@ -449,3 +454,6 @@ class ReactionsAdmin(admin.ModelAdmin):
         'created_at',
         'updated_at',
     )
+
+
+

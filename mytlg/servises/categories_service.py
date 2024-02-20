@@ -12,6 +12,13 @@ class CategoriesService:
         return Categories.objects.all()
 
     @staticmethod
+    def get_all_categories_only(only_lst: list):
+        """
+        Получить все категории, но только поля, указанные в списке only_lst
+        """
+        return Categories.objects.all().only(*only_lst)
+
+    @staticmethod
     def get_or_create(category_name: str, defaults: dict) -> tuple:
         theme_obj, theme_created = Categories.objects.get_or_create(category_name=category_name, defaults=defaults)
         return theme_obj, theme_created
@@ -60,7 +67,6 @@ class CategoriesService:
 
     @staticmethod
     def get_or_create_channels_from_json_file(request):
-        print(request)
         for i_json_file in request.FILES.getlist("json_files"):
 
             i_file_dct = json.loads(i_json_file.read().decode('utf-8'))

@@ -106,7 +106,7 @@ class BotUsersService:
                 "custom_channels_is_empty": custom_channels_is_empty}
 
     @staticmethod
-    def get_bot_bot_admins_tlg_ids() -> tuple:
+    def get_bot_admins_tlg_ids() -> tuple:
         """
         Получение кортежа tlg_id пользователей, которые являются админами бота.
         """
