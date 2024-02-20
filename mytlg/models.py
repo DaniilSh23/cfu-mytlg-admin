@@ -424,3 +424,11 @@ class Reactions(models.Model):
         ordering = ['-id']
         verbose_name = 'реакция'
         verbose_name_plural = 'реакции'
+
+
+class FaqQuestion(models.Model):
+    question = models.TextField(verbose_name='Вопрос')
+    answer = models.TextField(verbose_name='Ответ')
+
+    created_at = models.DateTimeField(verbose_name='Создан', auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name='Изменен', blank=True, null=True, auto_now_add=False, auto_now=True)
