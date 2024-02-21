@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 import sys
 from pathlib import Path
 import environ
-import asyncio
 
 import loguru
 from celery.schedules import crontab
@@ -78,7 +77,7 @@ INSTALLED_APPS = [
     'posts.apps.PostsConfig',
     'telegram_accounts.apps.TelegramAccountsConfig',
     'support.apps.SupportConfig',
-    'user_interface.apps.UserInterfaceConfig'
+    'user_interface.apps.UserInterfaceConfig',
 
     # сторонние приложения
     'rest_framework',
