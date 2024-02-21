@@ -8,7 +8,7 @@ from mytlg.admin_actions import mark_channel_is_ready_param, switch_is_started_p
 from mytlg.admin_mixins import ExportAsJSONMixin
 from mytlg.forms import JSONImportForm
 from mytlg.models import BotUser, BotSettings, Categories, Channels, TlgAccounts, NewsPosts, \
-    AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists, Reactions
+    AccountsErrors, AccountsSubscriptionTasks, Proxys, Interests, ScheduledPosts, BlackLists, Reactions, FaqQuestion
 from mytlg.tasks import subscription_to_new_channels
 from mytlg.common import save_json_channels
 from mytlg.servises.proxys_service import ProxysService
@@ -456,4 +456,18 @@ class ReactionsAdmin(admin.ModelAdmin):
     )
 
 
+@admin.register(FaqQuestion)
+class FaqQuestionAdmin(admin.ModelAdmin):
+    list_display = (
+        'question',
+        'answer',
+        'created_at',
+        'updated_at',
+    )
 
+    list_display_links = (
+        'question',
+        'answer',
+        'created_at',
+        'updated_at',
+    )
