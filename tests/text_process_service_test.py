@@ -7,7 +7,8 @@ from mytlg.servises.bot_settings_service import BotSettingsService
 from mytlg.servises.interests_service import InterestsService
 from unittest.mock import Mock
 from posts.services.text_process_service import TextProcessService
-from mytlg.models import BotUser, Categories, Interests
+from mytlg.models import BotUser, Categories
+from user_interface.models import Interests
 
 
 class TextProcessServiceTestCase(TestCase):

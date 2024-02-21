@@ -1,4 +1,5 @@
-from mytlg.models import BlackLists, NewsPosts
+from mytlg.models import NewsPosts
+from user_interface.models import BlackLists
 from django.core.exceptions import ObjectDoesNotExist
 from cfu_mytlg_admin.settings import MY_LOGGER
 

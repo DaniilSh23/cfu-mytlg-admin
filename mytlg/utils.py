@@ -10,7 +10,7 @@ import json
 from io import TextIOWrapper
 
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, TIME_ZONE
-from mytlg.models import CustomChannelsSettings
+from user_interface.models import CustomChannelsSettings
 
 
 def send_gpt_interests_proc_rslt_to_tlg(interests: List, tlg_id):

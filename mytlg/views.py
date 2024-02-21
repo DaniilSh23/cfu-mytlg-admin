@@ -16,7 +16,8 @@ from django.core.cache import cache
 from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN
 from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewChannelsForm, SubscribeChannelForm, \
     CustomChannelsSettingsForm
-from mytlg.models import CustomChannelsSettings, BotUser
+from mytlg.models import BotUser
+from user_interface.models import CustomChannelsSettings
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer, \
     SwitchOnlyCustomChannelsSerializer, GetProxySerializer, GetShareLinkSerializer

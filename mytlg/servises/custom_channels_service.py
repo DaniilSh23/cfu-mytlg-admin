@@ -6,7 +6,8 @@ import datetime
 from django.core.exceptions import ObjectDoesNotExist
 
 from cfu_mytlg_admin.settings import MY_LOGGER
-from mytlg.models import CustomChannelsSettings, BotUser
+from mytlg.models import BotUser
+from user_interface.models import CustomChannelsSettings
 
 
 class CustomChannelsService:

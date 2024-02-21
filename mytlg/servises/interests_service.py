@@ -1,4 +1,4 @@
-from mytlg.models import Interests
+from user_interface.models import Interests
 import datetime
 import pytz
 from cfu_mytlg_admin.settings import MY_LOGGER, TIME_ZONE

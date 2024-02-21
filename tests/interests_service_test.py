@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.test import RequestFactory
-from mytlg.models import Interests
+from user_interface.models import Interests
 from mytlg.models import BotUser
 from mytlg.models import Categories
 from mytlg.servises.interests_service import InterestsService

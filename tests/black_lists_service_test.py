@@ -1,5 +1,6 @@
 from django.test import TestCase
-from mytlg.models import BlackLists, BotUser, NewsPosts, Channels, Categories
+from mytlg.models import BotUser, NewsPosts, Channels, Categories
+from user_interface.models import BlackLists
 from mytlg.servises.black_lists_service import BlackListsService
 from django.core.exceptions import ObjectDoesNotExist
 

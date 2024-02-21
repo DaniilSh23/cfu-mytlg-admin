@@ -2,7 +2,8 @@ import datetime
 import pytz
 from django.core.exceptions import ObjectDoesNotExist
 
-from mytlg.models import ScheduledPosts, BotUser, Interests, NewsPosts, CustomChannelsSettings
+from mytlg.models import ScheduledPosts, BotUser, NewsPosts
+from user_interface.models import Interests, CustomChannelsSettings
 from mytlg.servises.bot_users_service import BotUsersService
 from mytlg.servises.black_lists_service import BlackListsService
 from mytlg.servises.interests_service import InterestsService

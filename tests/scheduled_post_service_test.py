@@ -1,6 +1,7 @@
 from django.test import TestCase
 from mytlg.serializers import NewsPostsSerializer
-from mytlg.models import ScheduledPosts, BotUser, Interests, NewsPosts, Categories, Channels
+from mytlg.models import ScheduledPosts, BotUser, NewsPosts, Categories, Channels
+from user_interface.models import Interests
 from mytlg.servises.scheduled_post_service import ScheduledPostsService
 from datetime import datetime, timedelta
 import pytz
