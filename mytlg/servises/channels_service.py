@@ -1,6 +1,8 @@
 from typing import List
+from bulk_update.helper import bulk_update as help_bulk_update
 
 from mytlg.models import Channels
+from mytlg.serializers import ChildIsValidChannelSerializer
 from mytlg.servises.tlg_accounts_service import TlgAccountsService
 from django.db.models import QuerySet
 from django.db import transaction
@@ -12,6 +14,24 @@ from cfu_mytlg_admin.settings import MY_LOGGER, BOT_TOKEN, ACCOUNT_SERVICE_HOST,
 
 
 class ChannelsService:
+
+    @staticmethod
+    def bulk_update_channels_is_valid(channels: List[ChildIsValidChannelSerializer]):
+        """
+        Массово изменяем значение параметра is_valid у каналов.
+        """
+        channels_pks = list()   # Список, чтобы достать из БД нужные записи
+        channels_dct = dict()   # Словарь, чтобы изменить значение is_valid у записей
+        for i_ch in channels:
+            channels_pks.append(i_ch["channel_pk"])
+            channels_dct[i_ch["channel_pk"]] = i_ch["is_valid"]
+
+        channels_qset = Channels.objects.filter(id__in=channels_pks).only("id", "is_valid")
+        for ch in channels_qset:
+            ch.is_valid = channels_dct[ch.id]   # Устанавливаем новое значение поля is_valid
+
+        # Обновляем несколько записей за один запрос
+        help_bulk_update(channels_qset, update_fields=["is_valid"])
 
     @staticmethod
     def filter_channels_by_link_only_pk(channels_links: List[str]):

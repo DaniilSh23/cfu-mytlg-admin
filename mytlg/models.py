@@ -110,7 +110,8 @@ class Channels(models.Model):
     category = models.ForeignKey(verbose_name='категория канала', to=Categories, on_delete=models.CASCADE, blank=True,
                                  null=True)
     is_ready = models.BooleanField(verbose_name='готов', default=False)
-    is_blocked = models.BooleanField(verbose_name='Канал заблокирован', default=False)
+    is_blocked = models.BooleanField(verbose_name='заблокирован', default=False)
+    is_valid = models.BooleanField(verbose_name='валидный', default=True)
 
     def __str__(self):
         return self.channel_link

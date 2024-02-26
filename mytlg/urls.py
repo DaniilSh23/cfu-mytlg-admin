@@ -7,7 +7,7 @@ from mytlg.views import (WriteUsrView, WriteInterestsView, \
                          SearchCustomChannels, SubscribeCustomChannels, InterestsSetting, SwitchOnlyCustomChannels,
                          ShowAcceptance,
                          CustomChannelsSettingsView, SearchCustomChannels, SubscribeCustomChannels, InterestsSetting,
-                         SwitchOnlyCustomChannels, ShowAcceptance, GetNewProxy, GetShareLink)
+                         SwitchOnlyCustomChannels, ShowAcceptance, GetNewProxy, GetShareLink, ChannelsIsValidView)
 
 app_name = 'mytlg'
 
@@ -33,6 +33,9 @@ urlpatterns = [
     path('interests_setting/', InterestsSetting.as_view(), name='interests_setting'),
     path('get_news_from_only_my_channels/', SwitchOnlyCustomChannels.as_view(), name='get_news_from_only_my_channels'),
     path('show_acceptance/', ShowAcceptance.as_view(), name='show_acceptance'),
-    path('get_new_proxy/', GetNewProxy.as_view(), name='get_new_proxy'),
     path('get_share_link/', GetShareLink.as_view(), name='get_share_link'),
+
+    # Приложуха с аккаунтами
+    path('get_new_proxy/', GetNewProxy.as_view(), name='get_new_proxy'),
+    path('channels_is_valid/', ChannelsIsValidView.as_view(), name='channels_is_valid'),
 ]

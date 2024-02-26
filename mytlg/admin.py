@@ -88,6 +88,7 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "created_at",
         "category",
         "is_ready",
+        "is_valid",
     )
     list_display_links = (
         "pk",
@@ -97,10 +98,12 @@ class ChannelsAdmin(admin.ModelAdmin, ExportAsJSONMixin):
         "created_at",
         "category",
         "is_ready",
+        "is_valid",
     )
     list_filter = (
         "category",
         "is_ready",
+        "is_valid",
     )
     search_fields = (
         "pk",

@@ -19,7 +19,7 @@ from mytlg.forms import BlackListForm, WhatWasInterestingForm, SearchAndAddNewCh
 from mytlg.models import CustomChannelsSettings, BotUser
 from mytlg.serializers import SetAccDataSerializer, ChannelsSerializer, NewsPostsSerializer, WriteNewPostSerializer, \
     UpdateChannelsSerializer, AccountErrorSerializer, WriteSubsResultSerializer, ReactionsSerializer, \
-    SwitchOnlyCustomChannelsSerializer, GetProxySerializer, GetShareLinkSerializer
+    SwitchOnlyCustomChannelsSerializer, GetProxySerializer, GetShareLinkSerializer, IsValidChannelsSerializer
 from mytlg.servises.check_request_services import CheckRequestService
 from mytlg.servises.custom_channels_service import CustomChannelsService
 from mytlg.servises.reactions_service import ReactionsService
@@ -596,28 +596,6 @@ class UpdateChannelsView(APIView):
             return Response(data='Invalid request data', status=status.HTTP_400_BAD_REQUEST)
 
 
-# class GetActiveAccounts(APIView):
-#     """
-#     Вьюшка для запроса активных аккаунтов из БД.
-#     """
-#
-#     def get(self, request):
-#         """
-#         Обрабатываем GET запрос и отправляем боту команды на старт нужных аккаунтов.
-#         """
-#         MY_LOGGER.info('Получен GET запрос на вьюшку для получения активных аккаунтов')
-#         token = request.query_params.get("token")
-#
-#         # Проверки запросов
-#         bad_response = CheckRequestService.check_bot_token(token, api_request=True)
-#         if bad_response:
-#             return bad_response
-#
-#         # Запускаем функцию отправки боту команд для старта аккаунтов
-#         start_or_stop_accounts.delay()
-#         return Response(data={'result': 'ok'}, status=status.HTTP_200_OK)
-
-
 class AccountError(APIView):
     """
     Вьюшки для ошибок аккаунта.
@@ -947,18 +925,46 @@ class GetShareLink(APIView):
     """
 
     def post(self, request):
-        MY_LOGGER.info(
-            f'{request.POST} Поступил POST запрос на вьюшку для получения ссылки для расшаривания бота')
+        MY_LOGGER.info(f'Поступил POST запрос на вьюшку для получения ссылки для расшаривания бота | {request.POST}')
         ser = GetShareLinkSerializer(data=request.data)
         if not ser.is_valid():
             MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
             return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
 
-        # Проверка токена
-        CheckRequestService.check_bot_token(ser.validated_data.get("token"), api_request=True)
+        # Проверка токена (вернет None, если все ОК, а иначе объект Response)
+        check_result = CheckRequestService.check_bot_token(ser.validated_data.get("token"), api_request=True)
+        if check_result:
+            return check_result
 
         tlg_id = ser.validated_data.get('tlg_id')
         shared_link = BotUsersService.get_shared_link(tlg_id)
         if shared_link:
             return Response(data={"shared_link": shared_link}, status=status.HTTP_200_OK)
         return Response(data="no shared link", status=status.HTTP_400_BAD_REQUEST)
+
+
+'''ВЬЮШКИ ДЛЯ РАБОТЫ АККАУНТОВ'''
+
+
+class ChannelsIsValidView(APIView):
+    """
+    Изменение каналам флага is_invalid
+    """
+
+    @extend_schema(request=IsValidChannelsSerializer, responses=str, methods=['post'])
+    def post(self, request):
+        MY_LOGGER.info(f"POST запрос на вьюшку InvalidChannelView | {request.POST}")
+        ser = IsValidChannelsSerializer(data=request.data)
+        if not ser.is_valid():
+            MY_LOGGER.warning(f'Невалидные данные запроса: {request.data!r} | Ошибка: {ser.errors}')
+            return Response(data=f'not valid data: {ser.errors!r}', status=status.HTTP_400_BAD_REQUEST)
+
+        # Проверка токена (вернет None, если все ОК, а иначе объект Response)
+        check_result = CheckRequestService.check_bot_token(ser.validated_data.get("token"), api_request=True)
+        if check_result:
+            return check_result
+
+        channels = ser.validated_data.get("channels")
+        ChannelsService.bulk_update_channels_is_valid(channels)
+        return Response(data=f'ok', status=status.HTTP_200_OK)
+

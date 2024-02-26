@@ -123,3 +123,19 @@ class GetShareLinkSerializer(serializers.Serializer):
     """
     token = serializers.CharField(max_length=50)
     tlg_id = serializers.CharField(max_length=30)
+
+
+class ChildIsValidChannelSerializer(serializers.Serializer):
+    """
+    Элемент канала, вложенный в параметр channels сериалайзера IsValidChannelsSerializer
+    """
+    channel_pk = serializers.IntegerField()
+    is_valid = serializers.BooleanField()
+
+
+class IsValidChannelsSerializer(serializers.Serializer):
+    """
+    Сериалайзер для установки каналам флага is_valid.
+    """
+    token = serializers.CharField(max_length=50)
+    channels = ChildIsValidChannelSerializer(many=True)
