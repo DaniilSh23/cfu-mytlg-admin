@@ -171,7 +171,8 @@ def subscription_to_new_channels():
     # Тут исключаем каналы на которые уже подписаны аккаунты (передаем ранее созданный excluded_ids и расширяем)
     excluded_ids = TlgAccountsService.exclude_already_subscribed_channels(excluded_ids)
     # Достаём каналы и распределяем их по аккаунтам
-    ch_lst = Channels.objects.filter(is_ready=False).exclude(id__in=excluded_ids).only("id", "channel_link")
+    ch_lst = (Channels.objects.filter(is_ready=False, is_valid=True).exclude(id__in=excluded_ids)
+              .only("id", "channel_link"))
 
     # Это словарик, в который мы соберем данные для веб-приложения
     start_subscription_general_data = dict(
